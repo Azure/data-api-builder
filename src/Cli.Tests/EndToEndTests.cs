@@ -1149,6 +1149,53 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Runs the production `dab start` path (<see cref="TryStartEngineWithOptions"/>) against a config that sets
+    /// its own log level, and validates the engine only treats the level as a CLI override when --log-level was
+    /// passed on the command line. Guards against the CLI forwarding the configured level as --log-level.
+    /// </summary>
+    /// <param name="cliLogLevel">The --log-level CLI flag value, or null to omit the flag.</param>
+    /// <param name="expectedIsCliOverriding">Expected value of Startup.IsCliOverriding.</param>
+    [DataTestMethod]
+    [DataRow(null, false, DisplayName = "Config-only log level is not forwarded as a CLI override")]
+    [DataRow(LogLevel.Error, true, DisplayName = "--log-level flag is forwarded as a CLI override")]
+    public void TestStartCommandForwardsLogLevelOnlyWhenProvidedOnCli(
+        LogLevel? cliLogLevel,
+        bool expectedIsCliOverriding)
+    {
+        string configWithEntity = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
+        string configWithLogLevel = AddPropertiesToJson(configWithEntity, @"{ ""runtime"": { ""telemetry"": { ""log-level"": { ""default"": ""Warning"" } } } }");
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, configWithLogLevel);
+
+        StartOptions options = new(
+            verbose: false,
+            logLevel: cliLogLevel,
+            isHttpsRedirectionDisabled: false,
+            mcpStdio: false,
+            mcpRole: null,
+            logLevelLegacy: null,
+            config: TEST_RUNTIME_CONFIG_FILE);
+
+        // Seed the opposite value so the assertion can only pass once the engine has parsed the CLI-built args.
+        Startup.IsCliOverriding = !expectedIsCliOverriding;
+
+        // Resolve the log level from the args the CLI built, as StartEngine does first, without launching a host.
+        string[]? engineArgs = null;
+        bool reachedEngineStart = TryStartEngineWithOptions(options, _runtimeConfigLoader!, _fileSystem!, startEngine: args =>
+        {
+            engineArgs = args;
+            Azure.DataApiBuilder.Service.Program.InitializeLogLevel(args, runMcpStdio: false);
+            return true;
+        });
+
+        Assert.IsTrue(reachedEngineStart, "The CLI should have reached the engine-start step.");
+        Assert.AreEqual(expectedIsCliOverriding, engineArgs!.Contains("--log-level"), $"Unexpected engine args: {string.Join(' ', engineArgs)}");
+
+        // The CLI tracks a config-driven level separately; it must not also be reported as a CLI override.
+        Assert.AreEqual(!expectedIsCliOverriding, Utils.IsConfigOverriding, "Config-driven log level tracking is incorrect.");
+        Assert.AreEqual(expectedIsCliOverriding, Startup.IsCliOverriding, "The engine resolved an unexpected CLI override state from the args built by `dab start`.");
+    }
+
+    /// <summary>
     /// Validates that valid usage of verbs and associated options produce exit code 0 (CliReturnCode.SUCCESS).
     /// Verifies that explicitly implemented verbs (add, update, init, start) and appropriately
     /// supplied options produce exit code 0.

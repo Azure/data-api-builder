@@ -424,6 +424,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Verifies database input errors (e.g. malformed XML for an xml parameter) keep the DatabaseInputError type, like create/update.
+        /// </summary>
+        [TestMethod]
+        public async Task ExecuteEntity_DatabaseInputError_PreservesClassification()
+        {
+            DataApiBuilderException exception = new(
+                "Invalid XML value supplied for an xml field.",
+                HttpStatusCode.BadRequest,
+                DataApiBuilderException.SubStatusCodes.DatabaseInputError);
+
+            CallToolResult result = await ExecuteWithMockedEngineAsync(
+                TEST_ENTITY,
+                new(),
+                null,
+                queryOutcome: exception);
+
+            AssertError(result, "DatabaseInputError");
+        }
+
+        /// <summary>
         /// Verifies provider, connection, and unexpected execution failures map to their MCP error classifications.
         /// </summary>
         [DataTestMethod]

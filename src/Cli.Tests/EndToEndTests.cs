@@ -170,6 +170,12 @@ public class EndToEndTests
         string telemetry = _fileSystem.File.ReadAllText("appname-out.txt");
         Assert.IsTrue(telemetry.StartsWith("dab_oss_"), telemetry);
         Assert.IsTrue(telemetry.EndsWith("+"), telemetry);
+        string[] sections = telemetry[(telemetry.IndexOf('+') + 1)..^1].Split('|');
+        Assert.AreEqual(4, sections.Length, "General settings must not shift runtime/entity sections.");
+        Assert.AreEqual("XXXX", sections[0], "The CLI still has no live connection context.");
+        Assert.AreEqual(6, sections[1].Length, "The CLI should emit all six general flags.");
+        Assert.AreEqual('0', sections[1][4], "One parsed data source is not multiple data sources.");
+        Assert.AreEqual('0', sections[1][5], "The default data source uses explicit SQL credentials, not MI.");
 
         // Act: decode the produced string back into a human-readable description.
         int decodeCode = Program.Execute(
@@ -180,6 +186,12 @@ public class EndToEndTests
         Assert.AreEqual(0, decodeCode, "appname --decode should succeed");
         string decoded = _fileSystem.File.ReadAllText("appname-decoded.txt");
         Assert.IsTrue(decoded.Contains("Version: dab_oss_"), decoded);
+        Assert.IsTrue(decoded.Contains("General > operating-system:"), decoded);
+        Assert.IsTrue(decoded.Contains("General > running-in-container:"), decoded);
+        Assert.IsTrue(decoded.Contains("General > hosting-environment:"), decoded);
+        Assert.IsTrue(decoded.Contains("General > azure-hosting-service:"), decoded);
+        Assert.IsTrue(decoded.Contains("General > multiple-data-sources: 0"), decoded);
+        Assert.IsTrue(decoded.Contains("General > managed-identity: 0"), decoded);
         Assert.IsTrue(decoded.Contains("runtime.rest.enabled"), decoded);
         Assert.IsTrue(decoded.Contains("entities.any.table"), decoded);
     }
@@ -207,6 +219,126 @@ public class EndToEndTests
         Assert.AreEqual(CliReturnCode.SUCCESS, code, "appname should support absolute config and output paths.");
         Assert.IsTrue(_fileSystem.File.Exists(outputPath), "The absolute output path should be written.");
         Assert.IsTrue(_fileSystem.File.ReadAllText(outputPath).StartsWith("dab_oss_", StringComparison.Ordinal));
+    }
+
+    /// <summary>Inspection must not require a resolvable connection string or create a Key Vault client.</summary>
+    [DataTestMethod]
+    [DataRow("@env('DAB_GENERAL_REVIEW_UNSET_CONNECTION')")]
+    [DataRow("not a connection string")]
+    [DataRow("@akv('database-connection')")]
+    public void TestAppNameReview_InspectsUnresolvedCredentialsOffline(string connectionString)
+    {
+        // The invalid URI fails before any network access if the runtime AKV resolver is invoked.
+        string configJson = $$"""
+        {
+            "data-source": { "database-type": "mssql", "connection-string": "{{connectionString}}" },
+            "azure-key-vault": { "endpoint": "not-a-valid-vault-uri" },
+            "entities": {}
+        }
+        """;
+        _fileSystem!.File.WriteAllText("appname-review.json", configJson);
+
+        int code = Program.Execute(
+            new[] { "appname", "--config", "appname-review.json", "--output", "appname-review.txt" },
+            _cliLogger!, _fileSystem, _runtimeConfigLoader!);
+
+        Assert.AreEqual(CliReturnCode.SUCCESS, code);
+        string telemetry = _fileSystem.File.ReadAllText("appname-review.txt");
+        string[] sections = telemetry[(telemetry.IndexOf('+') + 1)..^1].Split('|');
+        Assert.AreEqual('M', sections[1][5]);
+    }
+
+    /// <summary>Inspection applies the offline policy recursively and preserves global/runtime semantics.</summary>
+    [TestMethod]
+    public void TestAppNameReview_NestedConfigurationsAreOffline()
+    {
+        const string root = """
+        {
+            "data-source-files": ["appname-child.json", "appname-missing.json"],
+            "runtime": { "rest": { "enabled": false } },
+            "entities": {}
+        }
+        """;
+        const string child = """
+        {
+            "data-source": { "database-type": "mssql", "connection-string": "@akv('connection')" },
+            "azure-key-vault": { "endpoint": "not-a-vault-uri" },
+            "data-source-files": ["appname-grandchild.json"],
+            "entities": { "Table": { "source": { "object": "table", "type": "table" }, "permissions": [] } }
+        }
+        """;
+        const string grandchild = """
+        {
+            "data-source": { "database-type": "postgresql", "connection-string": "@akv('connection')" },
+            "azure-key-vault": { "endpoint": "not-a-vault-uri" },
+            "entities": { "View": { "source": { "object": "view", "type": "view" }, "permissions": [] } }
+        }
+        """;
+        _fileSystem!.File.WriteAllText("appname-review.json", root);
+        _fileSystem.File.WriteAllText("appname-child.json", child);
+        _fileSystem.File.WriteAllText("appname-grandchild.json", grandchild);
+
+        int code = Program.Execute(
+            new[] { "appname", "--config", "appname-review.json", "--output", "appname-review.txt" },
+            _cliLogger!, _fileSystem, _runtimeConfigLoader!);
+
+        Assert.AreEqual(CliReturnCode.SUCCESS, code);
+        string telemetry = _fileSystem.File.ReadAllText("appname-review.txt");
+        string[] sections = telemetry[(telemetry.IndexOf('+') + 1)..^1].Split('|');
+        Assert.AreEqual('1', sections[1][4], "Two loaded sources, not three file references.");
+        Assert.AreEqual('M', sections[1][5], "The root has no default connection context.");
+        Assert.AreEqual('0', sections[2][0], "Use the root runtime, not the child's defaults.");
+        Assert.AreEqual("11", sections[3][..2], "Both descendants' entities must be counted.");
+        Assert.IsNull(_runtimeConfigLoader!.RuntimeConfig, "Inspection must not configure or start the runtime loader.");
+        Assert.AreEqual(root, _fileSystem.File.ReadAllText("appname-review.json"));
+        Assert.AreEqual(child, _fileSystem.File.ReadAllText("appname-child.json"));
+    }
+
+    /// <summary>Bad/cyclic child configs fail predictably without runaway recursive loading.</summary>
+    [DataTestMethod]
+    [DataRow("{ not json }")]
+    [DataRow("{\"data-source-files\":[\"appname-review.json\"],\"entities\":{}}")]
+    public void TestAppNameReview_InvalidOrCyclicChildFails(string child)
+    {
+        _fileSystem!.File.WriteAllText("appname-review.json", "{\"data-source-files\":[\"appname-child.json\"],\"entities\":{}}");
+        _fileSystem.File.WriteAllText("appname-child.json", child);
+
+        int code = Program.Execute(
+            new[] { "appname", "--config", "appname-review.json", "--output", "appname-review.txt" },
+            _cliLogger!, _fileSystem, _runtimeConfigLoader!);
+
+        Assert.AreEqual(CliReturnCode.GENERAL_ERROR, code);
+        Assert.IsFalse(_fileSystem.File.Exists("appname-review.txt"));
+    }
+
+    /// <summary>Local environment substitution remains supported without resolving external secrets.</summary>
+    [TestMethod]
+    public void TestAppNameReview_UsesLocalEnvironmentAuthentication()
+    {
+        const string variable = "DAB_GENERAL_REVIEW_CONNECTION";
+        string? original = Environment.GetEnvironmentVariable(variable);
+        try
+        {
+            Environment.SetEnvironmentVariable(variable, "Server=unit-test.invalid;Authentication=Active Directory Managed Identity;");
+            _fileSystem!.File.WriteAllText("appname-review.json", """
+            {
+                "data-source": { "database-type": "mssql", "connection-string": "@env('DAB_GENERAL_REVIEW_CONNECTION')" },
+                "entities": {}
+            }
+            """);
+
+            int code = Program.Execute(
+                new[] { "appname", "--config", "appname-review.json", "--output", "appname-review.txt" },
+                _cliLogger!, _fileSystem, _runtimeConfigLoader!);
+
+            Assert.AreEqual(CliReturnCode.SUCCESS, code);
+            string telemetry = _fileSystem.File.ReadAllText("appname-review.txt");
+            Assert.AreEqual('1', telemetry[(telemetry.IndexOf('+') + 1)..^1].Split('|')[1][5]);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(variable, original);
+        }
     }
 
     /// <summary>

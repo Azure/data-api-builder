@@ -82,6 +82,9 @@ public interface IAuthorizationResolver
     /// <returns>The policy text and typed claim values to bind to it.</returns>
     public ResolvedDatabasePolicy ResolveDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext);
 
+    /// <summary>Audits a configured policy that produced no predicate and rejects the request outside development mode.</summary>
+    public void AuditDatabasePolicyFailOpen(string entityName, string roleName, EntityActionOperation operation, string configuredPolicy);
+
     /// <summary>
     /// Get list of roles defined for entity within runtime configuration.. This is applicable for GraphQL when creating authorization
     /// directive on Object type.

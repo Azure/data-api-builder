@@ -434,7 +434,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         exception: e,
                         message: "{correlationId} Query execution error due to:\n{errorMessage}",
                         correlationId,
-                        e.Message);
+                        DbExceptionParser.GetLogMessage(e));
                     throw DbExceptionParser.Parse(e);
                 }
 
@@ -523,7 +523,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         exception: e,
                         message: "{correlationId} Query execution error due to:\n{errorMessage}",
                         correlationId,
-                        e.Message);
+                        DbExceptionParser.GetLogMessage(e));
                     throw DbExceptionParser.Parse(e);
                 }
             }
@@ -587,7 +587,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 QueryExecutorLogger.LogError(
                     exception: e,
                     message: "Query execution error due to:\n{errorMessage}",
-                    e.Message);
+                    DbExceptionParser.GetLogMessage(e));
                 throw DbExceptionParser.Parse(e);
             }
         }
@@ -604,7 +604,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 QueryExecutorLogger.LogError(
                     exception: e,
                     message: "Query execution error due to:\n{errorMessage}",
-                    e.Message);
+                    DbExceptionParser.GetLogMessage(e));
                 throw DbExceptionParser.Parse(e);
             }
         }
@@ -766,18 +766,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             TResult? jsonResult = default;
 
-            // Parse Results into Json and return
-            if (dbDataReader.HasRows)
-            {
-                string jsonString = await GetJsonStringFromDbReader(dbDataReader);
+            // HasRows is intentionally not checked: for failing queries SqlClient reports HasRows == false and
+            // surfaces the server error only when the reader is advanced, so skipping the read hid the error.
+            string jsonString = await GetJsonStringFromDbReader(dbDataReader);
 
-                ///Json string can be null or empty when the returned result from the db is NULL.
-                ///In dw case when the entire result is a null, a single row with an empty string is returned, owing to the isnullcheck that is done while constructing the json in the query.
-                if (!string.IsNullOrEmpty(jsonString))
-                {
-                    // Make sure to get the complete json string in case of large document.
-                    jsonResult = JsonSerializer.Deserialize<TResult>(jsonString);
-                }
+            ///Json string can be null or empty when the returned result from the db is NULL.
+            ///In dw case when the entire result is a null, a single row with an empty string is returned, owing to the isnullcheck that is done while constructing the json in the query.
+            if (!string.IsNullOrEmpty(jsonString))
+            {
+                // Make sure to get the complete json string in case of large document.
+                jsonResult = JsonSerializer.Deserialize<TResult>(jsonString);
             }
 
             if (jsonResult is null)

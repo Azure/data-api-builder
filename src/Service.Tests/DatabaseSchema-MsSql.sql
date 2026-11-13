@@ -18,6 +18,7 @@ DROP VIEW IF EXISTS unique_without_pk_view;
 DROP VIEW IF EXISTS join_geometry_view;
 DROP VIEW IF EXISTS self_join_geometry_view;
 DROP PROCEDURE IF EXISTS get_books;
+DROP PROCEDURE IF EXISTS echo_xml;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
 DROP PROCEDURE IF EXISTS insert_book;
@@ -64,6 +65,7 @@ IF OBJECT_ID('dbo.temporal_geometry_type_table', 'U') IS NOT NULL
 DROP TABLE IF EXISTS temporal_geometry_type_table;
 DROP TABLE IF EXISTS temporal_geometry_type_table_history;
 DROP TABLE IF EXISTS profiles;
+DROP TABLE IF EXISTS xml_profiles;
 DROP TABLE IF EXISTS trees;
 DROP TABLE IF EXISTS fungi;
 DROP TABLE IF EXISTS empty_table;
@@ -337,6 +339,11 @@ CREATE TABLE decimal_identity_geometry_table(
 CREATE TABLE profiles(
     id int IDENTITY(5001, 1) PRIMARY KEY,
     metadata json NULL
+);
+
+CREATE TABLE xml_profiles(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    content xml NULL
 );
 
 CREATE TABLE trees (
@@ -784,6 +791,17 @@ VALUES
     (5, NULL);
 SET IDENTITY_INSERT profiles OFF
 
+-- XML values deliberately contain double-quoted attributes so tests can verify the
+-- quotes round-trip as valid XML (the JSON wire-escaping is removed on parse).
+SET IDENTITY_INSERT xml_profiles ON
+INSERT INTO xml_profiles(id, content)
+VALUES
+    (1, N'<order id="100"><item>Book</item><qty>2</qty></order>'),
+    (2, N'<config><setting enabled="true" name="cache"/></config>'),
+    (3, N'<note><to>User</to><from>Admin</from></note>'),
+    (4, NULL);
+SET IDENTITY_INSERT xml_profiles OFF
+
 SET IDENTITY_INSERT sales ON
 INSERT INTO sales(id, item_name, subtotal, tax) VALUES (1, 'Watch', 249.00, 20.59), (2, 'Montior', 120.50, 11.12);
 SET IDENTITY_INSERT sales OFF
@@ -891,6 +909,8 @@ EXEC('CREATE PROCEDURE get_publisher_by_id @id int AS
       WHERE id = @id');
 EXEC('CREATE PROCEDURE get_books AS
       SELECT * FROM dbo.books');
+EXEC('CREATE PROCEDURE echo_xml @doc xml AS
+    SELECT @doc AS content');
 EXEC('CREATE PROCEDURE insert_book @title varchar(max), @publisher_id int AS
       INSERT INTO dbo.books(title, publisher_id) VALUES (@title, @publisher_id)');
 EXEC('CREATE PROCEDURE count_books AS

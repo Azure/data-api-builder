@@ -163,6 +163,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             StringAssert.Contains(GetText(result), "mutation failed");
         }
 
+        [DataTestMethod]
+        [DataRow(DataApiBuilderException.SubStatusCodes.DatabaseInputError, "DatabaseInputError")]
+        [DataRow(DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed, "Error")]
+        public async Task ExecuteAsync_MutationException_PreservesDatabaseInputClassification(
+            DataApiBuilderException.SubStatusCodes subStatusCode, string expectedType)
+        {
+            DataApiBuilderException exception = new("Invalid XML value supplied for an xml field.",
+                subStatusCode == DataApiBuilderException.SubStatusCodes.DatabaseInputError
+                    ? HttpStatusCode.BadRequest : HttpStatusCode.InternalServerError,
+                subStatusCode);
+            CallToolResult result = await ExecuteAsync(exception);
+            AssertErrorType(result, expectedType);
+        }
+
         private static async Task<CallToolResult> ExecuteAsync(
             object? mutationOutcome,
             DatabaseObject? dbObject = null,

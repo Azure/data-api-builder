@@ -26,6 +26,8 @@ add GeometryType --config "dab-config.MsSql.json" --source geometry_type_table -
 add TemporalGeometryType --config "dab-config.MsSql.json" --source temporal_geometry_type_table --rest true --graphql true --permissions "anonymous:create,read,update"
 add Profile --config "dab-config.MsSql.json" --source profiles --rest true --graphql true --permissions "anonymous:create,read,delete,update"
 update Profile --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update"
+add XmlProfile --config "dab-config.MsSql.json" --source xml_profiles --rest true --graphql true --permissions "anonymous:create,read,delete,update"
+update XmlProfile --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update"
 add stocks_price --config "dab-config.MsSql.json" --source stocks_price --permissions "authenticated:create,read,update,delete"
 update stocks_price --config "dab-config.MsSql.json" --permissions "anonymous:read"
 update stocks_price --config "dab-config.MsSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read" --fields.exclude "price"
@@ -51,6 +53,7 @@ add User_AutogenRelationshipColumn --config "dab-config.MsSql.json" --source "us
 add User_AutogenToNonAutogenRelationshipColumn --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
 add User_RepeatedReferencingColumnToOneEntity --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
 add UserProfile_RepeatedReferencingColumnToTwoEntities --config "dab-config.MsSql.json" --source "user_profiles" --permissions "anonymous:*" --rest true --graphql true
+add EchoXml --config "dab-config.MsSql.json" --source "echo_xml" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --rest.methods "get" --graphql "EchoXml:EchoXml" --graphql.operation "query"
 add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true --mcp.custom-tool true
 add GetBook --config "dab-config.MsSql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql false --mcp.custom-tool true
 add GetPublisher --config "dab-config.MsSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true --graphql.operation "query" --mcp.custom-tool true

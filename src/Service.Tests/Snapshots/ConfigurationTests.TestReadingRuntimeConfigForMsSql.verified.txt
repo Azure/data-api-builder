@@ -2021,6 +2021,58 @@
       }
     },
     {
+      XmlProfile: {
+        Source: {
+          Object: xml_profiles,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: XmlProfile,
+          Plural: XmlProfiles,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Update
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Update
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       stocks_price: {
         Source: {
           Object: stocks_price,
@@ -3112,6 +3164,36 @@
             ]
           }
         }
+      }
+    },
+    {
+      EchoXml: {
+        Source: {
+          Object: echo_xml,
+          Type: stored-procedure
+        },
+        GraphQL: {
+          Singular: EchoXml,
+          Plural: EchoXml,
+          Enabled: true,
+          Operation: Query
+        },
+        Rest: {
+          Methods: [
+            Get
+          ],
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Execute
+              }
+            ]
+          }
+        ]
       }
     },
     {

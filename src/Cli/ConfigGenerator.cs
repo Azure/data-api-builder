@@ -3030,7 +3030,12 @@ namespace Cli
         /// overrides > environmentConfig > defaultConfig
         /// Also preforms validation to check connection string is not null or empty.
         /// </summary>
-        public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        /// <param name="startEngine">Receives the engine args; defaults to launching the engine.</param>
+        public static bool TryStartEngineWithOptions(
+            StartOptions options,
+            FileSystemRuntimeConfigLoader loader,
+            IFileSystem fileSystem,
+            Func<string[], bool>? startEngine = null)
         {
             if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile, options.CliBuffer))
             {
@@ -3153,7 +3158,7 @@ namespace Cli
                 args.Add(effectiveRole);
             }
 
-            return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
+            return (startEngine ?? Azure.DataApiBuilder.Service.Program.StartEngine)(args.ToArray());
         }
 
         /// <summary>

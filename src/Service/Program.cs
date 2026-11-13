@@ -107,12 +107,7 @@ namespace Azure.DataApiBuilder.Service
                     return false;
                 }
 
-                // Initialize log level EARLY, before building the host.
-                // This ensures logging filters are effective during the entire host build process.
-                // For MCP mode, we also read the config file early to check for log level override.
-                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding, out bool isLogLevelLegacy);
-
-                LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverriding, isConfigOverriding, isLogLevelLegacy);
+                LogLevel initialLogLevel = InitializeLogLevel(args, runMcpStdio);
 
                 // For MCP stdio mode, redirect Console.Out to keep stdout clean for JSON-RPC.
                 // MCP SDK uses Console.OpenStandardOutput() which gets the real stdout, unaffected by this redirect.
@@ -171,6 +166,23 @@ namespace Azure.DataApiBuilder.Service
                 // SynchronizationContext, and graceful draining has a shared two-second budget.
                 productTelemetry.StopAsync().GetAwaiter().GetResult();
             }
+        }
+
+        /// <summary>
+        /// Resolves the initial log level from the engine args (and, in MCP stdio mode, the config file)
+        /// and applies it to <see cref="LogLevelProvider"/> and <see cref="Startup"/>.
+        /// Must run before the host is built so logging filters apply during host construction.
+        /// </summary>
+        /// <param name="args">Engine arguments that may contain --log-level or --LogLevel.</param>
+        /// <param name="runMcpStdio">Whether the engine runs in MCP stdio mode.</param>
+        /// <returns>The resolved initial log level.</returns>
+        public static LogLevel InitializeLogLevel(string[] args, bool runMcpStdio)
+        {
+            LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding, out bool isLogLevelLegacy);
+            LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverriding, isConfigOverriding, isLogLevelLegacy);
+            Startup.MinimumLogLevel = LogLevelProvider.CurrentLogLevel;
+            Startup.IsCliOverriding = LogLevelProvider.IsCliOverriding;
+            return initialLogLevel;
         }
 
         // Compatibility overload used by external callers that do not pass the runMcpStdio flag.
@@ -246,10 +258,7 @@ namespace Azure.DataApiBuilder.Service
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    // LogLevelProvider was already initialized in StartEngine before CreateHostBuilder.
-                    // Use the already-set values to avoid re-parsing args.
-                    Startup.MinimumLogLevel = LogLevelProvider.CurrentLogLevel;
-                    Startup.IsCliOverriding = LogLevelProvider.IsCliOverriding;
+                    // Startup log level was already set by InitializeLogLevel in StartEngine.
                     ILoggerFactory loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel, stdio: runMcpStdio);
                     ILogger<Startup> startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);

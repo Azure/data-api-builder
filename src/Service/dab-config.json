@@ -20,7 +20,8 @@
     },
     "mcp": {
       "enabled": true,
-      "path": "/mcp"
+      "path": "/mcp",
+      "allowed-hosts": ["*"]
     },
     "host": {
       "cors": {

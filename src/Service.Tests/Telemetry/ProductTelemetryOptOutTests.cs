@@ -152,7 +152,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             Assert.AreEqual(string.Empty, ApplicationNameTelemetry.BuildApplicationNameSegment(config, source));
             Assert.AreEqual(encoded, ApplicationNameTelemetry.EncodeTelemetryString(config, source));
-            Assert.IsTrue(encoded.Contains("+XXSX||", StringComparison.Ordinal));
+            Assert.IsTrue(encoded.EndsWith('+'));
+            string[] sections = encoded[(encoded.IndexOf('+') + 1)..^1].Split('|');
+            Assert.AreEqual(4, sections.Length);
+            Assert.AreEqual("XXSX", sections[0]);
+            Assert.AreEqual(6, sections[1].Length, "Main now populates the previously reserved General section.");
+            Assert.AreEqual(20, sections[2].Length);
+            Assert.AreEqual(14, sections[3].Length);
         }
 
         [DataTestMethod]
@@ -365,6 +371,46 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         }
 
         [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL, false, 32)]
+        [DataRow(DatabaseType.MSSQL, false, 64)]
+        [DataRow(DatabaseType.MSSQL, false, 65)]
+        [DataRow(DatabaseType.MSSQL, false, 66)]
+        [DataRow(DatabaseType.MSSQL, false, 70)]
+        [DataRow(DatabaseType.MSSQL, false, 127)]
+        [DataRow(DatabaseType.MSSQL, false, 128)]
+        [DataRow(DatabaseType.MSSQL, true, 32)]
+        [DataRow(DatabaseType.MSSQL, true, 70)]
+        [DataRow(DatabaseType.DWSQL, false, 32)]
+        [DataRow(DatabaseType.DWSQL, false, 70)]
+        public void GlobalOptOut_PreservesSqlLengthAndConservativeOwnershipBoundaries(DatabaseType databaseType, bool hosted, int prefixLength)
+        {
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, hosted ? "dab_hosted" : null);
+            string prefix = new('a', prefixLength);
+            string original = CreateConnectionStringBuilder(databaseType, prefix).ConnectionString;
+            DataSource source = new(databaseType, original);
+            string fullSegment = ApplicationNameTelemetry.EncodeTelemetryString(CreateConfig(source), source);
+            string decorated = Rewrite(databaseType, original, withConfig: true);
+            using SqlConnection validConnection = new(decorated);
+            string actualName = new SqlConnectionStringBuilder(decorated).ApplicationName;
+            int available = 128 - prefixLength - 1;
+            string expectedName = available > 0 ? prefix + "," + fullSegment[..Math.Min(available, fullSegment.Length)] : prefix;
+            Assert.AreEqual(expectedName, actualName);
+            Assert.IsTrue(actualName.Length <= 128);
+            Assert.AreEqual(decorated, Rewrite(databaseType, decorated, withConfig: true));
+
+            Environment.SetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR, "true");
+            foreach (bool withConfig in new[] { false, true })
+            {
+                Assert.AreEqual(original, Rewrite(databaseType, original, withConfig), "Opt-out never adds a new segment to the original connection string.");
+                bool completeSegment = available >= fullSegment.Length;
+                // Preserve both contracts: main fits only the DAB suffix to the provider limit;
+                // opt-out never guesses ownership of a truncated value supplied by a caller.
+                // Reuse the undecorated input to opt out when a previous value was truncated.
+                Assert.AreEqual(completeSegment ? original : decorated, Rewrite(databaseType, decorated, withConfig));
+            }
+        }
+
+        [DataTestMethod]
         [DataRow(DatabaseType.MSSQL, true)]
         [DataRow(DatabaseType.MSSQL, false)]
         [DataRow(DatabaseType.DWSQL, true)]
@@ -426,6 +472,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [DataRow("hash==|my_dab_app,dab_hosted_1.2.3" + PAYLOAD, "hash==|my_dab_app")]
         [DataRow("Customer,dab_oss_1.2.3,dab_hosted_2.3.4" + PAYLOAD, "Customer")]
         [DataRow("Customer,dab_hosted_9.8.7+XXPXQ|10|MMMM00MMM00MMMMMMMMM9|MMM?MMMMMMMMM?9+", "Customer")]
+        [DataRow("Customer,dab_oss_1.2.3+XXSX|L1AC01|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?+", "Customer")]
+        [DataRow("hash==|Customer,dab_hosted_1.2.3+XXPX|W0LN10|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?+", "hash==|Customer")]
+        [DataRow("Customer,dab_oss_1.2.3+XXSX|L1AC019|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?+", "Customer")]
+        [DataRow("Customer,dab_oss_1.2.3+XXSX|L1AC01|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?", "Customer,dab_oss_1.2.3+XXSX|L1AC01|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?")]
+        [DataRow("Customer,dab_oss_1.2.3+XXSX|L1AC01|MMM|MM+", "Customer,dab_oss_1.2.3+XXSX|L1AC01|MMM|MM+")]
         [DataRow("my_dab_app", "my_dab_app")]
         [DataRow("my_dab_oss_1.2.3", "my_dab_oss_1.2.3")]
         [DataRow("Customer,dab_custom_1.2.3" + PAYLOAD, "Customer,dab_custom_1.2.3" + PAYLOAD)]

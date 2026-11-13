@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
@@ -31,6 +32,7 @@ using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -105,6 +107,7 @@ namespace Azure.DataApiBuilder.Service
 
         private readonly HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
         private RuntimeConfigProvider? _configProvider;
+        internal EngineTelemetrySession? ProductTelemetry { get; set; }
         private ILogger<Startup> _logger = logger;
         private LogBuffer _logBuffer = new();
 
@@ -131,8 +134,26 @@ namespace Azure.DataApiBuilder.Service
                 null);
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, _hotReloadEventHandler, configFileName, connectionString);
-            RuntimeConfigProvider configProvider = new(configLoader);
+            // Capture one owner for all registrations/callbacks, even if the startup property
+            // is replaced later. Embedded/default hosts never opt in through ambient environment alone.
+            EngineTelemetrySession productTelemetry = ProductTelemetry ??= EngineTelemetrySession.Create();
+            services.AddSingleton(productTelemetry);
+            services.AddSingleton<IProductTelemetryControl>(productTelemetry);
+            services.AddSingleton<EngineTelemetryHosting>();
+            services.AddHostedService(sp => sp.GetRequiredService<EngineTelemetryHosting>());
+            RuntimeConfigProvider configProvider = new(configLoader) { ProductTelemetry = productTelemetry };
             _configProvider = configProvider;
+            configLoader.TelemetryReloadCompleted = (acceptedConfig, accepted, failureStage) =>
+            {
+                if (accepted && acceptedConfig is not null)
+                {
+                    productTelemetry.AcceptConfiguration(acceptedConfig, "hot_reload", configLoader.ConfigFilePath);
+                }
+                else
+                {
+                    productTelemetry.ConfigurationChangeFailed(failureStage);
+                }
+            };
 
             services.AddSingleton(fileSystem);
             services.AddSingleton<FileSystemRuntimeConfigLoader>(sp => configLoader);
@@ -216,7 +237,9 @@ namespace Azure.DataApiBuilder.Service
                 services.AddSingleton(sp =>
                 {
                     AzureLogAnalyticsOptions options = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
-                    ManagedIdentityCredential credential = new();
+                    // Azure.Identity's former no-argument call also selected SystemAssigned.
+                    // Name it explicitly because the optional-client-ID overload is obsolete.
+                    ManagedIdentityCredential credential = new(ManagedIdentityId.SystemAssigned);
                     LogsIngestionClient logsIngestionClient = new(new Uri(options.Auth!.DceEndpoint!), credential);
                     return new AzureLogAnalyticsFlusherService(options, CustomLogCollector, logsIngestionClient, _logger);
                 });
@@ -366,6 +389,12 @@ namespace Azure.DataApiBuilder.Service
                     _logger.LogInformation($"Configured HealthCheck HttpClient BaseAddress as: {baseUri}");
                     client.DefaultRequestHeaders.Accept.Clear();
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                    EngineTelemetrySession telemetry = serviceProvider.GetRequiredService<EngineTelemetrySession>();
+                    if (telemetry.IsEnabled && telemetry.HealthProbeToken is string probeToken)
+                    {
+                        client.DefaultRequestHeaders.Add(EngineTelemetryHealthProbe.HEADER_NAME, probeToken);
+                    }
+
                     client.Timeout = TimeSpan.FromSeconds(200);
                 })
                 .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
@@ -461,7 +490,7 @@ namespace Azure.DataApiBuilder.Service
                         IHttpClientFactory httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
                         HttpClient httpClient = httpClientFactory.CreateClient(nameof(EmbeddingService));
 
-                        return new EmbeddingService(httpClient, embeddingsOptions, logger, cache);
+                        return new EmbeddingService(httpClient, embeddingsOptions, logger, cache) { ProductTelemetry = productTelemetry };
                     });
 
                     _logger.LogInformation(
@@ -508,6 +537,15 @@ namespace Azure.DataApiBuilder.Service
                 {
                     options.FactoryErrorsLogLevel = LogLevel.Debug;
                     options.EventHandlingErrorsLogLevel = LogLevel.Debug;
+                    // Synthetic-only trade-off: synchronous dispatch keeps layer counters inside
+                    // the request scope, but applies to ALL handlers on this cache, not just ours.
+                    // Third-party handlers therefore add their work/latency to the caller. Do not
+                    // use this validation setting as evidence of production performance parity.
+                    if (productTelemetry.IsEnabled)
+                    {
+                        options.EnableSyncEventHandlersExecution = true;
+                    }
+
                     string? cachePartition = runtimeConfig?.Runtime?.Cache?.Level2?.Partition;
                     if (string.IsNullOrWhiteSpace(cachePartition) == false)
                     {
@@ -686,6 +724,8 @@ namespace Azure.DataApiBuilder.Service
                 // See docs/design/HC16-upgrade.md for the full rationale.
                 .ModifyOptions(options => options.LazyInitialization = true)
                 .AddInstrumentation()
+                .AddDiagnosticEventListener(serviceProvider => new EngineTelemetryGraphQLListener(
+                    serviceProvider.GetRootServiceProvider().GetRequiredService<EngineTelemetrySession>()))
                 .AddType(new DateTimeType(new DateTimeOptions { ValidateInputFormat = !(graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true) }))
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
@@ -924,6 +964,8 @@ namespace Azure.DataApiBuilder.Service
 
             app.UseRouting();
 
+            app.UseMiddleware<EngineTelemetryHttpMiddleware>();
+
             // Adding CORS Middleware
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Cors is not null)
             {
@@ -1030,7 +1072,7 @@ namespace Azure.DataApiBuilder.Service
                         controller.ControllerContext = new ControllerContext { HttpContext = context };
                         IActionResult result = await controller.PostAsync(embedPath.TrimStart('/'));
                         await result.ExecuteResultAsync(controller.ControllerContext);
-                    });
+                    }).WithMetadata(EngineTelemetryEmbeddingEndpointMetadata.Instance);
                 }
 
                 endpoints.MapControllers();
@@ -1413,12 +1455,17 @@ namespace Azure.DataApiBuilder.Service
         /// <returns>Indicates if the runtime is ready to accept requests.</returns>
         private async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
         {
+            TelemetryFailureStage stage = TelemetryFailureStage.Configuration;
+            TelemetryFailureContext? failure = ProductTelemetry?.IsEnabled == true ? TelemetryFailureContext.Current ?? new() : null;
+            using IDisposable? failureScope = TelemetryFailureContext.Enter(failure);
             try
             {
+                RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig runtimeConfig =
                     await RuntimeInitializationHelper.InitializeRuntimeDependenciesAsync(
                         app.ApplicationServices);
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
+                stage = TelemetryFailureStage.Metadata;
                 IMetadataProviderFactory sqlMetadataProviderFactory =
                     app.ApplicationServices.GetRequiredService<IMetadataProviderFactory>();
 
@@ -1428,6 +1475,7 @@ namespace Azure.DataApiBuilder.Service
                 // In their constructors, those services consequentially inject
                 // other required services, triggering instantiation. Such recursive nature of DI and
                 // service instantiation results in the activation of all required services.
+                stage = TelemetryFailureStage.Serving;
                 GraphQLSchemaCreator graphQLSchemaCreator =
                     app.ApplicationServices.GetRequiredService<GraphQLSchemaCreator>();
 
@@ -1442,10 +1490,13 @@ namespace Azure.DataApiBuilder.Service
                 if (runtimeConfig.IsDevelopmentMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
+                    stage = TelemetryFailureStage.Validation;
                     runtimeConfigValidator.ValidateRelationshipConfigCorrectness(runtimeConfig);
+                    stage = TelemetryFailureStage.Metadata;
                     runtimeConfigValidator.ValidateRelationships(runtimeConfig, sqlMetadataProviderFactory!);
                 }
 
+                stage = TelemetryFailureStage.Serving;
                 // OpenAPI document creation is only attempted for REST supporting database types.
                 // CosmosDB is not supported for OpenAPI document creation.
                 if (!runtimeConfig.CosmosDataSourceUsed)
@@ -1466,10 +1517,37 @@ namespace Azure.DataApiBuilder.Service
                 }
 
                 _logger.LogInformation("Successfully completed runtime initialization.");
+                if (ProductTelemetry?.IsEnabled == true && !runtimeConfigProvider.IsLateConfigured &&
+                    runtimeConfigProvider.TryGetLoadedConfig(out RuntimeConfig? acceptedConfig))
+                {
+                    // Metadata initialization can replace the model when it expands autoentities.
+                    // Capture the configuration now used for serving, not the pre-initialization copy.
+                    ProductTelemetry.AcceptConfiguration(acceptedConfig, "startup",
+                        runtimeConfigProvider.ConfigFilePath, onlyIfUnconfigured: true);
+                }
+
                 return true;
             }
             catch (Exception ex)
             {
+                // Annotate before converting the failure to false. The provider's outer
+                // observer owns late-config reporting and can distinguish concurrent attempts.
+                failure?.RecordFailure(stage);
+                TelemetryFailureStage failureStage = failure?.FailureStage ?? stage;
+                // RuntimeConfigProvider owns late-configuration failure reporting, including
+                // parse/merge and post-parse initialization failures, exactly once per attempt.
+                if (_configProvider?.IsLateConfigured != true)
+                {
+                    if (ProductTelemetry?.IsReady == true)
+                    {
+                        ProductTelemetry.ConfigurationChangeFailed(failureStage);
+                    }
+                    else
+                    {
+                        ProductTelemetry?.StartupFailed(failureStage);
+                    }
+                }
+
                 _logger.LogError(exception: ex, message: "Unable to complete runtime initialization. Refer to exception for error details.");
                 return false;
             }
@@ -1630,6 +1708,7 @@ namespace Azure.DataApiBuilder.Service
             EmbeddingsOptions embeddingsOptions,
             bool runtimeConfigAvailable)
         {
+            EngineTelemetrySession? productTelemetry = ProductTelemetry;
             if (!embeddingsOptions.IsCachingEnabled)
             {
                 _logger.LogInformation("Embeddings caching is disabled");
@@ -1644,6 +1723,12 @@ namespace Azure.DataApiBuilder.Service
                 {
                     options.FactoryErrorsLogLevel = LogLevel.Debug;
                     options.EventHandlingErrorsLogLevel = LogLevel.Debug;
+                    // Same synthetic-only trade-off as the default cache: ALL subscribers
+                    // execute on the caller, including any unrelated embedding-cache handlers.
+                    if (productTelemetry?.IsEnabled == true)
+                    {
+                        options.EnableSyncEventHandlersExecution = true;
+                    }
                 })
                 .WithDefaultEntryOptions(new FusionCacheEntryOptions
                 {

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <!-- Applies only to this test process, not the developer's user/machine environment. -->
+      <APPLICATIONINSIGHTS_STATSBEAT_DISABLED>true</APPLICATIONINSIGHTS_STATSBEAT_DISABLED>
+      <APPLICATIONINSIGHTS_SDKSTATS_DISABLED>true</APPLICATIONINSIGHTS_SDKSTATS_DISABLED>
+    </EnvironmentVariables>
+  </RunConfiguration>
+</RunSettings>

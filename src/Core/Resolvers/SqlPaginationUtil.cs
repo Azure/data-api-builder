@@ -6,6 +6,8 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
@@ -157,15 +159,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElementCount - 1);
                     connection.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME,
-                        MakeCursorFromJsonElement(
-                            lastElemInRoot,
-                            paginationMetadata.Structure!.PrimaryKey(),
-                            paginationMetadata.Structure!.OrderByColumns,
-                            paginationMetadata.Structure!.EntityName,
-                            paginationMetadata.Structure!.DatabaseObject.SchemaName,
-                            paginationMetadata.Structure!.DatabaseObject.Name,
-                            paginationMetadata.Structure!.MetadataProvider,
-                            paginationMetadata.RequestedGroupBy));
+                        paginationMetadata.Structure!.CreatePaginationCursor(lastElemInRoot, paginationMetadata.RequestedGroupBy));
                 }
             }
 
@@ -205,19 +199,36 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Extracts the columns from the JsonElement needed for pagination, represents them as a string in json format and base64 encodes.
-        /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
-        /// without needing to understand how it works.
+        /// Base64 encoding does not provide confidentiality, so every cursor field must be readable by the caller.
         /// </summary>
         public static string MakeCursorFromJsonElement(
             JsonElement element,
             List<string> primaryKey,
             List<OrderByColumn>? orderByColumns,
+            IAuthorizationResolver authorizationResolver,
+            string roleName,
             string entityName = "",
             string schemaName = "",
             string tableName = "",
             ISqlMetadataProvider? sqlMetadataProvider = null,
             bool isGroupByQuery = false)
         {
+            IEnumerable<string> cursorColumns = orderByColumns?.Select(column => column.ColumnName) ?? Enumerable.Empty<string>();
+            if (!isGroupByQuery)
+            {
+                cursorColumns = cursorColumns.Concat(primaryKey);
+            }
+
+            IEnumerable<string> exposedCursorColumns = cursorColumns.Distinct()
+                .Select(column => GetExposedColumnName(entityName, column, sqlMetadataProvider));
+            if (!authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName, EntityActionOperation.Read, exposedCursorColumns))
+            {
+                throw new DataApiBuilderException(
+                    message: DataApiBuilderException.PAGINATION_FIELD_AUTHZ_FAILURE,
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
             List<NextLinkField> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
             // Hash set is used here to maintain linear runtime

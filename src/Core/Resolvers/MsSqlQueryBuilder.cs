@@ -96,13 +96,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     // When there is no DML trigger enabled on the table for insert operation, we can use OUTPUT clause to return the data.
                     insertQuery.Append($"INSERT INTO {tableName} ({insertColumns}) OUTPUT " +
-                        $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} ");
+                        $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString(), sourceDefinition)} ");
                     insertQuery.Append(values);
                 }
                 else
                 {
                     insertQuery.Append($"INSERT INTO {tableName} OUTPUT " +
-                        $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} DEFAULT VALUES");
+                        $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString(), sourceDefinition)} DEFAULT VALUES");
                 }
             }
             else
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // Build the subsequent select query to return the inserted data. By the time the subsequent select executes,
                 // the trigger would have already executed and we get the data as it is present in the table.
-                StringBuilder subsequentSelect = new($"SELECT {MakeOutputColumns(structure.OutputColumns, tableName)} FROM {tableName} ");
+                StringBuilder subsequentSelect = new($"SELECT {MakeOutputColumns(structure.OutputColumns, tableName, sourceDefinition)} FROM {tableName} ");
 
                 if (nonAutoGenPKColumns.Count > 0)
                 {
@@ -221,7 +221,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                    structure.GetDbPolicyForOperation(EntityActionOperation.Update),
                                    Build(structure.Predicates));
             string columnsToBeReturned =
-                MakeOutputColumns(structure.OutputColumns, isUpdateTriggerEnabled ? string.Empty : OutputQualifier.Inserted.ToString());
+                MakeOutputColumns(structure.OutputColumns, isUpdateTriggerEnabled ? string.Empty : OutputQualifier.Inserted.ToString(), sourceDefinition);
 
             StringBuilder updateQuery = new($"UPDATE {tableName} SET {Build(structure.UpdateOperations, ", ")} ");
 
@@ -284,8 +284,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             string updateOperations = Build(structure.UpdateOperations, ", ");
             string columnsToBeReturned =
-                MakeOutputColumns(structure.OutputColumns, isUpdateTriggerEnabled ? string.Empty : OutputQualifier.Inserted.ToString());
-            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
+                MakeOutputColumns(structure.OutputColumns, isUpdateTriggerEnabled ? string.Empty : OutputQualifier.Inserted.ToString(), sourceDefinition);
+            // Insert-capable upserts must serialize the existence decision with competing upserts for
+            // the same key. UPDLOCK avoids lock-conversion deadlocks and HOLDLOCK retains the key-range
+            // lock (including a missing-key range) through the ambient transaction. Update-only fallback
+            // queries do not have an insert race and retain the existing locking behavior.
+            string existenceCheckTable = structure.IsFallbackToUpdate
+                ? tableName
+                : $"{tableName} WITH (UPDLOCK, HOLDLOCK)";
+            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {existenceCheckTable} WHERE {pkPredicates}";
 
             // Query to get the number of records with a given PK.
             string prefixQuery = $"DECLARE @ROWS_TO_UPDATE int;" +
@@ -344,7 +351,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         // This is just an optimisation. If update trigger is enabled, then this build method had created
                         // columnsToBeReturned without the Inserted prefix.
-                        columnsToBeReturned = MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString());
+                        columnsToBeReturned = MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString(), sourceDefinition);
                     }
 
                     insertQuery.Append($"OUTPUT {columnsToBeReturned}");
@@ -355,7 +362,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     // This is again just an optimisation. If update trigger was enabled, then the columnsToBeReturned would
                     // have already been created without any prefix.
-                    columnsToBeReturned = MakeOutputColumns(structure.OutputColumns, string.Empty);
+                    columnsToBeReturned = MakeOutputColumns(structure.OutputColumns, string.Empty, sourceDefinition);
                 }
 
                 // Query to fetch the column values to be inserted into the entity.
@@ -414,10 +421,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// qualifier Inserted return
         /// Inserted.ColumnName1 AS {Label1}, Inserted.ColumnName2 AS {Label2},
         /// Inserted.ColumnName3 AS {Label3}
+        /// xml columns are wrapped as CAST(Inserted.ColumnName AS NVARCHAR(MAX)) AS {Label}.
         /// </summary>
-        private string MakeOutputColumns(List<LabelledColumn> columns, string columnPrefix)
+        private string MakeOutputColumns(List<LabelledColumn> columns, string columnPrefix, SourceDefinition sourceDefinition)
         {
-            return string.Join(", ", columns.Select(c => Build(c, columnPrefix)));
+            return string.Join(", ", columns.Select(column =>
+            {
+                if (sourceDefinition.Columns.TryGetValue(column.ColumnName, out ColumnDefinition? definition)
+                    && definition.SqlDbType == SqlDbType.Xml)
+                {
+                    return $"CAST({QualifyColumn(column, columnPrefix)} AS NVARCHAR(MAX)) AS {QuoteIdentifier(column.Label)}";
+                }
+
+                return Build(column, columnPrefix);
+            }));
         }
 
         /// <summary>
@@ -426,12 +443,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private string Build(LabelledColumn column, string columnPrefix)
         {
-            if (string.IsNullOrEmpty(columnPrefix))
-            {
-                return $"{QuoteIdentifier(column.ColumnName)} AS {QuoteIdentifier(column.Label)}";
-            }
+            return $"{QualifyColumn(column, columnPrefix)} AS {QuoteIdentifier(column.Label)}";
+        }
 
-            return $"{columnPrefix}.{QuoteIdentifier(column.ColumnName)} AS {QuoteIdentifier(column.Label)}";
+        private string QualifyColumn(LabelledColumn column, string columnPrefix)
+        {
+            return string.IsNullOrEmpty(columnPrefix)
+                ? QuoteIdentifier(column.ColumnName)
+                : $"{columnPrefix}.{QuoteIdentifier(column.ColumnName)}";
         }
 
         /// <summary>
@@ -692,7 +711,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     N'geometry',
                                     N'hierarchyid',
                                     N'sql_variant',
-                                    N'xml',
                                     N'rowversion'
                                 )
                         ) THEN 1
@@ -737,7 +755,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     N'geometry',
                                     N'hierarchyid',
                                     N'sql_variant',
-                                    N'xml',
                                     N'rowversion'
                                 )
                         )

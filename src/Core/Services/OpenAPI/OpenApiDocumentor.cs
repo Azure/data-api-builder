@@ -86,6 +86,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            args.CancellationToken.ThrowIfCancellationRequested();
             CreateDocument(doOverrideExistingDocument: true);
             _roleSpecificDocuments.Clear(); // Clear role-specific document cache on config change
         }
@@ -229,7 +230,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 Info = new OpenApiInfo
                 {
                     Version = ProductInfo.GetProductVersion(),
-                    Title = title
+                    Title = title,
+                    Description = runtimeConfig.Runtime?.Mcp?.Description
                 },
                 Servers = new List<OpenApiServer>
                 {

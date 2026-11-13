@@ -47,6 +47,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// ParseResultIntoJsonDocument must return null for an undefined JsonElement from an empty cached read
+        /// to avoid a serialization exception.
+        /// </summary>
+        [TestMethod]
+        public void ParseResultIntoJsonDocument_UndefinedElement_ReturnsNull()
+        {
+            JsonElement? undefined = default(JsonElement);
+            MethodInfo method = typeof(SqlQueryEngine).GetMethod(
+                "ParseResultIntoJsonDocument",
+                BindingFlags.Static | BindingFlags.NonPublic)!;
+
+            JsonDocument? result = (JsonDocument?)method.Invoke(null, new object?[] { undefined });
+
+            Assert.IsNull(result);
+        }
+
+        /// <summary>
         /// Verifies stored-procedure execution returns the first result object and maps empty or absent result arrays to null.
         /// </summary>
         [DataTestMethod]

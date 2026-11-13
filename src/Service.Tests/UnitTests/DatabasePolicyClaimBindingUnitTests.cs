@@ -5,7 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Net;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -16,6 +19,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -33,6 +37,105 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private const string ENTITY_NAME = AuthorizationHelpers.TEST_ENTITY;
         private const string ROLE_NAME = AuthorizationHelpers.TEST_ROLE;
         private const EntityActionOperation OPERATION = EntityActionOperation.Read;
+
+        /// <summary>Verifies a configured policy with no parsed filter is audited and rejected in production.</summary>
+        [DataTestMethod]
+        [DataRow(HostMode.Development, "@item.&$top=1", DisplayName = "Development empty filter with top logs a warning")]
+        [DataRow(HostMode.Production, "@item.&$top=1", DisplayName = "Production empty filter with top logs an error and fails")]
+        [DataRow(HostMode.Development, "@item.&$skip=1", DisplayName = "Development empty filter with skip logs a warning")]
+        [DataRow(HostMode.Production, "@item.&$skip=1", DisplayName = "Production empty filter with skip logs an error and fails")]
+        [DataRow(HostMode.Development, "@item.&$orderby=id", DisplayName = "Development empty filter with orderby logs a warning")]
+        [DataRow(HostMode.Production, "@item.&$orderby=id", DisplayName = "Production empty filter with orderby logs an error and fails")]
+        [DataRow(HostMode.Development, "@item.&$select=id", DisplayName = "Development empty filter with select logs a warning")]
+        [DataRow(HostMode.Production, "@item.&$select=id", DisplayName = "Production empty filter with select logs an error and fails")]
+        [DataRow(HostMode.Development, "@item.&$top=1&$skip=1", DisplayName = "Development empty filter with multiple options logs a warning")]
+        [DataRow(HostMode.Production, "@item.&$top=1&$skip=1", DisplayName = "Production empty filter with multiple options logs an error and fails")]
+        public void ProcessAuthorizationPolicies_NullParsedPolicy_AuditsAccordingToHostMode(HostMode hostMode, string policy)
+        {
+            RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: ENTITY_NAME, roleName: ROLE_NAME, operation: OPERATION, databasePolicy: policy);
+            config = config with
+            {
+                Runtime = config.Runtime! with { Host = config.Runtime.Host! with { Mode = hostMode } }
+            };
+            Mock<ILogger<IAuthorizationResolver>> logger = new();
+            AuthorizationResolver resolver = AuthorizationHelpers.InitAuthorizationResolver(config, logger.Object);
+            DefaultHttpContext context = new();
+            context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = ROLE_NAME;
+            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
+            TestSqlQueryStructure structure = new(metadataProvider.Object, resolver);
+
+            ResolvedDatabasePolicy resolvedPolicy = resolver.ResolveDBPolicy(ENTITY_NAME, ROLE_NAME, OPERATION, context);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(resolvedPolicy.Policy));
+            Assert.IsNull(AuthorizationPolicyHelpers.GetDBPolicyClauseForQueryStructure(
+                resolvedPolicy,
+                ENTITY_NAME,
+                $"{ENTITY_NAME}.{metadataProvider.Object.EntityToDatabaseObject[ENTITY_NAME].FullName}",
+                metadataProvider.Object));
+
+            if (hostMode == HostMode.Production)
+            {
+                DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                    AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(OPERATION, structure, context, resolver, metadataProvider.Object));
+                Assert.AreEqual(HttpStatusCode.Forbidden, exception.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure, exception.SubStatusCode);
+            }
+            else
+            {
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(OPERATION, structure, context, resolver, metadataProvider.Object);
+            }
+
+            var log = logger.Invocations.Single(invocation => invocation.Method.Name == nameof(ILogger.Log));
+            Assert.AreEqual(hostMode == HostMode.Development ? LogLevel.Warning : LogLevel.Error, log.Arguments[0]);
+            Dictionary<string, object?> audit = ((IEnumerable<KeyValuePair<string, object?>>)log.Arguments[2])
+                .ToDictionary(property => property.Key, property => property.Value);
+            Assert.AreEqual(ENTITY_NAME, audit["Entity"]);
+            Assert.AreEqual(ROLE_NAME, audit["Role"]);
+            Assert.AreEqual(OPERATION, audit["Operation"]);
+            Assert.AreEqual(policy, audit["PolicyText"]);
+            Assert.AreEqual(false, audit["DbPolicyApplied"]);
+            Assert.AreEqual(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(policy))), audit["PredicateHash"]);
+            Assert.IsFalse(string.IsNullOrWhiteSpace((string)audit["Reason"]!));
+            AssertParameterValues(structure);
+        }
+
+        /// <summary>Verifies unconfigured and valid policies remain unaffected by the parsed-filter guard.</summary>
+        [DataTestMethod]
+        [DataRow(HostMode.Development, null, DisplayName = "Development missing policy is allowed")]
+        [DataRow(HostMode.Production, null, DisplayName = "Production missing policy is allowed")]
+        [DataRow(HostMode.Development, "", DisplayName = "Development empty policy is allowed")]
+        [DataRow(HostMode.Production, "", DisplayName = "Production empty policy is allowed")]
+        [DataRow(HostMode.Development, "@item.intCol eq 1", DisplayName = "Development valid policy is applied")]
+        [DataRow(HostMode.Production, "@item.intCol eq 1", DisplayName = "Production valid policy is applied")]
+        public void ProcessAuthorizationPolicies_UnconfiguredOrValidPolicy_DoesNotAudit(HostMode hostMode, string policy)
+        {
+            RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: ENTITY_NAME, roleName: ROLE_NAME, operation: OPERATION, databasePolicy: policy);
+            config = config with
+            {
+                Runtime = config.Runtime! with { Host = config.Runtime.Host! with { Mode = hostMode } }
+            };
+            Mock<ILogger<IAuthorizationResolver>> logger = new();
+            AuthorizationResolver resolver = AuthorizationHelpers.InitAuthorizationResolver(config, logger.Object);
+            DefaultHttpContext context = new();
+            context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = ROLE_NAME;
+            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
+            TestSqlQueryStructure structure = new(metadataProvider.Object, resolver);
+
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(OPERATION, structure, context, resolver, metadataProvider.Object);
+
+            logger.VerifyNoOtherCalls();
+            if (!string.IsNullOrEmpty(policy))
+            {
+                Assert.AreEqual("([intCol] = @param0)", structure.GetDbPolicyForOperation(OPERATION));
+                AssertParameterValues(structure, 1);
+            }
+            else
+            {
+                Assert.IsTrue(string.IsNullOrEmpty(structure.GetDbPolicyForOperation(OPERATION)));
+                AssertParameterValues(structure);
+            }
+        }
 
         /// <summary>
         /// Verifies that encoded and literal syntax remains claim data throughout the complete

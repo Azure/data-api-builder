@@ -139,6 +139,43 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Verifies sort-field precedence and descending secondary ordering when the first field has duplicate values.
+        /// </summary>
+        [TestMethod]
+        public async Task ReadRecords_WithMultipleOrderByFields_RespectsFieldPrecedence()
+        {
+            CallToolResult result = await ExecuteReadAsync(
+                "Book",
+                select: "id,publisher_id",
+                filter: "id ge 1 and id le 8",
+                orderby: new[] { "publisher_id asc", "id desc" },
+                first: 8);
+
+            AssertSuccess(result, "ReadRecords with multiple orderby fields should succeed.");
+
+            JsonElement records = GetRecordsArray(ParseResultRoot(result));
+
+            // The seeded books include repeated publishers. This sequence differs from both
+            // global id-descending order and the default id-ascending primary-key tie-breaker.
+            (int Id, int PublisherId)[] expected =
+            {
+                (2, 1234), (1, 1234),
+                (5, 2323),
+                (8, 2324), (7, 2324), (6, 2324),
+                (4, 2345), (3, 2345)
+            };
+
+            Assert.AreEqual(expected.Length, records.GetArrayLength(), "All eight seeded books should be returned.");
+            for (int i = 0; i < expected.Length; i++)
+            {
+                Assert.AreEqual(expected[i].PublisherId, records[i].GetProperty("publisher_id").GetInt32(),
+                    $"Row {i} should respect publisher_id as the primary ascending sort field.");
+                Assert.AreEqual(expected[i].Id, records[i].GetProperty("id").GetInt32(),
+                    $"Row {i} should respect id descending within each publisher.");
+            }
+        }
+
+        /// <summary>
         /// Reads records with first parameter to limit page size.
         /// </summary>
         [TestMethod]

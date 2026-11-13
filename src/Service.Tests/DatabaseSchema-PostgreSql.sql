@@ -20,6 +20,7 @@ DROP TABLE IF EXISTS foo.magazines;
 DROP TABLE IF EXISTS bar.magazines;
 DROP TABLE IF EXISTS stocks_price;
 DROP TABLE IF EXISTS stocks;
+DROP TABLE IF EXISTS fixed_width_key_upsert;
 DROP TABLE IF EXISTS comics;
 DROP TABLE IF EXISTS brokers;
 DROP TABLE IF EXISTS array_type_table;
@@ -135,6 +136,11 @@ CREATE TABLE stocks(
     "piecesAvailable" int DEFAULT 0,
     "piecesRequired" int DEFAULT 0 NOT NULL,
     PRIMARY KEY(categoryid, pieceid)
+);
+
+CREATE TABLE fixed_width_key_upsert(
+    id character(8) PRIMARY KEY,
+    value int NOT NULL
 );
 
 CREATE TABLE stocks_price(

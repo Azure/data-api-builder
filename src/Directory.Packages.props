@@ -3,22 +3,23 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.2" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="9.5.2" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="9.5.2" />
-    <PackageVersion Include="Azure.Core" Version="1.47.1" />
-    <PackageVersion Include="Azure.Identity" Version="1.17.1" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.5" />
+    <PackageVersion Include="Azure.Core" Version="1.62.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Monitor.Ingestion" Version="1.1.2" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.9.0" />
     <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.6.0" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="coverlet.msbuild" Version="6.0.2" />
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
-    <PackageVersion Include="HotChocolate" Version="16.0.0" />
-    <PackageVersion Include="HotChocolate.AspNetCore" Version="16.0.0" />
-    <PackageVersion Include="HotChocolate.AspNetCore.Authorization" Version="16.0.0" />
-    <PackageVersion Include="HotChocolate.Types.NodaTime" Version="16.0.0" />
-    <PackageVersion Include="HotChocolate.Utilities.Introspection" Version="16.0.0" />
-    <PackageVersion Include="HotChocolate.Diagnostics" Version="16.0.0" />
+    <PackageVersion Include="HotChocolate" Version="16.7.3" />
+    <PackageVersion Include="HotChocolate.AspNetCore" Version="16.7.3" />
+    <PackageVersion Include="HotChocolate.AspNetCore.Authorization" Version="16.7.3" />
+    <PackageVersion Include="HotChocolate.Types.NodaTime" Version="16.7.3" />
+    <PackageVersion Include="HotChocolate.Utilities.Introspection" Version="16.7.3" />
+    <PackageVersion Include="HotChocolate.Diagnostics" Version="16.7.3" />
     <PackageVersion Include="Humanizer" Version="2.14.1" />
     <PackageVersion Include="Humanizer.Core" Version="2.14.1" />
     <PackageVersion Include="DotNetEnv" Version="3.0.0" />
@@ -33,15 +34,16 @@
     <PackageVersion Include="Microsoft.Azure.Cosmos" Version="3.38.1" />
     <PackageVersion Include="Microsoft.Azure.StackExchangeRedis" Version="3.3.1" />
     <!-- Pinned to override the vulnerable MessagePack 2.5.192 pulled in transitively
-         by Aspire.Hosting (KubernetesClient). 2.5.301 patches GHSA-hv8m-jj95-wg3x / CVE-2026-48109. -->
-    <PackageVersion Include="MessagePack" Version="2.5.301" />
+         by Aspire.Hosting (KubernetesClient). 2.5.307 patches GHSA-hv8m-jj95-wg3x / CVE-2026-48109
+         and GHSA-qhrr-8q5h-9q3h / CVE-2026-92707. -->
+    <PackageVersion Include="MessagePack" Version="2.5.307" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Primitives" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Primitives" Version="10.0.3" />
     <PackageVersion Include="ModelContextProtocol" Version="1.0.0" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.0.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.13.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
@@ -59,12 +61,13 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageVersion Include="Microsoft.OData.Edm" Version="7.20.0" />
     <PackageVersion Include="Microsoft.OData.Core" Version="7.20.0" />
-    <PackageVersion Include="Microsoft.OpenApi" Version="1.6.14" />
-    <PackageVersion Include="Microsoft.OpenApi.Readers" Version="1.6.14" />
+    <!-- Readers < 1.6.30 is vulnerable (GHSA-7pxr-59rr-hqj2); keep both packages on the same version. -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="1.6.31" />
+    <PackageVersion Include="Microsoft.OpenApi.Readers" Version="1.6.31" />
     <PackageVersion Include="Moq" Version="4.18.2" />
     <PackageVersion Include="MSTest.TestAdapter" Version="3.3.1" />
     <PackageVersion Include="MSTest.TestFramework" Version="3.3.1" />
-    <PackageVersion Include="MySqlConnector" Version="2.1.5" />
+    <PackageVersion Include="MySqlConnector" Version="2.6.1" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.2" />
     <!--
             We use an older version of Newtonsoft.Json.Schema because newer versions depend on Newtonsoft.Json >=13.0.3
@@ -81,6 +84,9 @@
         <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.1.2" />
         <PackageVersion Include="System.IO.Abstractions" Version="21.0.2" />
         <PackageVersion Include="System.IO.Abstractions.TestingHelpers" Version="21.0.2" />
+        <!-- Pinned to override the vulnerable Pkcs 9.0.11/9.0.4 pulled in transitively by Microsoft.Data.SqlClient
+             (including Aspire.Hosting.SqlServer). 9.0.21 patches GHSA-2fmv-rv2c-59x7 and GHSA-846f-f764-76mx. -->
+        <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />
         <PackageVersion Include="Verify.MsTest" Version="23.6.0" />
         <PackageVersion Include="Verify.DiffPlex" Version="2.3.0" />
         <PackageVersion Include="ZiggyCreatures.FusionCache" Version="2.1.0" />

@@ -7,6 +7,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -31,6 +32,14 @@ public record RuntimeConfig
     public virtual RuntimeEntities Entities { get; init; }
 
     public DataSourceFiles? DataSourceFiles { get; init; }
+
+    /// <summary>
+    /// Bounded, value-free input provenance captured only for opted-in synthetic product telemetry.
+    /// Preserved by record clones; never serialized or populated from customer configuration.
+    /// Recapture or clear it when replacing entity definitions programmatically.
+    /// </summary>
+    [JsonIgnore]
+    public TelemetryConfigurationPresence? TelemetryPresence { get; init; }
 
     /// <summary>
     /// Indicates whether this config was loaded as a child via another config's data-source-files.
@@ -368,12 +377,10 @@ public record RuntimeConfig
 
         if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
         {
-            IEnumerable<KeyValuePair<string, Entity>>? allEntities = Entities?.AsEnumerable();
-            IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = Autoentities?.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Entity>>? allEntities = Entities is null ? new List<KeyValuePair<string, Entity>>().AsEnumerable() : Entities.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = Autoentities is null ? new List<KeyValuePair<string, Autoentity>>().AsEnumerable() : Autoentities.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
-            // This loader is not used as a part of hot reload and therefore does not need a handler.
-            FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null);
 
             // Pass the parent's AKV options so @akv() references in child configs can
             // be resolved using the parent's Key Vault configuration.
@@ -390,7 +397,8 @@ public record RuntimeConfig
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
-
+                // This loader is not used as a part of hot reload and therefore does not need a handler.
+                FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null, baseConfigFilePath: dataSourceFile);
                 if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replacementSettings: replacementSettings))
                 {
                     try
@@ -404,8 +412,8 @@ public record RuntimeConfig
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _autoentityNameToDataSourceName = _autoentityNameToDataSourceName.Concat(config._autoentityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                        allEntities = allEntities?.Concat(config.Entities.AsEnumerable());
-                        allAutoentities = allAutoentities?.Concat(config.Autoentities.AsEnumerable());
+                        allEntities = allEntities.Concat(config.Entities.AsEnumerable());
+                        allAutoentities = allAutoentities.Concat(config.Autoentities.AsEnumerable());
                     }
                     catch (Exception e)
                     {
@@ -430,8 +438,8 @@ public record RuntimeConfig
                 }
             }
 
-            this.Entities = new RuntimeEntities(allEntities != null ? allEntities.ToDictionary(x => x.Key, x => x.Value) : new Dictionary<string, Entity>());
-            this.Autoentities = new RuntimeAutoentities(allAutoentities != null ? allAutoentities.ToDictionary(x => x.Key, x => x.Value) : new Dictionary<string, Autoentity>());
+            this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
+            this.Autoentities = new RuntimeAutoentities(allAutoentities.ToDictionary(x => x.Key, x => x.Value));
         }
 
         SetupDataSourcesUsed();

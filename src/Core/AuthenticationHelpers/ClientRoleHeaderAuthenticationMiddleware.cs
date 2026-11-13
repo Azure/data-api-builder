@@ -181,7 +181,11 @@ public class ClientRoleHeaderAuthenticationMiddleware
     private static string ResolveConfiguredAuthNScheme(string? configuredProviderName)
     {
         if (string.IsNullOrWhiteSpace(configuredProviderName)
-            || string.Equals(configuredProviderName, SupportedAuthNProviders.STATIC_WEB_APPS, StringComparison.OrdinalIgnoreCase))
+            || string.Equals(configuredProviderName, SupportedAuthNProviders.UNAUTHENTICATED, StringComparison.OrdinalIgnoreCase))
+        {
+            return UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME;
+        }
+        else if (string.Equals(configuredProviderName, SupportedAuthNProviders.STATIC_WEB_APPS, StringComparison.OrdinalIgnoreCase))
         {
             return EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
         }
@@ -193,10 +197,6 @@ public class ClientRoleHeaderAuthenticationMiddleware
         {
             return SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME;
         }
-        else if (string.Equals(configuredProviderName, SupportedAuthNProviders.UNAUTHENTICATED, StringComparison.OrdinalIgnoreCase))
-        {
-            return UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME;
-        }
         else if (string.Equals(configuredProviderName, SupportedAuthNProviders.AZURE_AD, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(configuredProviderName, SupportedAuthNProviders.ENTRA_ID, StringComparison.OrdinalIgnoreCase))
         {
@@ -204,10 +204,13 @@ public class ClientRoleHeaderAuthenticationMiddleware
         }
         else
         {
-            // Changing this value is a breaking change because non-out of box
-            // authentication provider names supplied in dab-config.json indicate
-            // that JWT bearer authentication should be used.
-            return GenericOAuthDefaults.AUTHENTICATIONSCHEME;
+            // Every non-EasyAuth/Simulator/Unauthenticated provider (AzureAD, EntraID, and any
+            // custom OAuth/JWT provider such as "Custom") is authenticated via JWT bearer. The JWT
+            // handler is always registered under JwtBearerDefaults.AuthenticationScheme ("Bearer")
+            // in Startup's ConfigureAuthentication/ConfigureAuthenticationV2, so the resolved scheme
+            // must match that registration - otherwise AuthenticateAsync throws
+            // "No authentication handler is registered for the scheme ...".
+            return JwtBearerDefaults.AuthenticationScheme;
         }
     }
 }

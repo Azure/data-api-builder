@@ -268,8 +268,8 @@ namespace Azure.DataApiBuilder.Service
                 // when no console format was configured (AddUtcTimestampConsoleFormatter does so):
                 // when it is left unset the provider ignores the registered formatters and derives its
                 // behavior from ConsoleLoggerOptions' own (obsolete) properties instead, which would
-                // silently drop the timestamp. An explicitly configured "json"/"systemd" format is
-                // preserved and timestamped through that format's own options.
+                // silently drop the timestamp. An explicitly configured "json"/"systemd" format keeps its
+                // record structure through the matching DAB formatter, which supplies the timestamp.
                 logging.AddUtcTimestampConsoleFormatter();
             }
 

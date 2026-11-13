@@ -3,13 +3,8 @@
 This project allows you to run DAB in debug mode using [Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/get-started/aspire-overview).
 
 ## Prerequisites
-- [.NET SDK](https://dotnet.microsoft.com/download) (10.0 or later)
+- [.NET SDK](https://dotnet.microsoft.com/download) (8.0 or later)
 - [Docker](https://www.docker.com/products/docker-desktop) (optional, for containerized development)
-
-The AppHost SDK and hosting integrations use Aspire 13.6.5, which includes the fix for
-[CVE-2026-120006](https://github.com/advisories/GHSA-f7vh-h5g3-7jrh). The PostgreSQL container
-stays on major version 17; upgrading the hosting libraries does not opt existing development
-databases into PostgreSQL 18.
 
 ## Database Configuration
 

@@ -150,7 +150,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             Assert.AreEqual(string.Empty, ApplicationNameTelemetry.BuildApplicationNameSegment(config, source));
             Assert.AreEqual(encoded, ApplicationNameTelemetry.EncodeTelemetryString(config, source));
-            Assert.IsTrue(encoded.Contains("+XXSX||", StringComparison.Ordinal));
+            string[] sections = encoded[(encoded.IndexOf('+') + 1)..^1].Split('|');
+            Assert.AreEqual(4, sections.Length);
+            Assert.AreEqual("XXSX", sections[0]);
+            Assert.AreEqual(6, sections[1].Length, "Offline inspection retains the new General flags regardless of either opt-out.");
+            Assert.AreEqual(20, sections[2].Length);
+            Assert.AreEqual(14, sections[3].Length);
         }
 
         [DataTestMethod]
@@ -295,6 +300,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [DataRow("hash==|dab_oss_1.2.3" + PAYLOAD, "hash==|")]
         [DataRow("hash==|my_dab_app,dab_hosted_1.2.3" + PAYLOAD, "hash==|my_dab_app")]
         [DataRow("Customer,dab_oss_1.2.3,dab_hosted_2.3.4" + PAYLOAD, "Customer")]
+        [DataRow("Customer,dab_oss_1.2.3+XXSX|W0LN00|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?+", "Customer")]
         [DataRow("Customer,dab_hosted_9.8.7+XXPXQ|10|MMMM00MMM00MMMMMMMMM9|MMM?MMMMMMMMM?9+", "Customer")]
         [DataRow("my_dab_app", "my_dab_app")]
         [DataRow("my_dab_oss_1.2.3", "my_dab_oss_1.2.3")]

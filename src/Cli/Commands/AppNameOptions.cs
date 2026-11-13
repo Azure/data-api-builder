@@ -5,7 +5,6 @@ using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Telemetry;
-using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Cli.Constants;
 using Cli.Telemetry;
@@ -60,21 +59,22 @@ namespace Cli.Commands
             // We intentionally do NOT run full `validate` here — validation opens a database
             // connection, whereas encoding only needs the parsed runtime/entity settings.
             // Requiring a live database would defeat the purpose of this static inspection command.
-            if (!ConfigGenerator.TryGetConfigForRuntimeEngine(Config, loader, fileSystem, out _, logBuffer: null, telemetry: ProductTelemetry))
+            if (!ConfigGenerator.TryGetConfigForRuntimeEngine(Config, loader, fileSystem, out string configPath, logBuffer: null, telemetry: ProductTelemetry))
             {
                 logger.LogError("Could not determine the config file to use.");
                 return CliReturnCode.GENERAL_ERROR;
             }
 
-            RuntimeConfigProvider runtimeConfigProvider = new(loader);
-            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) || runtimeConfig is null)
+            // An inspection command must not use the runtime provider: that path resolves Key Vault
+            // references and creates file watchers. Keep unresolved credentials as Missing instead.
+            if (!AppNameConfigLoader.TryLoadConfig(configPath, fileSystem, out RuntimeConfig? runtimeConfig))
             {
                 ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 logger.LogError("Failed to parse the config file.");
                 return CliReturnCode.GENERAL_ERROR;
             }
 
-            CliTelemetryHosting.ObserveConfigurationDetails(ProductTelemetry, fileSystem, runtimeConfigProvider.ConfigFilePath, runtimeConfig);
+            CliTelemetryHosting.ObserveConfigurationDetails(ProductTelemetry, fileSystem, configPath, runtimeConfig);
 
             // There is no live connection context at design time, so the context fields
             // (Protocol/Object/Source/Role) are emitted as placeholders.

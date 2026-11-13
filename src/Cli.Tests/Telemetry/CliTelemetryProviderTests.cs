@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Cli.Constants;
+using Cli.Telemetry;
 using CommandLine;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -138,7 +139,15 @@ namespace Cli.Tests.Telemetry
             RunResult result = await RunWithParityAsync([.. args, "--config", ROOT], Configuration(provider));
 
             Assert.AreEqual(expectedExitCode, result.ExitCode);
-            Assert.IsNotNull(result.LoadedConfiguration, "The real load must succeed before testing the observation boundary.");
+            if (args[0] == "appname")
+            {
+                Assert.IsNull(result.LoadedConfiguration, "Offline inspection must not publish its model to the runtime loader.");
+            }
+            else
+            {
+                Assert.IsNotNull(result.LoadedConfiguration, "The real load must succeed before testing the observation boundary.");
+            }
+
             Assert.AreEqual(1, result.Reads.Length);
             Assert.IsTrue(result.Reads[0].EndsWith(ROOT, StringComparison.Ordinal));
             Assert.AreEqual(writes, result.Writes.Length);
@@ -379,8 +388,7 @@ namespace Cli.Tests.Telemetry
             string json = Configuration("mssql").Replace("\"source\":", "\"description\":\"" + new string('x', 1024 * 1024)
                 + "\",\"source\":", StringComparison.Ordinal);
             RunResult result = await RunWithParityAsync(["appname", "--config", ROOT], json);
-            Assert.IsNotNull(result.LoadedConfiguration);
-            Assert.IsNull(result.LoadedConfiguration.TelemetryPresence);
+            Assert.IsNull(result.LoadedConfiguration, "Offline inspection must leave the runtime loader untouched.");
             Dictionary<string, string> context = ConfigurationContext(AssertCommand(result, "appname", "mssql", "success"));
             Assert.AreEqual("loaded", context["observation"]);
             Assert.AreEqual("unknown", context["runtime.rest.configured"]);
@@ -569,35 +577,130 @@ namespace Cli.Tests.Telemetry
         [DataRow(false, false, "mssql")]
         [DataRow(true, false, "multiple")]
         [DataRow(true, true, "unknown")]
-        public async Task AppNameProjectsOnlyTheAlreadyLoadedRootAndChildren(bool mixedProviders, bool missingChild, string expected)
+        public async Task AppNameProjectsSelectedOfflineFilesInsteadOfCachedRuntimeState(bool mixedProviders, bool missingChild, string expected)
         {
-            DataSource first = new(DatabaseType.MSSQL, string.Empty);
-            DataSource second = new(mixedProviders ? DatabaseType.MySQL : DatabaseType.MSSQL, string.Empty);
-            RuntimeEntities entities = new(new Dictionary<string, Entity>());
             string firstFile = PRIVATE_VALUE + "-first.json";
             string secondFile = PRIVATE_VALUE + "-second.json";
-            // Use the explicit-map constructor: the JSON constructor uses real child loaders
-            // and watchers. These are already-loaded child records, not files to discover.
-            RuntimeConfig root = new(Schema: string.Empty, DataSource: null!, Runtime: new(null, null, null, null),
-                Entities: entities, DefaultDataSourceName: "root",
-                DataSourceNameToDataSource: new() { ["first"] = first, ["second"] = second },
-                EntityNameToDataSourceName: new(), DataSourceFiles: new([firstFile, secondFile]));
-            root.ChildConfigs.Add((firstFile, new RuntimeConfig(Schema: null, DataSource: first, Entities: entities) { IsChildConfig = true }));
+            string root = $$"""
+                { "data-source-files": [{{JsonSerializer.Serialize(firstFile)}}, {{JsonSerializer.Serialize(secondFile)}}], "entities": {} }
+                """;
+            Dictionary<string, string> children = new()
+            {
+                [firstFile] = "{\"data-source\":{\"database-type\":\"mssql\"},\"entities\":{}}"
+            };
             if (!missingChild)
             {
-                root.ChildConfigs.Add((secondFile, new RuntimeConfig(Schema: null, DataSource: second, Entities: entities) { IsChildConfig = true }));
+                children[secondFile] = $$"""
+                    { "data-source": { "database-type": "{{(mixedProviders ? "mysql" : "mssql")}}" }, "entities": {} }
+                    """;
             }
 
-            RunResult result = await RunWithParityAsync(["appname", "--config", ROOT], Configuration("cosmosdb_nosql"), loadedConfiguration: root);
+            RuntimeConfig cached = new(Schema: null, DataSource: new(DatabaseType.CosmosDB_NoSQL, string.Empty),
+                Entities: new(new Dictionary<string, Entity>()));
+            RunResult result = await RunWithParityAsync(["appname", "--config", ROOT], root,
+                loadedConfiguration: cached, additionalFiles: children);
 
             Assert.AreEqual(CliReturnCode.SUCCESS, result.ExitCode);
-            Assert.AreSame(root, result.LoadedConfiguration);
-            Assert.AreEqual(missingChild ? 1 : 2, root.ChildConfigs.Count);
-            Assert.AreEqual(2, root.ListAllDataSources().Count());
-            Assert.AreEqual(0, result.Reads.Length, "The normally used cached model, not conflicting disk contents or extra child reads, is authoritative.");
+            Assert.AreSame(cached, result.LoadedConfiguration, "Inspection must neither use nor replace cached runtime state.");
+            Assert.IsNotNull(cached.DataSource);
+            Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, cached.DataSource.DatabaseType);
+            Assert.AreEqual(missingChild ? 2 : 3, result.Reads.Length);
+            Assert.AreEqual(result.Reads.Length, result.Reads.Distinct(StringComparer.Ordinal).Count(), "Each selected file is read once.");
+            Assert.IsTrue(result.Reads[0].EndsWith(ROOT, StringComparison.Ordinal));
             Assert.AreEqual(0, result.Writes.Length);
             Assert.AreEqual(1, result.IdentityLookups, "Only the selected root is observed, never individual child paths.");
             AssertCommand(result, "appname", expected, "success");
+        }
+
+        [DataTestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void AppNameOfflineLoaderPreservesPerFileProvenanceOnlyForAuthorizedCapture(bool enabled)
+        {
+            const string childPath = "offline-child.json";
+            const string grandchildPath = "offline-grandchild.json";
+            const string connection = "Server=unit-test.invalid;User ID=test;Password=@akv('unresolved');";
+            string root = "{\"runtime\":{\"rest\":null},\"data-source-files\":[\"offline-child.json\"],\"entities\":{}}";
+            Dictionary<string, string> children = new()
+            {
+                [childPath] = $$"""
+                    {
+                      "data-source": { "database-type": "mssql", "connection-string": {{JsonSerializer.Serialize(connection)}} },
+                      "data-source-files": ["offline-grandchild.json"],
+                      "entities": { "First": { "source": "{{PRIVATE_VALUE}}", "rest": false, "permissions": [] } }
+                    }
+                    """,
+                [grandchildPath] = $$"""
+                    {
+                      "data-source": { "database-type": "mysql" },
+                      "entities": { "Second": { "source": "{{PRIVATE_VALUE}}", "permissions": [] } }
+                    }
+                    """
+            };
+            FileFixture fixture = new(root, additionalFiles: children);
+            RecordingExporter exporter = new();
+            using CliTelemetrySession session = CliTelemetrySession.Create(() => exporter, enableSyntheticCollection: enabled,
+                readEnvironmentVariable: _ => null, showNotice: () => { },
+                resolveInstallation: () => new(Guid.NewGuid(), "reused"));
+            Assert.AreEqual(enabled, session.IsEnabled);
+            RuntimeConfig loaded;
+            using (CliTelemetryHosting.BeginConfigurationCapture(enabled ? session : null))
+            {
+                Assert.IsTrue(AppNameConfigLoader.TryLoadConfig(ROOT, fixture.FileSystem, out RuntimeConfig? parsed));
+                loaded = parsed!;
+            }
+
+            Assert.IsFalse(TelemetryConfigurationPresence.IsCaptureEnabled());
+            RuntimeConfig child = loaded.ChildConfigs.Single().Config;
+            RuntimeConfig grandchild = child.ChildConfigs.Single().Config;
+            Assert.AreEqual(2, loaded.Entities.Count());
+            Assert.IsNotNull(child.DataSource);
+            Assert.AreEqual(connection, child.DataSource.ConnectionString, "Inspection must not resolve secrets or inject an Application Name.");
+            CollectionAssert.AreEqual(new[] { ROOT, childPath, grandchildPath }.Select(fixture.Files.Path.GetFullPath).ToArray(), fixture.Reads.ToArray());
+            Assert.AreEqual(0, fixture.Writes.Count);
+            foreach ((string path, string content) in children)
+            {
+                Assert.AreEqual(content, fixture.Files.File.ReadAllText(path));
+            }
+
+            if (enabled)
+            {
+                Assert.IsNotNull(loaded.TelemetryPresence);
+                Assert.IsNotNull(child.TelemetryPresence);
+                Assert.IsNotNull(grandchild.TelemetryPresence);
+                Assert.AreEqual(TelemetryConfigurationPresence.Presence.ExplicitNull, loaded.TelemetryPresence.Settings["runtime.rest.enabled"]);
+                Assert.AreEqual(TelemetryConfigurationPresence.Presence.Present, loaded.TelemetryPresence.Settings["data-source-files"]);
+                Assert.AreEqual(0L, loaded.TelemetryPresence.Entities[TelemetryConfigurationPresence.EntityFeature.Rest].Total);
+                Assert.AreEqual(1L, child.TelemetryPresence.Entities[TelemetryConfigurationPresence.EntityFeature.Rest].Present);
+                Assert.AreEqual(1L, child.TelemetryPresence.Entities[TelemetryConfigurationPresence.EntityFeature.Rest].Total);
+                Assert.AreEqual(1L, grandchild.TelemetryPresence.Entities[TelemetryConfigurationPresence.EntityFeature.Rest].Missing);
+                Assert.IsFalse(JsonSerializer.Serialize(loaded.TelemetryPresence).Contains(PRIVATE_VALUE, StringComparison.Ordinal));
+            }
+            else
+            {
+                Assert.IsNull(loaded.TelemetryPresence);
+                Assert.IsNull(child.TelemetryPresence);
+                Assert.IsNull(grandchild.TelemetryPresence);
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow("{ not json }")]
+        [DataRow("{\"data-source-files\":[\"offline-child.json\"],\"entities\":{}}")]
+        public async Task AppNameInvalidOrCyclicChildKeepsConfigurationFailureClassification(string child)
+        {
+            RunResult result = await RunWithParityAsync(["appname", "--config", ROOT],
+                "{\"data-source-files\":[\"offline-child.json\"],\"entities\":{}}",
+                additionalFiles: new Dictionary<string, string> { ["offline-child.json"] = child });
+
+            Assert.AreEqual(CliReturnCode.GENERAL_ERROR, result.ExitCode);
+            Assert.IsNull(result.LoadedConfiguration);
+            Assert.AreEqual(2, result.Reads.Length);
+            Assert.AreEqual(0, result.Writes.Length);
+            Assert.AreEqual(1, result.IdentityLookups);
+            CliTelemetryEvent command = AssertCommand(result, "appname", "unknown", "validation_failure");
+            Assert.AreEqual("configuration", command.Properties["failure_category"]);
+            Assert.AreEqual("unknown", ConfigurationContext(command)["observation"]);
         }
 
         [TestMethod]
@@ -634,10 +737,11 @@ namespace Cli.Tests.Telemetry
             """;
 
         private async Task<RunResult> RunWithParityAsync(string[] args, string? configuration = null,
-            bool failWrites = false, bool newlySavedInstallation = false, RuntimeConfig? loadedConfiguration = null)
+            bool failWrites = false, bool newlySavedInstallation = false, RuntimeConfig? loadedConfiguration = null,
+            IReadOnlyDictionary<string, string>? additionalFiles = null)
         {
-            RunResult baseline = await RunAsync(args, configuration, failWrites, newlySavedInstallation, loadedConfiguration, enabled: false);
-            RunResult observed = await RunAsync(args, configuration, failWrites, newlySavedInstallation, loadedConfiguration, enabled: true);
+            RunResult baseline = await RunAsync(args, configuration, failWrites, newlySavedInstallation, loadedConfiguration, enabled: false, additionalFiles);
+            RunResult observed = await RunAsync(args, configuration, failWrites, newlySavedInstallation, loadedConfiguration, enabled: true, additionalFiles);
             Assert.AreEqual(baseline.ExitCode, observed.ExitCode);
             Assert.AreEqual(baseline.Configuration, observed.Configuration);
             Assert.AreEqual(baseline.Stdout, observed.Stdout);
@@ -656,12 +760,12 @@ namespace Cli.Tests.Telemetry
         }
 
         private async Task<RunResult> RunAsync(string[] args, string? configuration, bool failWrites,
-            bool newlySavedInstallation, RuntimeConfig? loadedConfiguration, bool enabled)
+            bool newlySavedInstallation, RuntimeConfig? loadedConfiguration, bool enabled, IReadOnlyDictionary<string, string>? additionalFiles)
         {
             UseQuietLoggers();
             _stdout.GetStringBuilder().Clear();
             _stderr.GetStringBuilder().Clear();
-            FileFixture fixture = new(configuration, failWrites);
+            FileFixture fixture = new(configuration, failWrites, additionalFiles);
             RecordingExporter exporter = new();
             int identityCreations = 0;
             int identityLookups = 0;
@@ -756,7 +860,7 @@ namespace Cli.Tests.Telemetry
             public List<string> Reads { get; } = new();
             public List<string> Writes { get; } = new();
 
-            public FileFixture(string? configuration, bool failWrites = false)
+            public FileFixture(string? configuration, bool failWrites = false, IReadOnlyDictionary<string, string>? additionalFiles = null)
             {
                 string directory = Files.Path.GetFullPath("cli-provider-offline");
                 Files.AddDirectory(directory);
@@ -766,6 +870,11 @@ namespace Cli.Tests.Telemetry
                 if (configuration is not null)
                 {
                     Files.AddFile(ROOT, new MockFileData(configuration));
+                }
+
+                foreach ((string path, string content) in additionalFiles ?? new Dictionary<string, string>())
+                {
+                    Files.AddFile(path, new MockFileData(content));
                 }
 
                 Mock<IFile> file = new(MockBehavior.Strict);

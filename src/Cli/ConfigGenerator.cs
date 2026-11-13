@@ -3127,7 +3127,28 @@ namespace Cli
             // flush all current logs saved in LogBuffer
             ILogger<Program> programLogger = Utils.LoggerFactoryForCli.CreateLogger<Program>();
             ILoggerFactory cliLoggerFactory = Utils.LoggerFactoryForCli;
-            LogBuffer.Instance.FlushToLogger(category => category is null ? programLogger : cliLoggerFactory.CreateLogger(category));
+            Dictionary<string, Microsoft.Extensions.Logging.ILogger> configLevelLoggers = new();
+            LogBuffer.Instance.FlushToLogger(category =>
+            {
+                if (category is null)
+                {
+                    return programLogger;
+                }
+
+                if (logLevel is not null)
+                {
+                    return cliLoggerFactory.CreateLogger(category);
+                }
+
+                // Without --log-level, honor the config's per-class log-level, as the engine's loggers do.
+                if (!configLevelLoggers.TryGetValue(category, out Microsoft.Extensions.Logging.ILogger? categoryLogger))
+                {
+                    categoryLogger = new CustomLoggerProvider(deserializedRuntimeConfig.GetConfiguredLogLevel(category)).CreateLogger(category);
+                    configLevelLoggers[category] = categoryLogger;
+                }
+
+                return categoryLogger;
+            });
 
             // Update logger for Utils
             ILogger<Utils> utilsLogger = Utils.LoggerFactoryForCli.CreateLogger<Utils>();

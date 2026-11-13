@@ -5,7 +5,6 @@ using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
@@ -748,7 +747,7 @@ public static class FieldFilterParser
                     else
                     {
                         op = PredicateOperation.LIKE;
-                        value = $"%{ODataStringFunctionHelper.EscapeLikeString((string)value)}%";
+                        value = SqlLikePattern.Create(LikeMatch.Contains, (string)value);
                         lengthOverride = true;
                     }
 
@@ -761,19 +760,19 @@ public static class FieldFilterParser
                     else
                     {
                         op = PredicateOperation.NOT_LIKE;
-                        value = $"%{ODataStringFunctionHelper.EscapeLikeString((string)value)}%";
+                        value = SqlLikePattern.Create(LikeMatch.Contains, (string)value);
                         lengthOverride = true;
                     }
 
                     break;
                 case "startsWith":
                     op = PredicateOperation.LIKE;
-                    value = $"{ODataStringFunctionHelper.EscapeLikeString((string)value)}%";
+                    value = SqlLikePattern.Create(LikeMatch.StartsWith, (string)value);
                     lengthOverride = true;
                     break;
                 case "endsWith":
                     op = PredicateOperation.LIKE;
-                    value = $"%{ODataStringFunctionHelper.EscapeLikeString((string)value)}";
+                    value = SqlLikePattern.Create(LikeMatch.EndsWith, (string)value);
                     lengthOverride = true;
                     break;
                 case "isNull":

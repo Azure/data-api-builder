@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Net;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -11,6 +13,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using Microsoft.OData;
 using Microsoft.OData.UriParser;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -105,17 +108,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     cosmosQueryStructure.TableCounter.Next();
 
                                     fromClause = pathConfig.JoinStatement;
-                                    predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(
-                                        pathConfig.Alias,
-                                        cosmosQueryStructure));
+                                    predicates = GetCosmosPolicyPredicate(filterClause, pathConfig.Alias, cosmosQueryStructure);
 
                                     existQuery = CosmosQueryBuilder.BuildExistsQueryForCosmos(fromClause, predicates);
                                 }
                                 else
                                 {
-                                    predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(
-                                        GetCosmosPolicyPathPrefix(pathConfig),
-                                        cosmosQueryStructure));
+                                    predicates = GetCosmosPolicyPredicate(filterClause, GetCosmosPolicyPathPrefix(pathConfig), cosmosQueryStructure);
                                 }
 
                                 if (pathConfig.EntityName == entity.Key)
@@ -134,6 +133,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             }
                         });
                 }
+            }
+        }
+
+        /// <summary>
+        /// Translates a policy to a Cosmos DB predicate.
+        /// </summary>
+        internal static string GetCosmosPolicyPredicate(FilterClause filterClause, string prefix, BaseQueryStructure queryStructure)
+        {
+            try
+            {
+                return filterClause.Expression.Accept(new ODataASTCosmosVisitor(prefix, queryStructure));
+            }
+            catch (Exception ex)
+            {
+                throw new DataApiBuilderException(
+                    message: "Policy query parameter is not well formed for Cosmos DB Policy Processing.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
+                    innerException: ex);
             }
         }
 
@@ -221,14 +239,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // Parse and save the values that are needed to later generate SQL query predicates
                 // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
-                return sqlMetadataProvider.GetODataParser().GetFilterClause(
-                    filterQueryString: dbPolicyClause,
-                    resourcePath: resourcePath,
-                    customResolver: new ClaimsTypeDataUriResolver(claimValueNodes),
-                    parameterAliasNodes: claimValueNodes);
+                try
+                {
+                    return sqlMetadataProvider.GetODataParser().GetFilterClause(
+                        filterQueryString: dbPolicyClause,
+                        resourcePath: resourcePath,
+                        customResolver: new ClaimsTypeDataUriResolver(claimValueNodes),
+                        parameterAliasNodes: claimValueNodes);
+                }
+                catch (DataApiBuilderException ex) when (ex.InnerException is ODataException && UsesStringFunctionWithNonStringClaim(dbPolicy))
+                {
+                    throw new DataApiBuilderException(
+                        message: "Claims used in contains, startswith, endswith or concat in a database policy must be strings.",
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
+                        innerException: ex);
+                }
             }
 
             return null;
+        }
+
+        private static bool UsesStringFunctionWithNonStringClaim(ResolvedDatabasePolicy dbPolicy)
+        {
+            return Regex.IsMatch(dbPolicy.Policy, @"\b(contains|startswith|endswith|concat)\s*\(") &&
+                dbPolicy.ClaimValues.Values.Any(value => value is not null and not string);
         }
 
         /// <summary>

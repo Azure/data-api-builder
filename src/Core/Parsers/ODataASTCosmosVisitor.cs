@@ -123,10 +123,18 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <returns>String representing the function call.</returns>
         public override string Visit(SingleValueFunctionCallNode nodeIn)
         {
-            (SingleValuePropertyAccessNode field, string value) = ODataStringFunctionHelper.GetFieldAndValue(nodeIn);
+            (LikeMatch match, SingleValuePropertyAccessNode field, string value) = ODataStringFunctionHelper.GetFieldAndValue(nodeIn);
+            string cosmosFunction = match switch
+            {
+                LikeMatch.Contains => "CONTAINS",
+                LikeMatch.StartsWith => "STARTSWITH",
+                LikeMatch.EndsWith => "ENDSWITH",
+                _ => throw new NotSupportedException($"The function '{nodeIn.Name}' is not supported.")
+            };
             string column = field.Accept(this);
             string param = _queryStructure.MakeDbConnectionParam(value);
-            return $"{nodeIn.Name.ToUpperInvariant()}({column}, {param})";
+
+            return $"{cosmosFunction}({column}, {param})";
         }
 
         /// <summary>

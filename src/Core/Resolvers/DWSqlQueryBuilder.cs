@@ -30,6 +30,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return _builder.QuoteIdentifier(ident);
         }
 
+        /// <inheritdoc />
+        public string BuildLikePredicate(string column, string pattern)
+        {
+            throw new NotSupportedException("LIKE patterns with escaped wildcards are not supported for DWSQL.");
+        }
+
         /// <summary>
         /// Builds the sql query that will return the json result for DW.
         /// Sample: Get title of all books.

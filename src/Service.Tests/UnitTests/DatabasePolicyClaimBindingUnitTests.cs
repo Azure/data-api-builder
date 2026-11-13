@@ -376,7 +376,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 resolver,
                 metadataProvider.Object);
 
-            Assert.AreEqual("([textCol] LIKE @param0)", sqlStructure.GetDbPolicyForOperation(OPERATION));
+            Assert.AreEqual("([textCol] LIKE @param0 ESCAPE '\\')", sqlStructure.GetDbPolicyForOperation(OPERATION));
             AssertParameterValues(sqlStructure, "%|123456|%");
             Assert.AreEqual(-1, sqlStructure.Parameters["@param0"].Length);
 
@@ -412,8 +412,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 resolver,
                 metadataProvider.Object);
 
-            Assert.AreEqual("([textCol] LIKE @param0)", sqlStructure.GetDbPolicyForOperation(OPERATION));
+            Assert.AreEqual("([textCol] LIKE @param0 ESCAPE '\\')", sqlStructure.GetDbPolicyForOperation(OPERATION));
             AssertParameterValues(sqlStructure, expectedPattern);
+        }
+
+        /// <summary>
+        /// Verifies the SQL Server read path adds ESCAPE to GraphQL LIKE predicates without
+        /// adding a second one to policy and $filter predicates that already have it.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(@"([title] LIKE @param10)", @"([title] LIKE @param10 ESCAPE '\')", DisplayName = "No ESCAPE")]
+        [DataRow(@"([title] LIKE @param10 ESCAPE '\')", @"([title] LIKE @param10 ESCAPE '\')", DisplayName = "Existing ESCAPE")]
+        [DataRow(
+            @"([textCol] LIKE @param0 ESCAPE '\') AND ([title] NOT LIKE @param1)",
+            @"([textCol] LIKE @param0 ESCAPE '\') AND ([title] NOT LIKE @param1 ESCAPE '\')",
+            DisplayName = "Mixed")]
+        public void MsSqlLikeEscape_IsAddedOnce(string predicate, string expected)
+        {
+            Assert.AreEqual(expected, MsSqlQueryBuilder.AddEscapeToLikeClauses(predicate));
         }
 
         /// <summary>
@@ -438,7 +454,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 metadataProvider.Object);
 
             Assert.AreEqual(
-                "(([intCol] != @param0) AND ([textCol] LIKE @param1))",
+                "(([intCol] != @param0) AND ([textCol] LIKE @param1 ESCAPE '\\'))",
                 sqlStructure.GetDbPolicyForOperation(OPERATION));
             AssertParameterValues(sqlStructure, 6, "%abc%");
         }
@@ -450,6 +466,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("contains(@claims.value, 'x')", "value", DisplayName = "Claim as searched value")]
         [DataRow("contains(@item.textCol, @item.textCol)", "value", DisplayName = "Field as search value")]
         [DataRow("contains(@item.textCol, @claims.value)", null, DisplayName = "Null claim")]
+        [DataRow("contains(@item.textCol, @claims.value)", "", DisplayName = "Empty claim")]
+        [DataRow("startswith(@item.textCol, @claims.value)", "", DisplayName = "Empty claim with startswith")]
+        [DataRow("contains(@item.textCol, '')", "value", DisplayName = "Empty constant")]
         [DataRow("tolower(@item.textCol) eq @claims.value", "value", DisplayName = "Unsupported function")]
         [DataRow("contains(@item.textCol, @claims.value) eq true", "value", DisplayName = "Function compared to a value")]
         public void UnsupportedStringFunctionPolicy_FailsClosed(string policy, string? claimValue)
@@ -468,6 +487,84 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     context,
                     resolver,
                     metadataProvider.Object));
+            Assert.AreEqual(0, sqlStructure.Parameters.Count);
+        }
+
+        /// <summary>
+        /// Verifies rejected string function policies fail the authorization check for Cosmos DB.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("contains(@claims.value, 'x')", "value", DisplayName = "Claim as searched value")]
+        [DataRow("contains(@item.textCol, @item.textCol)", "value", DisplayName = "Field as search value")]
+        [DataRow("contains(@item.textCol, @claims.value)", null, DisplayName = "Null claim")]
+        [DataRow("contains(@item.textCol, @claims.value)", "", DisplayName = "Empty claim")]
+        [DataRow("contains(@item.textCol, @claims.value) eq true", "value", DisplayName = "Function compared to a value")]
+        public void UnsupportedStringFunctionPolicy_FailsAuthorizationForCosmos(string policy, string? claimValue)
+        {
+            Claim claim = claimValue is null
+                ? new Claim("value", "null", JsonClaimValueTypes.JsonNull)
+                : new Claim("value", claimValue, ClaimValueTypes.String);
+            (AuthorizationResolver resolver, DefaultHttpContext context) = CreateAuthorizationContext(policy, claim);
+            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
+            FilterClause filterClause = ResolveFilterClause(resolver, context, metadataProvider.Object);
+            TestQueryStructure cosmosStructure = new(metadataProvider.Object, resolver);
+
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                AuthorizationPolicyHelpers.GetCosmosPolicyPredicate(filterClause, "c", cosmosStructure));
+
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed, exception.SubStatusCode);
+            Assert.AreEqual(0, cosmosStructure.Parameters.Count);
+        }
+
+        /// <summary>
+        /// Verifies string functions are rejected for DWSQL.
+        /// </summary>
+        [TestMethod]
+        public void StringFunctionPolicy_IsRejectedForDwSql()
+        {
+            (AuthorizationResolver resolver, DefaultHttpContext context) = CreateAuthorizationContext(
+                "not contains(@item.textCol, @claims.value)",
+                new Claim("value", "_", ClaimValueTypes.String));
+            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider(DatabaseType.DWSQL);
+            TestSqlQueryStructure sqlStructure = new(metadataProvider.Object, resolver);
+
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                    OPERATION,
+                    sqlStructure,
+                    context,
+                    resolver,
+                    metadataProvider.Object));
+
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed, exception.SubStatusCode);
+        }
+
+        /// <summary>
+        /// Verifies a numeric claim in a string function gives a clear error.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("contains(@item.textCol, @claims.value)", ClaimValueTypes.Integer32, DisplayName = "Integer32 search value")]
+        [DataRow("contains(@item.textCol, @claims.value)", ClaimValueTypes.Integer64, DisplayName = "Integer64 search value")]
+        [DataRow("contains(@item.textCol, concat(concat('|', @claims.value), '|'))", ClaimValueTypes.Integer32, DisplayName = "Integer32 in concat")]
+        [DataRow("contains(@item.textCol, concat(concat('|', @claims.value), '|'))", ClaimValueTypes.Integer64, DisplayName = "Integer64 in concat")]
+        public void NumericClaimInStringFunction_FailsWithClearError(string policy, string claimType)
+        {
+            (AuthorizationResolver resolver, DefaultHttpContext context) = CreateAuthorizationContext(
+                policy,
+                new Claim("value", "123456", claimType));
+            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
+            TestSqlQueryStructure sqlStructure = new(metadataProvider.Object, resolver);
+
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                    OPERATION,
+                    sqlStructure,
+                    context,
+                    resolver,
+                    metadataProvider.Object));
+
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed, exception.SubStatusCode);
+            StringAssert.Contains(exception.Message, "must be strings");
             Assert.AreEqual(0, sqlStructure.Parameters.Count);
         }
 
@@ -514,7 +611,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             return (resolver, context);
         }
 
-        private static Mock<ISqlMetadataProvider> CreateMetadataProvider()
+        private static Mock<ISqlMetadataProvider> CreateMetadataProvider(DatabaseType databaseType = DatabaseType.MSSQL)
         {
             SourceDefinition sourceDefinition = new();
             sourceDefinition.Columns.Add("id", new ColumnDefinition(typeof(int)) { DbType = DbType.Int32 });
@@ -536,8 +633,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             metadataProvider.Setup(provider => provider.GetLinkingEntities())
                 .Returns(new Dictionary<string, Entity>());
             metadataProvider.Setup(provider => provider.GetSourceDefinition(ENTITY_NAME)).Returns(sourceDefinition);
-            metadataProvider.Setup(provider => provider.GetDatabaseType()).Returns(DatabaseType.MSSQL);
-            metadataProvider.Setup(provider => provider.GetQueryBuilder()).Returns(new MsSqlQueryBuilder());
+            metadataProvider.Setup(provider => provider.GetDatabaseType()).Returns(databaseType);
+            metadataProvider.Setup(provider => provider.GetQueryBuilder()).Returns(
+                databaseType is DatabaseType.DWSQL ? new DwSqlQueryBuilder() : new MsSqlQueryBuilder());
 
             string? exposedName;
             metadataProvider

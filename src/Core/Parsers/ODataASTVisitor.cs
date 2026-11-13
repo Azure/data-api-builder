@@ -73,13 +73,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <returns>String representing the Field name</returns>
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
-            _metadataProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? backingColumnName);
-            if (_operation is EntityActionOperation.Create)
-            {
-                _struct.FieldsReferencedInDbPolicyForCreateAction.Add(backingColumnName!);
-            }
-
-            return _metadataProvider.GetQueryBuilder().QuoteIdentifier(backingColumnName!);
+            return _metadataProvider.GetQueryBuilder().QuoteIdentifier(GetBackingColumn(nodeIn));
         }
 
         /// <summary>
@@ -120,12 +114,22 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <returns>String representing the LIKE predicate.</returns>
         public override string Visit(SingleValueFunctionCallNode nodeIn)
         {
-            (SingleValuePropertyAccessNode field, string value) = ODataStringFunctionHelper.GetFieldAndValue(nodeIn);
-            string column = field.Accept(this);
-            _metadataProvider.TryGetBackingColumn(_struct.EntityName, field.Property.Name, out string? backingColumnName);
-            string pattern = ODataStringFunctionHelper.GetLikePattern(nodeIn.Name, value);
-            string param = _struct.MakeDbConnectionParam(pattern, backingColumnName, lengthOverride: true);
-            return $"({column} LIKE {param})";
+            (LikeMatch match, SingleValuePropertyAccessNode field, string value) = ODataStringFunctionHelper.GetFieldAndValue(nodeIn);
+            IQueryBuilder queryBuilder = _metadataProvider.GetQueryBuilder();
+            string backingColumnName = GetBackingColumn(field);
+            string param = _struct.MakeDbConnectionParam(SqlLikePattern.Create(match, value), backingColumnName, lengthOverride: true);
+            return $"({queryBuilder.BuildLikePredicate(queryBuilder.QuoteIdentifier(backingColumnName), param)})";
+        }
+
+        private string GetBackingColumn(SingleValuePropertyAccessNode nodeIn)
+        {
+            _metadataProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? backingColumnName);
+            if (_operation is EntityActionOperation.Create)
+            {
+                _struct.FieldsReferencedInDbPolicyForCreateAction.Add(backingColumnName!);
+            }
+
+            return backingColumnName!;
         }
 
         ///<summary>

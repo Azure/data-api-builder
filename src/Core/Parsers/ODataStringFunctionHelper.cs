@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.OData.UriParser;
 
 namespace Azure.DataApiBuilder.Core.Parsers
@@ -8,28 +9,31 @@ namespace Azure.DataApiBuilder.Core.Parsers
     /// <summary>
     /// Shared handling for the OData string functions supported in $filter and database policies:
     /// contains, startswith and endswith. The first argument must be a field and the second must
-    /// resolve to a non-null string, either a constant (including a bound claim value) or a
+    /// resolve to a non-empty string, either a constant (including a bound claim value) or a
     /// concat of such values. Folding concat here keeps the whole search value in one parameter.
     /// </summary>
     internal static class ODataStringFunctionHelper
     {
-        public const string CONTAINS = "contains";
-        public const string STARTSWITH = "startswith";
-        public const string ENDSWITH = "endswith";
-        public const string CONCAT = "concat";
+        private const string CONTAINS = "contains";
+        private const string STARTSWITH = "startswith";
+        private const string ENDSWITH = "endswith";
+        private const string CONCAT = "concat";
 
         /// <summary>
-        /// Validates a string function call and returns its field and resolved search value.
+        /// Validates a string function call and returns its match type, field and resolved search value.
         /// </summary>
         /// <param name="nodeIn">The function call node.</param>
-        /// <returns>The field being searched and the search value.</returns>
+        /// <returns>The match type, the field being searched and the search value.</returns>
         /// <exception cref="NotSupportedException">The function or its arguments are not supported.</exception>
-        public static (SingleValuePropertyAccessNode Field, string Value) GetFieldAndValue(SingleValueFunctionCallNode nodeIn)
+        public static (LikeMatch Match, SingleValuePropertyAccessNode Field, string Value) GetFieldAndValue(SingleValueFunctionCallNode nodeIn)
         {
-            if (nodeIn.Name is not (CONTAINS or STARTSWITH or ENDSWITH))
+            LikeMatch match = nodeIn.Name switch
             {
-                throw new NotSupportedException($"The function '{nodeIn.Name}' is not supported.");
-            }
+                CONTAINS => LikeMatch.Contains,
+                STARTSWITH => LikeMatch.StartsWith,
+                ENDSWITH => LikeMatch.EndsWith,
+                _ => throw new NotSupportedException($"The function '{nodeIn.Name}' is not supported.")
+            };
 
             QueryNode[] arguments = nodeIn.Parameters.ToArray();
             if (arguments.Length != 2 || Unwrap(arguments[0]) is not SingleValuePropertyAccessNode field)
@@ -37,10 +41,13 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 throw new NotSupportedException($"The first argument of '{nodeIn.Name}' must be a field.");
             }
 
-            string value = FoldString(arguments[1])
-                ?? throw new NotSupportedException($"The second argument of '{nodeIn.Name}' must be a non-null string value.");
+            string? value = FoldString(arguments[1]);
+            if (string.IsNullOrEmpty(value))
+            {
+                throw new NotSupportedException($"The second argument of '{nodeIn.Name}' must be a non-empty string value.");
+            }
 
-            return (field, value);
+            return (match, field, value);
         }
 
         /// <summary>
@@ -56,35 +63,6 @@ namespace Azure.DataApiBuilder.Core.Parsers
             {
                 throw new NotSupportedException("A function call cannot be an operand of a comparison; use it directly as a condition.");
             }
-        }
-
-        /// <summary>
-        /// Builds a LIKE pattern for the function, escaping LIKE wildcards in the value
-        /// with a backslash.
-        /// </summary>
-        public static string GetLikePattern(string functionName, string value)
-        {
-            string escaped = EscapeLikeString(value);
-            return functionName switch
-            {
-                CONTAINS => $"%{escaped}%",
-                STARTSWITH => $"{escaped}%",
-                ENDSWITH => $"%{escaped}",
-                _ => throw new NotSupportedException($"The function '{functionName}' is not supported.")
-            };
-        }
-
-        /// <summary>
-        /// Escapes LIKE wildcard characters with a backslash.
-        /// </summary>
-        public static string EscapeLikeString(string input)
-        {
-            input = input.Replace(@"\", @"\\");
-            input = input.Replace(@"%", @"\%");
-            input = input.Replace(@"[", @"\[");
-            input = input.Replace(@"]", @"\]");
-            input = input.Replace(@"_", @"\_");
-            return input;
         }
 
         /// <summary>

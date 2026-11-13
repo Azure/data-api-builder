@@ -52,6 +52,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ModelContextProtocol.AspNetCore;
 using Moq;
 using Moq.Protected;
 using Serilog;
@@ -6772,6 +6773,145 @@ type Planet @model(name:""PlanetAlias"") {
             File.WriteAllText(childConfigPath, childConfig.ToJson());
 
             return (rootConfigPath, new FileSystemRuntimeConfigLoader(fileSystem), fileSystem, tempDir);
+        }
+
+        [DataTestMethod]
+        [DataRow(true, false)]
+        [DataRow(false, false)]
+        [DataRow(true, true)]
+        [DataRow(false, true)]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task LinkedConfigMutations_UseChildDataSource(bool rootHasDataSource, bool useMcp)
+        {
+            string connectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL);
+            string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dab-linked-writes-" + Guid.NewGuid().ToString("N"));
+            string name = "linked-write-" + Guid.NewGuid().ToString("N");
+            using SqlConnection connection = new(connectionString);
+            await connection.OpenAsync();
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                string rootPath = System.IO.Path.Combine(tempDir, "root.json");
+                string childPath = System.IO.Path.Combine(tempDir, "child.json");
+                JsonObject child = JsonNode.Parse("""
+                                        {
+                                            "data-source": { "database-type": "mssql", "connection-string": "" },
+                                            "entities": {
+                                                "LinkedPublisher": {
+                                                    "source": "dbo.publishers",
+                                                    "rest": true,
+                                                    "graphql": false,
+                                                    "permissions": [{ "role": "anonymous", "actions": ["*"] }]
+                                                }
+                                            }
+                                        }
+                                        """)!.AsObject();
+                child["data-source"]!["connection-string"] = connectionString;
+                JsonObject root = JsonNode.Parse("""
+                                        {
+                                            "runtime": {
+                                                "rest": { "enabled": true },
+                                                "graphql": { "enabled": false },
+                                                "mcp": { "enabled": true },
+                                                "host": { "mode": "development" }
+                                            },
+                                            "entities": {}
+                                        }
+                                        """)!.AsObject();
+                root["data-source-files"] = new JsonArray(childPath);
+                if (rootHasDataSource)
+                {
+                    root["data-source"] = child["data-source"]!.DeepClone();
+                }
+
+                File.WriteAllText(childPath, child.ToJsonString());
+                File.WriteAllText(rootPath, root.ToJsonString());
+                using TestServer server = new(Program.CreateWebHostBuilder(new[] { $"--ConfigFileName={rootPath}" })
+                    .ConfigureServices(services => services.PostConfigure<HttpServerTransportOptions>(options => options.Stateless = true)));
+                using HttpClient client = server.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(30);
+                if (useMcp)
+                {
+                    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+                    client.DefaultRequestHeaders.Accept.ParseAdd("text/event-stream");
+                    client.DefaultRequestHeaders.Add("MCP-Protocol-Version", "2025-11-25");
+                    await SendMcpRequestAsync(client, 1, "initialize", new
+                    {
+                        protocolVersion = "2025-11-25",
+                        capabilities = new { },
+                        clientInfo = new { name = "linked-config-test", version = "1" }
+                    });
+                    await SendMcpRequestAsync(client, 2, "tools/call", new
+                    {
+                        name = "create_record",
+                        arguments = new { entity = "LinkedPublisher", data = new { name } }
+                    });
+                    using SqlCommand lookup = connection.CreateCommand();
+                    lookup.CommandText = "SELECT id FROM dbo.publishers WHERE name = @name";
+                    lookup.Parameters.AddWithValue("@name", name);
+                    object insertedId = await lookup.ExecuteScalarAsync();
+                    Assert.IsNotNull(insertedId);
+                    int publisherId = (int)insertedId;
+                    await SendMcpRequestAsync(client, 3, "tools/call", new
+                    {
+                        name = "update_record",
+                        arguments = new { entity = "LinkedPublisher", keys = new { id = publisherId }, fields = new { name = name + "-patch" } }
+                    });
+                    lookup.Parameters["@name"].Value = name + "-patch";
+                    Assert.AreEqual(publisherId, await lookup.ExecuteScalarAsync());
+                    await SendMcpRequestAsync(client, 4, "tools/call", new
+                    {
+                        name = "delete_record",
+                        arguments = new { entity = "LinkedPublisher", keys = new { id = publisherId } }
+                    });
+                    Assert.IsNull(await lookup.ExecuteScalarAsync());
+                    return;
+                }
+
+                using HttpResponseMessage created = await client.PostAsJsonAsync("/api/LinkedPublisher", new { name });
+                Assert.AreEqual(HttpStatusCode.Created, created.StatusCode, await created.Content.ReadAsStringAsync());
+                Assert.IsNotNull(created.Headers.Location);
+                using JsonDocument createdBody = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+                int id = createdBody.RootElement.GetProperty("value")[0].GetProperty("id").GetInt32();
+                StringAssert.EndsWith(created.Headers.Location.ToString(), $"/id/{id}");
+                string itemPath = $"/api/LinkedPublisher/id/{id}";
+
+                using HttpResponseMessage replaced = await client.PutAsJsonAsync(itemPath, new { name = name + "-put" });
+                Assert.AreEqual(HttpStatusCode.OK, replaced.StatusCode, await replaced.Content.ReadAsStringAsync());
+                using JsonDocument replacedBody = JsonDocument.Parse(await replaced.Content.ReadAsStringAsync());
+                Assert.AreEqual(name + "-put", replacedBody.RootElement.GetProperty("value")[0].GetProperty("name").GetString());
+                using HttpResponseMessage patched = await client.PatchAsJsonAsync(itemPath, new { name = name + "-patch" });
+                Assert.AreEqual(HttpStatusCode.OK, patched.StatusCode, await patched.Content.ReadAsStringAsync());
+                using JsonDocument patchedBody = JsonDocument.Parse(await patched.Content.ReadAsStringAsync());
+                Assert.AreEqual(name + "-patch", patchedBody.RootElement.GetProperty("value")[0].GetProperty("name").GetString());
+                using HttpResponseMessage deleted = await client.DeleteAsync(itemPath);
+                Assert.AreEqual(HttpStatusCode.NoContent, deleted.StatusCode, await deleted.Content.ReadAsStringAsync());
+            }
+            finally
+            {
+                using SqlCommand cleanup = connection.CreateCommand();
+                cleanup.CommandText = "DELETE FROM dbo.publishers WHERE name IN (@name, @putName, @patchName)";
+                cleanup.Parameters.AddWithValue("@name", name);
+                cleanup.Parameters.AddWithValue("@putName", name + "-put");
+                cleanup.Parameters.AddWithValue("@patchName", name + "-patch");
+                await cleanup.ExecuteNonQueryAsync();
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+
+        private static async Task SendMcpRequestAsync(HttpClient client, int id, string method, object parameters)
+        {
+            using HttpResponseMessage response = await client.PostAsJsonAsync("/mcp", new { jsonrpc = "2.0", id, method, @params = parameters });
+            string payload = await response.Content.ReadAsStringAsync();
+            Assert.IsTrue(response.IsSuccessStatusCode, $"HTTP {response.StatusCode}: {payload}");
+            if (response.Content.Headers.ContentType?.MediaType == "text/event-stream")
+            {
+                payload = payload.Split('\n').Last(line => line.StartsWith("data:", StringComparison.Ordinal))[5..].Trim();
+            }
+
+            using JsonDocument document = JsonDocument.Parse(payload);
+            Assert.IsTrue(document.RootElement.TryGetProperty("result", out JsonElement result), payload);
+            Assert.IsFalse(result.TryGetProperty("isError", out JsonElement error) && error.GetBoolean(), payload);
         }
 
         /// <summary>

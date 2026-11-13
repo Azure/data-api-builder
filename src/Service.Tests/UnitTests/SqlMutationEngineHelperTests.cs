@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -11,8 +12,10 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Transactions;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -457,7 +460,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(EntityActionOperation.Delete, DisplayName = "Delete is unsupported by this mutation path")]
         public async Task PerformMutationOperation_RejectsInvalidInvocation(EntityActionOperation operation)
         {
-            (SqlMutationEngine engine, ISqlMetadataProvider metadata) = CreateMutationOperationFixture();
+            (SqlMutationEngine engine, ISqlMetadataProvider metadata, _, _, _) = CreateMutationOperationFixture();
             MethodInfo method = typeof(SqlMutationEngine).GetMethod("PerformMutationOperation", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
             Task task = (Task)method.Invoke(engine, new object?[]
@@ -480,6 +483,61 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Verifies REST mutations use metadata for the entity's datasource rather than the root datasource.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(EntityActionOperation.Insert)]
+        [DataRow(EntityActionOperation.Update)]
+        [DataRow(EntityActionOperation.UpdateIncremental)]
+        [DataRow(EntityActionOperation.Upsert)]
+        [DataRow(EntityActionOperation.UpsertIncremental)]
+        [DataRow(EntityActionOperation.Delete)]
+        public async Task ExecuteRestMutation_UsesEntityDataSource(EntityActionOperation operation)
+        {
+            foreach (bool readPolicy in new[] { false, true })
+            {
+                var (engine, metadata, metadataFactory, executor, queryEngine) =
+                    CreateMutationOperationFixture(linkedDataSource: true, readPolicy: readPolicy);
+                DatabaseObject table = metadata.EntityToDatabaseObject["Book"];
+                using JsonDocument payload = JsonDocument.Parse("{\"title\":\"linked book\"}");
+                RestRequestContext context = operation switch
+                {
+                    EntityActionOperation.Insert => new InsertRequestContext("Book", table, payload.RootElement, operation),
+                    EntityActionOperation.Delete => new DeleteRequestContext("Book", table, isList: false),
+                    _ => new UpsertRequestContext("Book", table, payload.RootElement, operation)
+                };
+                if (operation != EntityActionOperation.Insert)
+                {
+                    context.PrimaryKeyValuePairs["id"] = 1;
+                }
+
+                IActionResult? result = await engine.ExecuteAsync(context);
+
+                if (operation == EntityActionOperation.Insert)
+                {
+                    Assert.IsInstanceOfType<CreatedResult>(result);
+                    StringAssert.EndsWith(((CreatedResult)result!).Location, "/id/1");
+                }
+                else if (operation == EntityActionOperation.Delete)
+                {
+                    Assert.IsInstanceOfType<NoContentResult>(result);
+                }
+                else
+                {
+                    Assert.IsInstanceOfType<OkObjectResult>(result);
+                }
+
+                metadataFactory.Verify(x => x.GetMetadataProvider("linked"), Times.AtLeastOnce);
+                metadataFactory.Verify(x => x.GetMetadataProvider("root"), Times.Never);
+                var execution = executor.Invocations.Single(call => call.Method.Name == "ExecuteQueryAsync");
+                Assert.AreEqual("linked", execution.Arguments[3]);
+                queryEngine.Verify(x => x.ExecuteAsync(It.Is<FindRequestContext>(request =>
+                    request.EntityName == "Book" && request.DatabaseObject == table)),
+                    readPolicy && operation != EntityActionOperation.Delete ? Times.Once() : Times.Never());
+            }
+        }
+
+        /// <summary>
         /// Verifies empty linking-table and current-entity insert results produce their distinct failure statuses.
         /// </summary>
         [DataTestMethod]
@@ -487,7 +545,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(false, true, DisplayName = "Null current-entity result is forbidden")]
         public void BuildAndExecuteInsertDbQueries_ReportsEmptyResults(bool linkingEntity, bool returnNull)
         {
-            (SqlMutationEngine engine, ISqlMetadataProvider metadata) =
+            (SqlMutationEngine engine, ISqlMetadataProvider metadata, _, _, _) =
                 CreateMutationOperationFixture(returnNull ? null : new DbResultSet(new Dictionary<string, object>()));
             SourceDefinition definition = new();
 
@@ -526,8 +584,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             return metadata;
         }
 
-        private static (SqlMutationEngine Engine, ISqlMetadataProvider Metadata) CreateMutationOperationFixture(
-            DbResultSet? syncResult = null)
+        private static (SqlMutationEngine Engine, ISqlMetadataProvider Metadata, Mock<IMetadataProviderFactory> MetadataFactory,
+            Mock<IQueryExecutor> Executor, Mock<IQueryEngine> QueryEngine) CreateMutationOperationFixture(
+            DbResultSet? syncResult = null, bool linkedDataSource = false, bool readPolicy = false)
         {
             Entity entity = new(
                 Source: new EntitySource("dbo.Books", EntitySourceType.Table, null, null),
@@ -541,20 +600,62 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
                 DataSource: new DataSource(DatabaseType.MSSQL, string.Empty),
+                Runtime: new RuntimeOptions(Rest: new(), GraphQL: new(), Mcp: new(), Host: new(null, null, HostMode.Development)),
+                DefaultDataSourceName: "root",
+                DataSourceNameToDataSource: new Dictionary<string, DataSource>
+                {
+                    ["root"] = new(DatabaseType.MSSQL, string.Empty),
+                    ["linked"] = new(DatabaseType.MSSQL, string.Empty)
+                },
+                EntityNameToDataSourceName: new Dictionary<string, string>
+                {
+                    ["Book"] = linkedDataSource ? "linked" : "root",
+                    ["Parent"] = "root"
+                },
                 Entities: new RuntimeEntities(new Dictionary<string, Entity> { ["Book"] = entity, ["Parent"] = entity }));
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            Mock<RuntimeConfigLoader> configLoader = new(null, null);
+            configLoader.Object.RuntimeConfig = runtimeConfig;
+            RuntimeConfigProvider runtimeConfigProvider = new(configLoader.Object);
 
             SourceDefinition definition = new();
+            if (linkedDataSource)
+            {
+                definition.PrimaryKey.Add("id");
+                definition.Columns.Add("id", new ColumnDefinition { SystemType = typeof(int), IsAutoGenerated = true });
+                definition.Columns.Add("title", new ColumnDefinition { SystemType = typeof(string) });
+            }
+
             DatabaseTable table = new("dbo", "Books") { TableDefinition = definition };
             Mock<ISqlMetadataProvider> metadata = new();
             metadata.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.MSSQL);
             metadata.Setup(x => x.GetSourceDefinition("Book")).Returns(definition);
             metadata.SetupGet(x => x.EntityToDatabaseObject)
                 .Returns(new Dictionary<string, DatabaseObject> { ["Book"] = table });
+            metadata.Setup(x => x.TryGetBackingColumn("Book", It.IsAny<string>(), out It.Ref<string?>.IsAny))
+                .Returns((string _, string field, out string? backing) => { backing = field; return true; });
+            metadata.Setup(x => x.TryGetExposedColumnName("Book", It.IsAny<string>(), out It.Ref<string?>.IsAny))
+                .Returns((string _, string field, out string? exposed) => { exposed = field; return true; });
+            Mock<IMetadataProviderFactory> metadataFactory = new(MockBehavior.Strict);
+            metadataFactory.Setup(x => x.GetMetadataProvider(linkedDataSource ? "linked" : "root")).Returns(metadata.Object);
 
             Mock<IQueryBuilder> queryBuilder = new();
             queryBuilder.Setup(x => x.Build(It.IsAny<SqlInsertStructure>())).Returns("INSERT");
+            queryBuilder.Setup(x => x.Build(It.IsAny<SqlUpdateStructure>())).Returns("UPDATE");
+            queryBuilder.Setup(x => x.Build(It.IsAny<SqlUpsertQueryStructure>())).Returns("UPSERT");
+            queryBuilder.Setup(x => x.Build(It.IsAny<SqlDeleteStructure>())).Returns("DELETE");
             Mock<IQueryExecutor> queryExecutor = new();
+            DbResultSet resultSet = new(new Dictionary<string, object> { [SqlMutationEngine.IS_UPDATE_RESULT_SET] = true });
+            resultSet.Rows.Add(new DbResultSetRow { Columns = { ["id"] = 1, ["title"] = "linked book" } });
+            queryExecutor.Setup(x => x.ExecuteQueryAsync<DbResultSet>(
+                    It.IsAny<string>(), It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                    It.IsAny<Func<DbDataReader, List<string>?, Task<DbResultSet>>>(), It.IsAny<string>(),
+                    It.IsAny<HttpContext?>(), It.IsAny<List<string>?>()))
+                .ReturnsAsync(resultSet);
+            queryExecutor.Setup(x => x.ExecuteQueryAsync<Dictionary<string, object>>(
+                    It.IsAny<string>(), It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                    It.IsAny<Func<DbDataReader, List<string>?, Task<Dictionary<string, object>>>>(), It.IsAny<string>(),
+                    It.IsAny<HttpContext?>(), It.IsAny<List<string>?>()))
+                .ReturnsAsync(new Dictionary<string, object> { [nameof(DbDataReader.RecordsAffected)] = 1 });
             queryExecutor.Setup(x => x.ExecuteQuery<DbResultSet>(
                     It.IsAny<string>(),
                     It.IsAny<IDictionary<string, DbConnectionParam>>(),
@@ -568,8 +669,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryManagerFactory.Setup(x => x.GetQueryExecutor(DatabaseType.MSSQL)).Returns(queryExecutor.Object);
 
             Mock<IHttpContextAccessor> accessor = new();
-            accessor.Setup(x => x.HttpContext).Returns(new DefaultHttpContext());
+            DefaultHttpContext httpContext = new();
+            if (linkedDataSource)
+            {
+                httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "anonymous";
+            }
+
+            httpContext.Request.Scheme = "https";
+            httpContext.Request.Host = new HostString("example.test");
+            httpContext.Request.Path = "/api/Book";
+            accessor.Setup(x => x.HttpContext).Returns(httpContext);
             Mock<IAuthorizationResolver> authorization = new();
+            authorization.Setup(x => x.AreRoleAndOperationDefinedForEntity("Book", "anonymous", EntityActionOperation.Read)).Returns(true);
+            authorization.Setup(x => x.GetAllowedExposedColumns("Book", "anonymous", EntityActionOperation.Read))
+                .Returns(new HashSet<string> { "id", "title" });
+            authorization.Setup(x => x.GetDBPolicyForRequest("Book", "anonymous", EntityActionOperation.Read))
+                .Returns(readPolicy ? "@item.id eq 1" : string.Empty);
             authorization.Setup(x => x.ResolveDBPolicy(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
@@ -577,15 +692,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     It.IsAny<HttpContext>()))
                 .Returns(ResolvedDatabasePolicy.Empty);
 
+            Mock<IQueryEngine> queryEngine = new();
+            queryEngine.Setup(x => x.ExecuteAsync(It.IsAny<FindRequestContext>()))
+                .ReturnsAsync(() => JsonDocument.Parse("{\"id\":1,\"title\":\"linked book\"}"));
+            Mock<IQueryEngineFactory> queryEngineFactory = new();
+            queryEngineFactory.Setup(x => x.GetQueryEngine(DatabaseType.MSSQL)).Returns(queryEngine.Object);
             SqlMutationEngine engine = new(
                 queryManagerFactory.Object,
-                Mock.Of<IMetadataProviderFactory>(),
-                Mock.Of<IQueryEngineFactory>(),
+                metadataFactory.Object,
+                queryEngineFactory.Object,
                 authorization.Object,
                 null!,
                 accessor.Object,
                 runtimeConfigProvider);
-            return (engine, metadata.Object);
+            return (engine, metadata.Object, metadataFactory, queryExecutor, queryEngine);
         }
 
         private static SqlMutationEngine CreateUninitializedEngine(IAuthorizationResolver authorizationResolver)

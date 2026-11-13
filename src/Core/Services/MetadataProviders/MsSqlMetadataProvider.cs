@@ -32,16 +32,20 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         private RuntimeConfigProvider _runtimeConfigProvider;
 
+        private RuntimeConfig? _childConfig;
+
         public MsSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             RuntimeConfigValidator runtimeConfigValidator,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName,
-            bool isValidateOnly = false)
+            bool isValidateOnly = false,
+            RuntimeConfig? childConfig = null)
             : base(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
             _runtimeConfigProvider = runtimeConfigProvider;
+            _childConfig = childConfig;
         }
 
         public override string GetDefaultSchemaName()
@@ -464,6 +468,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 // Track resolution count for validation.
                 runtimeConfig.AutoentityResolutionCounts[autoentityName] = addedEntities;
+                if (_childConfig is not null)
+                {
+                    _childConfig.AutoentityResolutionCounts[autoentityName] = addedEntities;
+                }
             }
 
             LogRestPathsForEntities(runtimeConfig, entities);

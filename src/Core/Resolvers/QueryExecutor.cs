@@ -9,8 +9,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlTypes;
@@ -412,20 +414,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 await conn.OpenAsync(cancellationToken);
                 DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
                 TResult? result = default(TResult);
+                CommandBehavior commandBehavior = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ? CommandBehavior.SequentialAccess : CommandBehavior.CloseConnection;
+
+                // Start only at provider execution, not connection setup or the retry-policy boundary.
+                // Each execution gets its own scope, including executions in a retry attempt.
+                using EngineTelemetryMeasurementScope? databaseAttempt = BeginDatabaseAttempt(dataSourceName);
                 try
                 {
-                    CommandBehavior commandBehavior = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ? CommandBehavior.SequentialAccess : CommandBehavior.CloseConnection;
-                    // CancellationToken is passed to ExecuteReaderAsync to ensure that if the client times out while the query is executing, the execution will be cancelled and resources will be freed up.
-                    using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(commandBehavior, cancellationToken);
+                    // Preserve the caller's linked cancellation through actual provider execution.
+                    using (DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(commandBehavior, cancellationToken))
+                    {
+                        if (dataReaderHandler is not null && dbDataReader is not null)
+                        {
+                            result = await dataReaderHandler(dbDataReader, args);
+                        }
+                        else
+                        {
+                            result = default(TResult);
+                        }
+                    }
 
-                    if (dataReaderHandler is not null && dbDataReader is not null)
-                    {
-                        result = await dataReaderHandler(dbDataReader, args);
-                    }
-                    else
-                    {
-                        result = default(TResult);
-                    }
+                    databaseAttempt?.Complete(EngineTelemetryOutcome.Success);
+                }
+                catch (OperationCanceledException)
+                {
+                    databaseAttempt?.Complete(EngineTelemetryOutcome.Canceled);
+                    throw;
                 }
                 catch (DbException e)
                 {
@@ -434,7 +448,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         exception: e,
                         message: "{correlationId} Query execution error due to:\n{errorMessage}",
                         correlationId,
-                        e.Message);
+                        DbExceptionParser.GetLogMessage(e));
                     throw DbExceptionParser.Parse(e);
                 }
 
@@ -503,18 +517,30 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 conn.Open();
                 DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
 
+                CommandBehavior commandBehavior = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ? CommandBehavior.SequentialAccess : CommandBehavior.CloseConnection;
+                using EngineTelemetryMeasurementScope? databaseAttempt = BeginDatabaseAttempt(dataSourceName);
                 try
                 {
-                    using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
-                        cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
-                    if (dataReaderHandler is not null && dbDataReader is not null)
+                    TResult? result;
+                    using (DbDataReader dbDataReader = cmd.ExecuteReader(commandBehavior))
                     {
-                        return dataReaderHandler(dbDataReader, args);
+                        if (dataReaderHandler is not null && dbDataReader is not null)
+                        {
+                            result = dataReaderHandler(dbDataReader, args);
+                        }
+                        else
+                        {
+                            result = default(TResult);
+                        }
                     }
-                    else
-                    {
-                        return default(TResult);
-                    }
+
+                    databaseAttempt?.Complete(EngineTelemetryOutcome.Success);
+                    return result;
+                }
+                catch (OperationCanceledException)
+                {
+                    databaseAttempt?.Complete(EngineTelemetryOutcome.Canceled);
+                    throw;
                 }
                 catch (DbException e)
                 {
@@ -523,7 +549,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         exception: e,
                         message: "{correlationId} Query execution error due to:\n{errorMessage}",
                         correlationId,
-                        e.Message);
+                        DbExceptionParser.GetLogMessage(e));
                     throw DbExceptionParser.Parse(e);
                 }
             }
@@ -531,6 +557,43 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 queryExecutionTimer.Stop();
                 AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
+            }
+        }
+
+        /// <summary>
+        /// Resolves only the provider category, preserving the request's captured source IDs
+        /// across reload. The session excludes work without an eligible request.
+        /// </summary>
+        private EngineTelemetryMeasurementScope? BeginDatabaseAttempt(string dataSourceName)
+        {
+            EngineTelemetrySession? session = ConfigProvider.ProductTelemetry;
+            RuntimeConfig? config = session?.CurrentRequest?.Config;
+            if (session?.IsEnabled != true || config is null)
+            {
+                return null;
+            }
+
+            try
+            {
+                string resolvedDataSourceName = string.IsNullOrEmpty(dataSourceName) ? config.DefaultDataSourceName : dataSourceName;
+                // A later executor selection may use the replacement model, while an already
+                // prepared command still uses the captured one. Match the actual source ID.
+                if (!config.CheckDataSourceExists(resolvedDataSourceName) &&
+                    ConfigProvider.TryGetLoadedConfig(out RuntimeConfig? currentConfig))
+                {
+                    config = currentConfig;
+                }
+
+                DatabaseType? provider = config.CheckDataSourceExists(resolvedDataSourceName)
+                    ? config.GetDataSourceFromDataSourceName(resolvedDataSourceName).DatabaseType
+                    : null;
+                return session.BeginDatabaseAttempt(provider);
+            }
+            catch (DataApiBuilderException)
+            {
+                // Multiple replacements can remove both models' attribution. Preserve the
+                // observed attempt as unknown rather than discard it or guess its provider.
+                return session.BeginDatabaseAttempt(null);
             }
         }
 
@@ -587,7 +650,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 QueryExecutorLogger.LogError(
                     exception: e,
                     message: "Query execution error due to:\n{errorMessage}",
-                    e.Message);
+                    DbExceptionParser.GetLogMessage(e));
                 throw DbExceptionParser.Parse(e);
             }
         }
@@ -604,7 +667,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 QueryExecutorLogger.LogError(
                     exception: e,
                     message: "Query execution error due to:\n{errorMessage}",
-                    e.Message);
+                    DbExceptionParser.GetLogMessage(e));
                 throw DbExceptionParser.Parse(e);
             }
         }
@@ -766,18 +829,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             TResult? jsonResult = default;
 
-            // Parse Results into Json and return
-            if (dbDataReader.HasRows)
-            {
-                string jsonString = await GetJsonStringFromDbReader(dbDataReader);
+            // HasRows is intentionally not checked: for failing queries SqlClient reports HasRows == false and
+            // surfaces the server error only when the reader is advanced, so skipping the read hid the error.
+            string jsonString = await GetJsonStringFromDbReader(dbDataReader);
 
-                ///Json string can be null or empty when the returned result from the db is NULL.
-                ///In dw case when the entire result is a null, a single row with an empty string is returned, owing to the isnullcheck that is done while constructing the json in the query.
-                if (!string.IsNullOrEmpty(jsonString))
-                {
-                    // Make sure to get the complete json string in case of large document.
-                    jsonResult = JsonSerializer.Deserialize<TResult>(jsonString);
-                }
+            ///Json string can be null or empty when the returned result from the db is NULL.
+            ///In dw case when the entire result is a null, a single row with an empty string is returned, owing to the isnullcheck that is done while constructing the json in the query.
+            if (!string.IsNullOrEmpty(jsonString))
+            {
+                // Make sure to get the complete json string in case of large document.
+                jsonResult = JsonSerializer.Deserialize<TResult>(jsonString);
             }
 
             if (jsonResult is null)

@@ -429,6 +429,10 @@ public abstract class RuntimeConfigLoader
     /// <returns>The connection string with the telemetry-bearing <c>Application Name</c> embedded.</returns>
     public static string GetConnectionStringWithApplicationName(string connectionString, RuntimeConfig config, DataSource dataSource)
     {
+        // Hosted initialization and explicit overrides can supply a different connection string from
+        // the one parsed into the config. Per-pool authentication telemetry must describe that string.
+        dataSource = dataSource with { ConnectionString = connectionString };
+
         return dataSource.DatabaseType switch
         {
             DatabaseType.MSSQL or DatabaseType.DWSQL => GetMsSqlConnectionStringWithApplicationName(connectionString, config, dataSource),
@@ -499,16 +503,41 @@ public abstract class RuntimeConfigLoader
         if (string.IsNullOrWhiteSpace(connectionStringBuilder.ApplicationName)
             || connectionStringBuilder.ApplicationName.Equals(defaultApplicationName, StringComparison.OrdinalIgnoreCase))
         {
-            connectionStringBuilder.ApplicationName = applicationName;
+            connectionStringBuilder.ApplicationName = ComposeSqlApplicationName(string.Empty, applicationName);
         }
         else
         {
             // If the connection string contains the `Application Name` property with a value, update the value by adding the DataApiBuilder Application Name.
-            connectionStringBuilder.ApplicationName += $",{applicationName}";
+            connectionStringBuilder.ApplicationName = ComposeSqlApplicationName(connectionStringBuilder.ApplicationName, applicationName);
         }
 
         // Return the updated connection string.
         return connectionStringBuilder.ConnectionString;
+    }
+
+    /// <summary>
+    /// SqlClient rejects names longer than 128 UTF-16 code units before opening a connection. Keep
+    /// the existing name (including any isolation prefix) intact and fit only the DAB-owned suffix
+    /// into the remaining budget. The decoder already accepts a truncated payload.
+    /// </summary>
+    private static string ComposeSqlApplicationName(string existingName, string telemetry)
+    {
+        const int maxLength = 128;
+        string separator = existingName.Length == 0 ? string.Empty : ",";
+        int available = maxLength - existingName.Length - separator.Length;
+        if (available <= 0)
+        {
+            return existingName;
+        }
+
+        int length = Math.Min(available, telemetry.Length);
+        if (length < telemetry.Length && length > 0
+            && char.IsHighSurrogate(telemetry[length - 1]) && char.IsLowSurrogate(telemetry[length]))
+        {
+            length--;
+        }
+
+        return length == 0 ? existingName : existingName + separator + telemetry[..length];
     }
 
     /// <summary>

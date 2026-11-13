@@ -602,8 +602,11 @@ public class RuntimeConfigLoaderTests
             DataSource parentDataSource = runtimeConfig.GetDataSourceFromDataSourceName(runtimeConfig.GetDataSourceNameFromEntityName("ParentEntity"));
             DataSource childDataSource = runtimeConfig.GetDataSourceFromDataSourceName(runtimeConfig.GetDataSourceNameFromEntityName("ChildEntity"));
 
-            (_, string parentRuntime, string parentEntity) = GetTelemetrySections(parentDataSource.ConnectionString);
-            (_, string childRuntime, string childEntity) = GetTelemetrySections(childDataSource.ConnectionString);
+            (_, string parentGeneral, string parentRuntime, string parentEntity) = GetTelemetrySections(parentDataSource.ConnectionString);
+            (_, string childGeneral, string childRuntime, string childEntity) = GetTelemetrySections(childDataSource.ConnectionString);
+
+            Assert.AreEqual('1', parentGeneral[4], "The default pool must report the merged data-source count.");
+            Assert.AreEqual('1', childGeneral[4], "The child pool must report the merged data-source count.");
 
             // Sanity: the root has a real runtime, so its encoded runtime section is meaningful, i.e. not
             // entirely the 'M' (missing) sentinel. This guarantees the equality checks below are meaningful.
@@ -711,8 +714,11 @@ public class RuntimeConfigLoaderTests
             DataSource parentDataSource = runtimeConfig.GetDataSourceFromDataSourceName(runtimeConfig.GetDataSourceNameFromEntityName("ParentEntity"));
             DataSource childDataSource = runtimeConfig.GetDataSourceFromDataSourceName(runtimeConfig.GetDataSourceNameFromEntityName("ChildEntity"));
 
-            (string parentContext, string parentRuntime, string parentEntity) = GetTelemetrySections(parentDataSource.ConnectionString);
-            (string childContext, string childRuntime, string childEntity) = GetTelemetrySections(childDataSource.ConnectionString);
+            (string parentContext, string parentGeneral, string parentRuntime, string parentEntity) = GetTelemetrySections(parentDataSource.ConnectionString);
+            (string childContext, string childGeneral, string childRuntime, string childEntity) = GetTelemetrySections(childDataSource.ConnectionString);
+
+            Assert.AreEqual('1', parentGeneral[4], "The default pool must report multiple parsed data sources.");
+            Assert.AreEqual('1', childGeneral[4], "The PostgreSQL pool must report multiple parsed data sources.");
 
             // Context = [Protocol][Object][Source][Role]; only Source is known at pool time.
             // The PostgreSQL pool encodes Source 'P'; the MSSQL pool encodes Source 'S'.
@@ -940,11 +946,11 @@ public class RuntimeConfigLoaderTests
     }
 
     /// <summary>
-    /// Extracts the populated telemetry sections (context, runtime, entity) from the DAB usage-telemetry
+    /// Extracts the populated telemetry sections (context, general, runtime, entity) from the DAB usage-telemetry
     /// payload embedded in a connection string's "Application Name" property.
-    /// Payload shape: &lt;marker&gt;&lt;version&gt;+&lt;context&gt;||&lt;runtime&gt;|&lt;entity&gt;+
+    /// Payload shape: &lt;marker&gt;&lt;version&gt;+&lt;context&gt;|&lt;general&gt;|&lt;runtime&gt;|&lt;entity&gt;+
     /// </summary>
-    private static (string Context, string Runtime, string Entity) GetTelemetrySections(string connectionString)
+    private static (string Context, string General, string Runtime, string Entity) GetTelemetrySections(string connectionString)
     {
         // Use the engine-agnostic base builder so this works for both SQL Server and PostgreSQL connection strings.
         DbConnectionStringBuilder builder = new() { ConnectionString = connectionString };
@@ -964,9 +970,9 @@ public class RuntimeConfigLoaderTests
 
         string[] sections = sectionsRegion.Split('|');
         Assert.AreEqual(4, sections.Length, $"Telemetry payload in '{applicationName}' should have 4 positional sections, but was '{sectionsRegion}'.");
-        Assert.AreEqual(string.Empty, sections[1], "The reserved general-settings section should be empty.");
+        Assert.AreEqual(6, sections[1].Length, "The general section should have six flags.");
 
-        return (sections[0], sections[2], sections[3]);
+        return (sections[0], sections[1], sections[2], sections[3]);
     }
 
     /// <summary>Minimal in-memory <see cref="ILogger{T}"/> that records formatted messages for assertions.</summary>

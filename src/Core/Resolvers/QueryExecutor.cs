@@ -448,7 +448,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         exception: e,
                         message: "{correlationId} Query execution error due to:\n{errorMessage}",
                         correlationId,
-                        e.Message);
+                        DbExceptionParser.GetLogMessage(e));
                     throw DbExceptionParser.Parse(e);
                 }
 
@@ -549,7 +549,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         exception: e,
                         message: "{correlationId} Query execution error due to:\n{errorMessage}",
                         correlationId,
-                        e.Message);
+                        DbExceptionParser.GetLogMessage(e));
                     throw DbExceptionParser.Parse(e);
                 }
             }
@@ -650,7 +650,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 QueryExecutorLogger.LogError(
                     exception: e,
                     message: "Query execution error due to:\n{errorMessage}",
-                    e.Message);
+                    DbExceptionParser.GetLogMessage(e));
                 throw DbExceptionParser.Parse(e);
             }
         }
@@ -667,7 +667,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 QueryExecutorLogger.LogError(
                     exception: e,
                     message: "Query execution error due to:\n{errorMessage}",
-                    e.Message);
+                    DbExceptionParser.GetLogMessage(e));
                 throw DbExceptionParser.Parse(e);
             }
         }

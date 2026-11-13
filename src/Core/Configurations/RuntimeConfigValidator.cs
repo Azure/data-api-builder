@@ -62,7 +62,7 @@ public class RuntimeConfigValidator : IConfigValidator
         "runtime.cache.enabled must be false when user-delegated-auth is configured.";
 
     public const string USER_DELEGATED_AUTH_MISSING_CREDENTIALS_ERR_MSG =
-        "User-delegated authentication requires DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID, and DAB_OBO_CLIENT_SECRET environment variables.";
+        OboCredentialFactory.MISSING_CREDENTIALS_ERROR_MESSAGE;
 
     // Error messages.
     public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
@@ -129,16 +129,18 @@ public class RuntimeConfigValidator : IConfigValidator
 
     /// <summary>
     /// Validates configuration for user-delegated authentication (OBO).
-    /// When any data source has user-delegated-auth configured, the following
+    /// When any data source has user-delegated-auth enabled, the following
     /// rules are enforced:
     /// - data-source.database-type must be "mssql".
     /// - data-source.user-delegated-auth.database-audience must be present.
     /// - runtime.cache.enabled must be false.
-    /// - Environment variables DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID, and DAB_OBO_CLIENT_SECRET must be set.
+    /// - Environment variables must supply the API app IDs and exactly one process-wide OBO credential: client secret or managed identity.
     /// </summary>
     /// <param name="runtimeConfig">Runtime configuration.</param>
     private void ValidateUserDelegatedAuthOptions(RuntimeConfig runtimeConfig)
     {
+        bool hasValidatedGlobalOptions = false;
+
         foreach (DataSource dataSource in runtimeConfig.ListAllDataSources())
         {
             // Skip validation if user-delegated-auth is not configured or not enabled
@@ -163,26 +165,27 @@ public class RuntimeConfigValidator : IConfigValidator
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
 
-            // Validate OBO App Registration credentials are configured via environment variables.
-            string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR);
-            string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR);
-            string? clientSecret = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR);
-
-            if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(clientSecret))
+            // Credentials and result caching are process-wide; record their errors only once.
+            if (!hasValidatedGlobalOptions)
             {
-                HandleOrRecordException(new DataApiBuilderException(
-                    message: USER_DELEGATED_AUTH_MISSING_CREDENTIALS_ERR_MSG,
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-            }
+                try
+                {
+                    OboCredentialFactory.ValidateEnvironmentVariables();
+                }
+                catch (DataApiBuilderException ex) when (ex.SubStatusCode == DataApiBuilderException.SubStatusCodes.ConfigValidationError)
+                {
+                    HandleOrRecordException(ex);
+                }
 
-            // Validate caching is disabled when user-delegated-auth is enabled
-            if (runtimeConfig.Runtime?.Cache?.Enabled == true)
-            {
-                HandleOrRecordException(new DataApiBuilderException(
-                    message: USER_DELEGATED_AUTH_CACHING_ERR_MSG,
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                if (runtimeConfig.Runtime?.Cache?.Enabled == true)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: USER_DELEGATED_AUTH_CACHING_ERR_MSG,
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                hasValidatedGlobalOptions = true;
             }
         }
     }

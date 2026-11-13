@@ -742,8 +742,24 @@ type Moon {
         [TestInitialize]
         public void SetupAuthProviderEnvironmentVariables()
         {
+            // Other integration fixtures can leave a database environment selected. Reset
+            // before each test as well as after it, so late-config hosts start unconfigured.
+            TestHelper.UnsetAllDABEnvironmentVariables();
             TestHelper.SetAppServiceEnvironmentVariable();
             TestHelper.SetStaticWebAppsEnvironmentVariable();
+        }
+
+        [DataTestMethod]
+        [DataRow(RUNTIME_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT)]
+        [DataRow(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT)]
+        [DataRow(RUNTIME_ENV_CONNECTION_STRING, "Server=synthetic.invalid;Database=unused;")]
+        public void TestSetupDoesNotInheritDatabaseSelectionFromEarlierFixtures(string variable, string value)
+        {
+            Environment.SetEnvironmentVariable(variable, value);
+
+            SetupAuthProviderEnvironmentVariables();
+
+            Assert.IsNull(Environment.GetEnvironmentVariable(variable));
         }
 
         /// <summary>
@@ -5984,9 +6000,11 @@ type Planet @model(name:""PlanetAlias"") {
         /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow(true, 4, DisplayName = "Test Autoentities with additional entities")]
-        [DataRow(false, 2, DisplayName = "Test Autoentities without additional entities")]
-        public async Task TestAutoentitiesAreGeneratedIntoEntities(bool useEntities, int expectedEntityCount)
+        [DataRow(true, 4, false, DisplayName = "Test Autoentities with additional entities")]
+        [DataRow(false, 2, false, DisplayName = "Test Autoentities without additional entities")]
+        [DataRow(true, 3, true, DisplayName = "XML autoentity with additional entities")]
+        [DataRow(false, 1, true, DisplayName = "XML autoentity without additional entities")]
+        public async Task TestAutoentitiesAreGeneratedIntoEntities(bool useEntities, int expectedEntityCount, bool useXmlTable)
         {
             // Arrange
             EntityRelationship bookRelationship = new(Cardinality: Cardinality.One,
@@ -6033,7 +6051,7 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     "PublisherAutoEntity", new Autoentity(
                         Patterns: new AutoentityPatterns(
-                            Include: new[] { "%publishers%" },
+                            Include: new[] { useXmlTable ? "%xml_profiles%" : "%publishers%" },
                             Exclude: null,
                             Name: null
                         ),
@@ -6085,18 +6103,20 @@ type Planet @model(name:""PlanetAlias"") {
             {
                 // Act
                 RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
-                using HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/dbo_publishers");
+                string entityName = useXmlTable ? "dbo_xml_profiles" : "dbo_publishers";
+                string fieldName = useXmlTable ? "content" : "name";
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, $"/api/{entityName}");
                 using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
 
-                string graphqlQuery = @"
-                {
-                    dbo_publishers {
-                        items {
+                string graphqlQuery = $@"
+                {{
+                    {entityName} {{
+                        items {{
                             id
-                            name
-                        }
-                    }
-                }";
+                            {fieldName}
+                        }}
+                    }}
+                }}";
 
                 object graphqlPayload = new { query = graphqlQuery };
                 HttpRequestMessage graphqlRequest = new(HttpMethod.Post, "/graphql")
@@ -6106,7 +6126,9 @@ type Planet @model(name:""PlanetAlias"") {
                 HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
 
                 // Assert
-                string expectedResponseFragment = @"{""id"":1156,""name"":""The First Publisher""}";
+                string expectedResponseFragment = useXmlTable
+                    ? @"""id"":1"
+                    : @"{""id"":1156,""name"":""The First Publisher""}";
 
                 // Verify number of entities
                 Assert.AreEqual(expectedEntityCount, configProvider.GetConfig().Entities.Entities.Count, "Number of generated entities is not what is expected");
@@ -6125,6 +6147,14 @@ type Planet @model(name:""PlanetAlias"") {
                 Assert.IsTrue(!string.IsNullOrEmpty(graphqlResponseBody), "GraphQL response should contain data");
                 Assert.IsFalse(graphqlResponseBody.Contains("errors"), "GraphQL response should not contain errors");
                 Assert.IsTrue(graphqlResponseBody.Contains(expectedResponseFragment));
+                if (useXmlTable)
+                {
+                    JsonElement restItem = JsonDocument.Parse(restResponseBody).RootElement.GetProperty("value")[0];
+                    JsonElement graphqlItem = JsonDocument.Parse(graphqlResponseBody).RootElement
+                        .GetProperty("data").GetProperty(entityName).GetProperty("items")[0];
+                    Assert.AreEqual(JsonValueKind.String, restItem.GetProperty("content").ValueKind);
+                    Assert.AreEqual(restItem.GetProperty("content").GetString(), graphqlItem.GetProperty("content").GetString());
+                }
             }
         }
 

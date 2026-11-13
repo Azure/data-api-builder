@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -61,6 +62,8 @@ public abstract class RuntimeConfigLoader
 
     public bool IsNewConfigValidated;
 
+    internal Func<bool>? TelemetryCaptureEnabled { get; set; }
+
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
         _changeToken = new DabChangeToken();
@@ -120,37 +123,49 @@ public abstract class RuntimeConfigLoader
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
-        // Signal that a change has occurred to all change token listeners.
-        RaiseChanged();
-
-        // All the data inside of the if statement should only update when DAB is in development mode.
-        if (RuntimeConfig!.IsDevelopmentMode())
+        TelemetryFailureStage stage = TelemetryFailureStage.Validation;
+        try
         {
-            RaiseOrderedEvent(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED);
-            RaiseOrderedEvent(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED);
-            RaiseOrderedEvent(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED);
-            RaiseOrderedEvent(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED);
-            RaiseOrderedEvent(DOCUMENTOR_ON_CONFIG_CHANGED);
+            // Signal that a change has occurred to all change token listeners.
+            RaiseChanged();
 
-            // Order of event firing matters: Authorization rules can only be updated after the
-            // MetadataProviderFactory has been updated with latest database object metadata.
-            // RuntimeConfig must already be updated and is implied to have been updated by the time
-            // this function is called.
-            RaiseOrderedEvent(AUTHZ_RESOLVER_ON_CONFIG_CHANGED);
+            // All the data inside of the if statement should only update when DAB is in development mode.
+            if (RuntimeConfig!.IsDevelopmentMode())
+            {
+                stage = TelemetryFailureStage.Configuration;
+                RaiseOrderedEvent(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED);
+                stage = TelemetryFailureStage.Metadata;
+                RaiseOrderedEvent(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED);
+                stage = TelemetryFailureStage.Serving;
+                RaiseOrderedEvent(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED);
+                RaiseOrderedEvent(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED);
+                RaiseOrderedEvent(DOCUMENTOR_ON_CONFIG_CHANGED);
 
-            // Custom MCP tool schemas depend on refreshed database metadata. Publish the new
-            // registry only after query, mutation, and authorization dependencies are ready.
-            RaiseOrderedEvent(MCP_TOOL_REGISTRY_ON_CONFIG_CHANGED);
+                // Order of event firing matters: Authorization rules can only be updated after the
+                // MetadataProviderFactory has been updated with latest database object metadata.
+                // RuntimeConfig must already be updated and is implied to have been updated by the time
+                // this function is called.
+                RaiseOrderedEvent(AUTHZ_RESOLVER_ON_CONFIG_CHANGED);
 
-            // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
-            RaiseOrderedEvent(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED);
-            RaiseOrderedEvent(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED);
-            RaiseOrderedEvent(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED);
+                // Custom MCP tool schemas depend on refreshed database metadata. Publish the new
+                // registry only after query, mutation, and authorization dependencies are ready.
+                RaiseOrderedEvent(MCP_TOOL_REGISTRY_ON_CONFIG_CHANGED);
+
+                // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
+                RaiseOrderedEvent(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED);
+                RaiseOrderedEvent(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED);
+                RaiseOrderedEvent(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED);
+            }
+
+            // Log Level Initializer is outside of if statement as it can be updated on both development and production mode.
+            stage = TelemetryFailureStage.Serving;
+            RaiseOrderedEvent(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE);
         }
-
-        // Log Level Initializer is outside of if statement as it can be updated on both development and production mode.
-        RaiseOrderedEvent(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE);
+        catch (Exception)
+        {
+            TelemetryFailureContext.Current?.RecordFailure(stage);
+            throw;
+        }
 
         void RaiseOrderedEvent(string eventName)
         {
@@ -288,6 +303,17 @@ public abstract class RuntimeConfigLoader
             if (config is null)
             {
                 return false;
+            }
+
+            // Capture original presence before any model clone/rewriting. No raw JSON escapes
+            // capture, and the default-off gate avoids allocating metadata in ordinary loads.
+            // Child loads run this same path and retain only their own original declarations.
+            if (TelemetryConfigurationPresence.IsCaptureEnabled())
+            {
+                config = config with
+                {
+                    TelemetryPresence = TelemetryConfigurationPresence.TryCapture(json, config, enabled: true)
+                };
             }
 
             // Embed the DAB Application Name (with anonymous usage telemetry) into the connection
@@ -429,6 +455,10 @@ public abstract class RuntimeConfigLoader
     /// <returns>The connection string with the telemetry-bearing <c>Application Name</c> embedded.</returns>
     public static string GetConnectionStringWithApplicationName(string connectionString, RuntimeConfig config, DataSource dataSource)
     {
+        // Hosted initialization and explicit overrides can supply a different connection string from
+        // the one parsed into the config. Per-pool authentication telemetry must describe that string.
+        dataSource = dataSource with { ConnectionString = connectionString };
+
         return dataSource.DatabaseType switch
         {
             DatabaseType.MSSQL or DatabaseType.DWSQL => GetMsSqlConnectionStringWithApplicationName(connectionString, config, dataSource),
@@ -444,7 +474,8 @@ public abstract class RuntimeConfigLoader
     /// </summary>
     /// <param name="connectionString">Connection string for connecting to database.</param>
     /// <param name="config">When provided, anonymous DAB telemetry is embedded into the `Application Name`
-    /// (honoring the `DAB_TELEMETRY_APPNAME_OPT_OUT` opt-out). When null, only the plain user agent is used.</param>
+    /// (honoring both product telemetry opt-outs). When null, only the plain user agent is used,
+    /// unless the global product telemetry veto is set.</param>
     /// <param name="liveDataSource">The data source whose connection is being opened, used to encode per-pool
     /// fields (Source, OBO). Ignored when <paramref name="config"/> is null.</param>
     /// <returns>Updated connection string with `Application Name` property.</returns>
@@ -469,6 +500,14 @@ public abstract class RuntimeConfigLoader
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
                 innerException: ex);
+        }
+
+        // Check the shared veto before the legacy idempotency guard, including config-null paths
+        // and connection strings already decorated by an earlier load or embedding host.
+        if (ProductTelemetryPolicy.IsOptedOut())
+        {
+            return RemoveApplicationNameTelemetry(connectionString, connectionStringBuilder,
+                connectionStringBuilder.ApplicationName, value => connectionStringBuilder.ApplicationName = value);
         }
 
         // Idempotency guard: both OSS and hosted telemetry share the dab_ prefix, so do not append a
@@ -499,16 +538,41 @@ public abstract class RuntimeConfigLoader
         if (string.IsNullOrWhiteSpace(connectionStringBuilder.ApplicationName)
             || connectionStringBuilder.ApplicationName.Equals(defaultApplicationName, StringComparison.OrdinalIgnoreCase))
         {
-            connectionStringBuilder.ApplicationName = applicationName;
+            connectionStringBuilder.ApplicationName = ComposeSqlApplicationName(string.Empty, applicationName);
         }
         else
         {
             // If the connection string contains the `Application Name` property with a value, update the value by adding the DataApiBuilder Application Name.
-            connectionStringBuilder.ApplicationName += $",{applicationName}";
+            connectionStringBuilder.ApplicationName = ComposeSqlApplicationName(connectionStringBuilder.ApplicationName, applicationName);
         }
 
         // Return the updated connection string.
         return connectionStringBuilder.ConnectionString;
+    }
+
+    /// <summary>
+    /// SqlClient rejects names longer than 128 UTF-16 code units before opening a connection. Keep
+    /// the existing name (including any isolation prefix) intact and fit only the DAB-owned suffix
+    /// into the remaining budget. The decoder already accepts a truncated payload.
+    /// </summary>
+    private static string ComposeSqlApplicationName(string existingName, string telemetry)
+    {
+        const int maxLength = 128;
+        string separator = existingName.Length == 0 ? string.Empty : ",";
+        int available = maxLength - existingName.Length - separator.Length;
+        if (available <= 0)
+        {
+            return existingName;
+        }
+
+        int length = Math.Min(available, telemetry.Length);
+        if (length < telemetry.Length && length > 0
+            && char.IsHighSurrogate(telemetry[length - 1]) && char.IsLowSurrogate(telemetry[length]))
+        {
+            length--;
+        }
+
+        return length == 0 ? existingName : existingName + separator + telemetry[..length];
     }
 
     /// <summary>
@@ -517,7 +581,9 @@ public abstract class RuntimeConfigLoader
     /// else add the Application Name property with DataApiBuilder Application Name based on hosted/oss platform.
     /// </summary>
     /// <param name="connectionString">Connection string for connecting to database.</param>
-    /// <param name="config">When provided, anonymous DAB usage telemetry is embedded in the Application Name (honoring the opt-out switch); otherwise the plain user agent is used.</param>
+    /// <param name="config">When provided, anonymous DAB usage telemetry is embedded in the Application Name
+    /// (honoring both product telemetry opt-outs); otherwise the plain user agent is used, unless
+    /// the global product telemetry veto is set.</param>
     /// <param name="liveDataSource">The data source whose connection is being opened, used to encode per-pool
     /// fields (Source, OBO). Ignored when <paramref name="config"/> is null.</param>
     /// <returns>Updated connection string with `Application Name` property.</returns>
@@ -542,6 +608,14 @@ public abstract class RuntimeConfigLoader
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
                 innerException: ex);
+        }
+
+        // Check the shared veto before the legacy idempotency guard, including config-null paths
+        // and connection strings already decorated by an earlier load or embedding host.
+        if (ProductTelemetryPolicy.IsOptedOut())
+        {
+            return RemoveApplicationNameTelemetry(connectionString, connectionStringBuilder,
+                connectionStringBuilder.ApplicationName, value => connectionStringBuilder.ApplicationName = value);
         }
 
         // Idempotency guard: both OSS and hosted telemetry share the dab_ prefix, so do not append a
@@ -577,6 +651,35 @@ public abstract class RuntimeConfigLoader
         }
 
         // Return the updated connection string.
+        return connectionStringBuilder.ConnectionString;
+    }
+
+    /// <summary>
+    /// Removes only recognized DAB suffixes, preserving the raw connection string when unchanged.
+    /// The caller supplies the provider's canonical property value (including its default) and
+    /// typed setter, rather than an indexer that can normalize nulls or wrap setter exceptions.
+    /// </summary>
+    private static string RemoveApplicationNameTelemetry(
+        string connectionString,
+        DbConnectionStringBuilder connectionStringBuilder,
+        string? canonicalApplicationName,
+        Action<string> setApplicationName)
+    {
+        string? optedOutApplicationName = ApplicationNameTelemetry.RemoveApplicationNameSegments(canonicalApplicationName);
+        if (string.Equals(optedOutApplicationName, canonicalApplicationName, StringComparison.Ordinal))
+        {
+            return connectionString;
+        }
+
+        if (string.IsNullOrEmpty(optedOutApplicationName))
+        {
+            connectionStringBuilder.Remove("Application Name");
+        }
+        else
+        {
+            setApplicationName(optedOutApplicationName);
+        }
+
         return connectionStringBuilder.ConnectionString;
     }
 

@@ -91,6 +91,56 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
+        [DataRow(false, "CAST(Inserted.[title] AS NVARCHAR(MAX)) AS [title]")]
+        [DataRow(true, "CAST([dbo].[books].[title] AS NVARCHAR(MAX)) AS [title]")]
+        public void BuildInsert_XmlOutputUsesSqlServerStringSerialization(bool hasTrigger, string expected)
+        {
+            SourceDefinition sourceDefinition = CreateSourceDefinition(hasTrigger, false, true);
+            sourceDefinition.Columns["title"].SqlDbType = SqlDbType.Xml;
+            SqlInsertStructure structure = new(
+                ENTITY_NAME, CreateMetadataProvider(sourceDefinition), CreateAuthorizationResolver(), CreateFilterParser(),
+                new Dictionary<string, object?> { ["title"] = "<doc/>" }, CreateHttpContext());
+
+            StringAssert.Contains(new MsSqlQueryBuilder().Build(structure), expected);
+        }
+
+        [DataTestMethod]
+        [DataRow(false, "CAST(Inserted.[title] AS NVARCHAR(MAX)) AS [title]")]
+        [DataRow(true, "CAST([title] AS NVARCHAR(MAX)) AS [title]")]
+        public void BuildUpdate_XmlOutputUsesSqlServerStringSerialization(bool hasTrigger, string expected)
+        {
+            SourceDefinition sourceDefinition = CreateSourceDefinition(false, hasTrigger, false);
+            sourceDefinition.Columns["title"].SqlDbType = SqlDbType.Xml;
+            SqlUpdateStructure structure = new(
+                ENTITY_NAME, CreateMetadataProvider(sourceDefinition), CreateAuthorizationResolver(), CreateFilterParser(),
+                new Dictionary<string, object?> { ["id"] = 1, ["title"] = "<doc/>" },
+                CreateHttpContext(), isIncrementalUpdate: true);
+
+            StringAssert.Contains(new MsSqlQueryBuilder().Build(structure), expected);
+        }
+
+        [DataTestMethod]
+        [DataRow(false, false)]
+        [DataRow(false, true)]
+        [DataRow(true, false)]
+        [DataRow(true, true)]
+        public void BuildUpsert_XmlOutputUsesSqlServerStringSerialization(bool hasInsertTrigger, bool hasUpdateTrigger)
+        {
+            SourceDefinition sourceDefinition = CreateSourceDefinition(hasInsertTrigger, hasUpdateTrigger, false);
+            sourceDefinition.Columns["title"].SqlDbType = SqlDbType.Xml;
+            SqlUpsertQueryStructure structure = new(
+                ENTITY_NAME, CreateMetadataProvider(sourceDefinition), CreateAuthorizationResolver(), CreateFilterParser(),
+                new Dictionary<string, object?> { ["id"] = 1, ["title"] = "<doc/>" },
+                incrementalUpdate: false, CreateHttpContext());
+
+            string query = new MsSqlQueryBuilder().Build(structure);
+            string updateColumn = hasUpdateTrigger ? "[title]" : "Inserted.[title]";
+            string insertColumn = hasInsertTrigger ? "[title]" : "Inserted.[title]";
+            StringAssert.Contains(query, $"CAST({updateColumn} AS NVARCHAR(MAX)) AS [title]");
+            StringAssert.Contains(query, $"CAST({insertColumn} AS NVARCHAR(MAX)) AS [title]");
+        }
+
+        [DataTestMethod]
         [DataRow("alias", "dbo", "[alias].[price]", DisplayName = "Table alias takes precedence")]
         [DataRow(null, "dbo", "[dbo].[books].[price]", DisplayName = "Schema and table qualify an unaliased column")]
         [DataRow(null, "", "[books].[price]", DisplayName = "Table qualifies a column when schema is empty")]

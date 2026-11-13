@@ -97,5 +97,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             return _developerMode ? e.Message : GENERIC_DB_EXCEPTION_MESSAGE;
         }
+
+        /// <summary>
+        /// Gets the message to write to server logs. Unlike <see cref="GetMessage"/>, this is not sanitized by host mode.
+        /// </summary>
+        /// <param name="e">The exception thrown as a result of execution of the request.</param>
+        /// <returns>Log message.</returns>
+        public virtual string GetLogMessage(DbException e)
+        {
+            return e.Message;
+        }
     }
 }

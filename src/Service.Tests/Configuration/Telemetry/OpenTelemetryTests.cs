@@ -2,7 +2,10 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -111,5 +114,52 @@ public class OpenTelemetryTests
         // If tracerProvider and meterProvider are null, OTEL is disabled
         Assert.IsNull(tracerProvider, "TracerProvider should not be registered.");
         Assert.IsNull(meterProvider, "MeterProvider should not be registered.");
+    }
+
+    /// <summary>
+    /// Tests that a request reading from SQL Server produces a recorded SQL client span when Open Telemetry is enabled.
+    /// The listener below never samples by itself, so the span can only be recorded because
+    /// the OpenTelemetry TracerProvider subscribes to the SqlClient instrumentation activity source.
+    /// </summary>
+    [TestMethod]
+    public async Task TestOpenTelemetryRecordsSqlClientSpan()
+    {
+        // Arrange
+        const string SQLCLIENT_ACTIVITY_SOURCE_NAME = "OpenTelemetry.Instrumentation.SqlClient";
+        SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, true, "http://localhost:4317", "key=key", OtlpExportProtocol.Grpc);
+
+        // Spans from startup metadata queries are ignored so that only the request's queries are asserted.
+        bool requestSent = false;
+        TaskCompletionSource<Activity> recordedSqlActivity = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using ActivityListener listener = new()
+        {
+            ShouldListenTo = source => source.Name == SQLCLIENT_ACTIVITY_SOURCE_NAME,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.None,
+            ActivityStopped = activity =>
+            {
+                if (requestSent && activity.Recorded && activity.Kind == ActivityKind.Client)
+                {
+                    recordedSqlActivity.TrySetResult(activity);
+                }
+            }
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        string[] args = new[]
+        {
+            $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
+        };
+        using TestServer server = new(Program.CreateWebHostBuilder(args));
+        Assert.IsNotNull(server.Services.GetService<TracerProvider>(), "TracerProvider should be registered.");
+        using HttpClient client = server.CreateClient();
+
+        // Act
+        requestSent = true;
+        using HttpResponseMessage response = await client.GetAsync("/api/Book");
+
+        // Assert
+        Assert.IsTrue(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+        Task completedTask = await Task.WhenAny(recordedSqlActivity.Task, Task.Delay(TimeSpan.FromSeconds(10)));
+        Assert.AreSame(recordedSqlActivity.Task, completedTask, "A request reading from SQL Server should produce a recorded SQL client span.");
     }
 }

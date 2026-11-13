@@ -214,6 +214,8 @@ namespace Azure.DataApiBuilder.Service
                 {
                     tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
                     .AddHttpClientInstrumentation()
+                    // Emits a client span per SQL Server/Azure SQL command issued through Microsoft.Data.SqlClient.
+                    .AddSqlClientInstrumentation()
                     // TODO: should we also add FusionCache traces?
                     // To do so we just need to add the package ZiggyCreatures.FusionCache.OpenTelemetry and call
                     // .AddFusionCacheInstrumentation()

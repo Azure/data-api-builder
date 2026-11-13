@@ -5,9 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -150,6 +152,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("source.fields", "source.fields of relationship 'related'")]
         [DataRow("source.fields with a matching alias", "source.fields of relationship 'related'")]
         [DataRow("target.fields", "target.fields of relationship 'related'")]
+        [DataRow("linking.source.fields", "linking.source.fields of relationship 'related'")]
+        [DataRow("linking.target.fields", "linking.target.fields of relationship 'related'")]
         public async Task ReferenceToUnsupportedColumnFailsInitialization(string reference, string expectedSection)
         {
             Entity entity = CreateEntity("dbo.geometry_type_table", EntitySourceType.Table);
@@ -168,6 +172,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Relationships = CreateRelationship(sourceField: "geom", targetField: "code")
                 },
                 "target.fields" => entity with { Relationships = CreateRelationship(sourceField: "name", targetField: "geom") },
+                "linking.source.fields" => entity with { Relationships = CreateLinkingRelationship(linkingSourceField: "geom", linkingTargetField: "code") },
+                "linking.target.fields" => entity with { Relationships = CreateLinkingRelationship(linkingSourceField: "geometry_id", linkingTargetField: "geom") },
                 _ => throw new ArgumentOutOfRangeException(nameof(reference))
             };
 
@@ -216,6 +222,51 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             StringAssert.Contains(exception.Message, "Entity 'Upper': mappings references column 'geom'");
         }
 
+        [TestMethod]
+        public async Task LinkingObjectWithUnsupportedColumnIsLoaded()
+        {
+            Entity entity = CreateEntity("dbo.geometry_type_table", EntitySourceType.Table) with
+            {
+                Relationships = CreateLinkingRelationship(linkingSourceField: "geometry_id", linkingTargetField: "code")
+            };
+
+            await InitializeMetadataProviderAsync(new()
+            {
+                { ENTITY_NAME, entity },
+                { RELATED_ENTITY_NAME, CreateEntity("dbo.unique_key_geometry_table", EntitySourceType.Table, name: RELATED_ENTITY_NAME) }
+            });
+
+            string linkingEntityName = _sqlMetadataProvider.GetLinkingEntities().Keys.Single();
+            CollectionAssert.AreEqual(
+                new[] { "geometry_id", "code" },
+                _sqlMetadataProvider.GetSourceDefinition(linkingEntityName).Columns.Keys.ToArray());
+        }
+
+        [TestMethod]
+        public async Task AutoentitiesExcludeOnlyTablesWithAnUnsupportedPrimaryKeyColumn()
+        {
+            Autoentity autoentity = new(
+                new AutoentityPatterns(
+                    Include: new[]
+                    {
+                        "dbo.geometry_type_table",
+                        "dbo.decimal_identity_geometry_table",
+                        "dbo.hierarchyid_pk_table",
+                        "dbo.hierarchyid_composite_pk_table"
+                    },
+                    Exclude: null,
+                    Name: "{object}"),
+                Template: null,
+                Permissions: null);
+            SetUpSQLMetadataProvider(TestHelper.GenerateInMemoryRuntimeConfigProvider(SqlTestHelper.SetupRuntimeConfig()));
+
+            JsonArray tables = await ((MsSqlMetadataProvider)_sqlMetadataProvider).QueryAutoentitiesAsync("autoentity", autoentity);
+
+            CollectionAssert.AreEqual(
+                new[] { "decimal_identity_geometry_table", "geometry_type_table" },
+                tables.Select(table => table["object"].ToString()).ToArray());
+        }
+
         private static Entity CreateEntity(
             string databaseObject,
             EntitySourceType sourceType,
@@ -251,6 +302,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         LinkingObject: null,
                         LinkingSourceFields: Array.Empty<string>(),
                         LinkingTargetFields: Array.Empty<string>())
+                }
+            };
+        }
+
+        private static Dictionary<string, EntityRelationship> CreateLinkingRelationship(string linkingSourceField, string linkingTargetField)
+        {
+            return new()
+            {
+                {
+                    "related",
+                    new EntityRelationship(
+                        Cardinality: Cardinality.Many,
+                        TargetEntity: RELATED_ENTITY_NAME,
+                        SourceFields: new[] { "id" },
+                        TargetFields: new[] { "code" },
+                        LinkingObject: "dbo.geometry_linking_table",
+                        LinkingSourceFields: new[] { linkingSourceField },
+                        LinkingTargetFields: new[] { linkingTargetField })
                 }
             };
         }

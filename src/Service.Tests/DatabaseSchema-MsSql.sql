@@ -58,6 +58,7 @@ DROP TABLE IF EXISTS hierarchyid_unique_table;
 DROP TABLE IF EXISTS unique_key_geometry_table;
 DROP TABLE IF EXISTS decimal_identity_geometry_table;
 DROP TABLE IF EXISTS pk_and_unique_geometry_table;
+DROP TABLE IF EXISTS geometry_linking_table;
 -- System versioning has to be released before the temporal table can be dropped.
 IF OBJECT_ID('dbo.temporal_geometry_type_table', 'U') IS NOT NULL
     AND OBJECTPROPERTY(OBJECT_ID('dbo.temporal_geometry_type_table'), 'TableTemporalType') = 2
@@ -334,6 +335,14 @@ CREATE TABLE decimal_identity_geometry_table(
     id decimal(18, 0) IDENTITY(1, 1) NOT NULL PRIMARY KEY,
     name varchar(100) NOT NULL,
     geom geometry NULL
+);
+
+-- A linking table with an unsupported column, for relationships that go through it.
+CREATE TABLE geometry_linking_table(
+    geometry_id int NOT NULL,
+    code varchar(20) NOT NULL,
+    geom geometry NULL,
+    CONSTRAINT PK_geometry_linking_table PRIMARY KEY (geometry_id, code)
 );
 
 CREATE TABLE profiles(

@@ -959,6 +959,67 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Scopes carry untrusted values too, so the simple format escapes their control characters
+        /// as it does for messages (and as the systemd format does for scopes).
+        /// </summary>
+        [TestMethod]
+        public void ConfigureHostLogging_ControlCharactersInScope_AreEscaped()
+        {
+            Dictionary<string, string?> settings = new()
+            {
+                ["Logging:Console:FormatterName"] = "simple",
+                ["Logging:Console:FormatterOptions:IncludeScopes"] = "true",
+                ["Logging:Console:FormatterOptions:ColorBehavior"] = "Disabled",
+            };
+
+            (string stdout, _, _, _) = CaptureConsole(() =>
+            {
+                using ILoggerFactory factory = CreateHostLoggerFactory(settings);
+                ILogger logger = factory.CreateLogger("TestCategory");
+                using (logger.BeginScope("scope\u001b[31mred"))
+                {
+                    logger.LogInformation(LOG_MESSAGE);
+                }
+            });
+
+            Assert.IsFalse(stdout.Contains('\u001b'), $"ESC in a scope must be escaped but got: '{stdout}'");
+            StringAssert.Contains(stdout, "scope\\u001B[31mred");
+        }
+
+        /// <summary>
+        /// Like the built-in formatter, DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION opts redirected
+        /// output into level colors, e.g. for CI logs which render ANSI sequences.
+        /// </summary>
+        [TestMethod]
+        public void ConfigureHostLogging_AnsiColorRedirectionOptIn_EmitsLevelColors()
+        {
+            const string ALLOW_ANSI_COLOR_REDIRECTION = "DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION";
+            if (!Console.IsOutputRedirected)
+            {
+                Assert.Inconclusive("Requires redirected standard output, as under the test host.");
+            }
+
+            string? previousValue = Environment.GetEnvironmentVariable(ALLOW_ANSI_COLOR_REDIRECTION);
+            try
+            {
+                Environment.SetEnvironmentVariable(ALLOW_ANSI_COLOR_REDIRECTION, "1");
+
+                (string stdout, _, _, _) = CaptureConsole(() =>
+                {
+                    using ILoggerFactory factory = CreateHostLoggerFactory(new Dictionary<string, string?>());
+                    factory.CreateLogger("TestCategory").LogInformation(LOG_MESSAGE);
+                });
+
+                StringAssert.Contains(stdout, "\u001b[32minfo",
+                    $"Information must be colored when redirected output opts into ANSI colors but got: '{stdout}'");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ALLOW_ANSI_COLOR_REDIRECTION, previousValue);
+            }
+        }
+
+        /// <summary>
         /// Matches a direct write to the console, e.g. <c>Console.WriteLine(</c>,
         /// <c>Console.Error.Write(</c> or <c>Console.Out.WriteLine(</c>.
         /// </summary>

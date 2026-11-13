@@ -211,7 +211,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
                     state.Write(" => ");
                 }
 
-                state.Write(scope);
+                state.Write(ConsoleFormatterShared.SanitizeControlCharacters(scope?.ToString()));
             }, textWriter);
 
             if (!firstScope && !singleLine)
@@ -222,7 +222,8 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
         /// <summary>
         /// Mirrors the built-in console formatter's decision on whether ANSI color codes may be
-        /// emitted, honoring the NO_COLOR convention and output redirection.
+        /// emitted: NO_COLOR suppresses them on an interactive console, and redirected output only
+        /// carries them when DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION opts in.
         /// </summary>
         private static bool EmitAnsiColorCodes(LoggerColorBehavior colorBehavior)
         {
@@ -236,12 +237,13 @@ namespace Azure.DataApiBuilder.Service.Telemetry
                 return true;
             }
 
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR")))
+            if (!Console.IsOutputRedirected)
             {
-                return false;
+                return string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR"));
             }
 
-            return !Console.IsOutputRedirected;
+            string? allowRedirection = Environment.GetEnvironmentVariable("DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION");
+            return allowRedirection == "1" || string.Equals(allowRedirection, "true", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>

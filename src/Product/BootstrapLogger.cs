@@ -45,6 +45,18 @@ public static class BootstrapLogger
         => _logLevelToAbbreviation.TryGetValue(logLevel, out string? abbreviation) ? abbreviation : null;
 
     /// <summary>
+    /// Formats a console entry exactly as <see cref="Instance"/> writes it, for diagnostics which
+    /// must bypass <see cref="Console"/> redirection and therefore write the stream themselves.
+    /// </summary>
+    public static string FormatEntry(LogLevel logLevel, string message)
+    {
+        // CultureInfo.InvariantCulture guarantees deterministic ISO 8601 output
+        // regardless of the machine's locale (digits, calendar).
+        string timestamp = DateTime.UtcNow.ToString(UTC_TIMESTAMP_FORMAT, CultureInfo.InvariantCulture);
+        return $"{timestamp} {GetAbbreviatedLogLevel(logLevel)}: {message}";
+    }
+
+    /// <summary>
     /// When true, all entries are written to stderr. Set by hosts which reserve
     /// stdout for a protocol stream, e.g. MCP stdio mode's JSON-RPC messages.
     /// </summary>
@@ -63,7 +75,7 @@ public static class BootstrapLogger
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            if (!IsEnabled(logLevel) || !_logLevelToAbbreviation.TryGetValue(logLevel, out string? abbreviation))
+            if (!IsEnabled(logLevel) || !_logLevelToAbbreviation.ContainsKey(logLevel))
             {
                 return;
             }
@@ -74,13 +86,10 @@ public static class BootstrapLogger
                 message = string.IsNullOrEmpty(message) ? exception.ToString() : $"{message} {exception}";
             }
 
-            // CultureInfo.InvariantCulture guarantees deterministic ISO 8601 output
-            // regardless of the machine's locale (digits, calendar).
-            string timestamp = DateTime.UtcNow.ToString(UTC_TIMESTAMP_FORMAT, CultureInfo.InvariantCulture);
             TextWriter writer = WriteAllOutputToStandardError || logLevel >= LogLevel.Error
                 ? Console.Error
                 : Console.Out;
-            writer.WriteLine($"{timestamp} {abbreviation}: {message}");
+            writer.WriteLine(FormatEntry(logLevel, message));
         }
     }
 }

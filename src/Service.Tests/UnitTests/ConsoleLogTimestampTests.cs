@@ -887,7 +887,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             ["Cli/CustomLoggerProvider.cs"] = "Is the CLI console logger implementation; it writes the timestamp itself.",
             ["Cli/Commands/AppNameOptions.cs"] = "Intentional command result (encoded/decoded app name), not a diagnostic.",
-            ["Cli/ConfigGenerator.cs"] = "Intentional command result (auto-entities simulation table), not a diagnostic."
+            ["Cli/ConfigGenerator.cs"] = "Intentional command result (auto-entities simulation table), not a diagnostic.",
+            ["Service/Utilities/McpStdioHelper.cs"] = "The fatal MCP stdio report must reach stderr even when LogLevel.None nulls Console.Error; it is prefixed through BootstrapLogger.FormatEntry."
         };
 
         /// <summary>

@@ -4,8 +4,12 @@
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
+using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.DataApiBuilder.Mcp.Core
 {
@@ -35,9 +39,38 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             string mcpPath = mcpOptions.Path ?? McpRuntimeOptions.DEFAULT_PATH;
+            EngineTelemetrySession? telemetry = endpoints.ServiceProvider.GetService<EngineTelemetrySession>();
 
             // Map the MCP endpoint
-            endpoints.MapMcp(mcpPath);
+            endpoints.MapMcp(mcpPath).Add(builder =>
+            {
+                RequestDelegate? next = builder.RequestDelegate;
+                if (next is null)
+                {
+                    return;
+                }
+
+                builder.RequestDelegate = async context =>
+                {
+                    if (telemetry?.IsEnabled != true)
+                    {
+                        await next(context);
+                        return;
+                    }
+
+                    Stream original = context.Response.Body;
+                    using McpProductResponseStream observer = new(original);
+                    context.Response.Body = observer;
+                    try
+                    {
+                        await next(context);
+                    }
+                    finally
+                    {
+                        context.Response.Body = original;
+                    }
+                };
+            });
 
             return endpoints;
         }

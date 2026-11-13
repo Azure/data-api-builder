@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
+using Azure.DataApiBuilder.Core.Telemetry.Product.Export;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ZiggyCreatures.Caching.Fusion;

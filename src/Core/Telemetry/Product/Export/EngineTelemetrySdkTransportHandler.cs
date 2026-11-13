@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 
-namespace Azure.DataApiBuilder.Core.Telemetry.Product
+namespace Azure.DataApiBuilder.Core.Telemetry.Product.Export
 {
     /// <summary>
     /// Public HttpClient boundary for the SDK: links worker cancellation and rejects unexpected

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
+using Azure.DataApiBuilder.Core.Telemetry.Product.Export;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -35,9 +36,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             Assert.AreEqual("Microsoft.DataApiBuilder.Core", core.GetName().Name);
             Assert.AreSame(core, type.Assembly);
-            Assert.AreEqual("Azure.DataApiBuilder.Core.Telemetry.Product", type.Namespace);
+            Assert.AreEqual("Azure.DataApiBuilder.Core.Telemetry.Product.Export", type.Namespace);
             Assert.IsTrue(type.IsNotPublic, "Export infrastructure must remain a top-level internal type.");
             Assert.IsFalse(type.IsVisible);
+            Assert.IsNull(core.GetType("Azure.DataApiBuilder.Core.Telemetry.Product." + type.Name),
+                "Export infrastructure must not be duplicated in the parent namespace.");
             Assert.IsNull(service.GetType(type.FullName!));
             Assert.IsNull(service.GetType("Azure.DataApiBuilder.Service.Telemetry." + type.Name));
             Assert.IsFalse(core.GetReferencedAssemblies().Any(reference => reference.Name == service.GetName().Name),

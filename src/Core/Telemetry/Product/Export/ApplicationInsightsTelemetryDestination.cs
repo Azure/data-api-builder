@@ -3,7 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-namespace Azure.DataApiBuilder.Core.Telemetry.Product
+namespace Azure.DataApiBuilder.Core.Telemetry.Product.Export
 {
     /// <summary>
     /// Validated routing for the product's Application Insights instance. Never reads customer

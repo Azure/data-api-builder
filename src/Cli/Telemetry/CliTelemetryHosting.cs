@@ -7,6 +7,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
+using Azure.DataApiBuilder.Core.Telemetry.Product.Export;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Cli.Constants;
 

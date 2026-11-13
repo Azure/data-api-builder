@@ -3,7 +3,7 @@
 
 using System.Globalization;
 
-namespace Azure.DataApiBuilder.Core.Telemetry.Product
+namespace Azure.DataApiBuilder.Core.Telemetry.Product.Export
 {
     /// <summary>Maps the immutable product contract to the SDK's custom-event attributes.</summary>
     internal static class ApplicationInsightsEventAttributes

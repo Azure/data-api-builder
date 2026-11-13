@@ -3,7 +3,7 @@
 
 using OpenTelemetry;
 
-namespace Azure.DataApiBuilder.Core.Telemetry.Product
+namespace Azure.DataApiBuilder.Core.Telemetry.Product.Export
 {
     /// <summary>One worker-owned SDK call; neither an event queue nor a process-wide context.</summary>
     internal sealed class EngineTelemetryExportAttempt(IProductTelemetryEvent record, CancellationToken token)

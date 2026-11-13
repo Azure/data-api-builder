@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.DataApiBuilder.Core.Telemetry.Product
+namespace Azure.DataApiBuilder.Core.Telemetry.Product.Export
 {
     /// <summary>
     /// Bounded, process-owned senders. Each destination has one adapter, private logger and SDK

@@ -4,7 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Config.Telemetry;
 
-namespace Azure.DataApiBuilder.Core.Telemetry.Product
+namespace Azure.DataApiBuilder.Core.Telemetry.Product.Export
 {
     /// <summary>Shared, read-only preflight. Never initializes an SDK sender or contacts a destination.</summary>
     internal static class ProductTelemetryBootstrap

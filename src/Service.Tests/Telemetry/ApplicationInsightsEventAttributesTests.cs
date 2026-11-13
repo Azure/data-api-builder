@@ -9,6 +9,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
+using Azure.DataApiBuilder.Core.Telemetry.Product.Export;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.Telemetry

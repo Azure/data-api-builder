@@ -9,7 +9,7 @@ using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 
-namespace Azure.DataApiBuilder.Core.Telemetry.Product
+namespace Azure.DataApiBuilder.Core.Telemetry.Product.Export
 {
     /// <summary>
     /// Uses the supported Azure Monitor custom-event exporter on the delivery worker, never a

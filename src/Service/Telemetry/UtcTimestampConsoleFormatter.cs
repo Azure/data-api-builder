@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using Azure.DataApiBuilder.Product;
@@ -274,23 +275,6 @@ namespace Azure.DataApiBuilder.Service.Telemetry
     }
 
     /// <summary>
-    /// Records whether the console logger provider was configured through the legacy
-    /// <see cref="ConsoleLoggerOptions"/> members rather than through
-    /// <see cref="ConsoleLoggerOptions.FormatterName"/>.
-    /// </summary>
-    /// <remarks>
-    /// The console logger provider only copies the legacy members onto the selected formatter's
-    /// options when <see cref="ConsoleLoggerOptions.FormatterName"/> is null. Selecting a DAB
-    /// formatter sets that property, which would otherwise silently drop those settings, so the
-    /// copy is performed here instead. A single flag is enough because the legacy members
-    /// themselves are left untouched on <see cref="ConsoleLoggerOptions"/>.
-    /// </remarks>
-    internal sealed class LegacyConsoleLoggerOptionsMarker
-    {
-        public bool IsActive { get; set; }
-    }
-
-    /// <summary>
     /// Registration helpers for the DAB console formatters.
     /// </summary>
     public static class UtcTimestampConsoleFormatterExtensions
@@ -316,24 +300,22 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ConsoleFormatter, UtcTimestampConsoleFormatter>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ConsoleFormatter, UtcTimestampJsonConsoleFormatter>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ConsoleFormatter, UtcTimestampSystemdConsoleFormatter>());
-            builder.Services.TryAddSingleton<LegacyConsoleLoggerOptionsMarker>();
 
             // PostConfigure runs after the "Logging:Console" configuration binding, so an explicitly
             // configured format - whether through FormatterName or through the legacy Format member -
             // is visible here.
-            builder.Services.AddOptions<ConsoleLoggerOptions>()
-                .PostConfigure<LegacyConsoleLoggerOptionsMarker>(SelectUtcTimestampFormatter);
+            builder.Services.AddOptions<ConsoleLoggerOptions>().PostConfigure(SelectUtcTimestampFormatter);
 
             // Each built-in format binds a different options type, so the legacy members have to be
             // mapped onto all three. SimpleConsoleFormatterOptions and JsonConsoleFormatterOptions
             // derive from ConsoleFormatterOptions but are distinct options types, so configuring one
             // does not affect the others.
             builder.Services.AddOptions<SimpleConsoleFormatterOptions>()
-                .PostConfigure<IOptionsMonitor<ConsoleLoggerOptions>, LegacyConsoleLoggerOptionsMarker>(ApplyLegacyConsoleLoggerOptions);
+                .PostConfigure<IEnumerable<IConfigureOptions<ConsoleLoggerOptions>>>(ApplyLegacyConsoleLoggerOptions);
             builder.Services.AddOptions<JsonConsoleFormatterOptions>()
-                .PostConfigure<IOptionsMonitor<ConsoleLoggerOptions>, LegacyConsoleLoggerOptionsMarker>(ApplyLegacyConsoleLoggerOptions);
+                .PostConfigure<IEnumerable<IConfigureOptions<ConsoleLoggerOptions>>>(ApplyLegacyConsoleLoggerOptions);
             builder.Services.AddOptions<ConsoleFormatterOptions>()
-                .PostConfigure<IOptionsMonitor<ConsoleLoggerOptions>, LegacyConsoleLoggerOptionsMarker>(ApplyLegacyConsoleLoggerOptions);
+                .PostConfigure<IEnumerable<IConfigureOptions<ConsoleLoggerOptions>>>(ApplyLegacyConsoleLoggerOptions);
 
             return builder;
         }
@@ -342,24 +324,12 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         /// Replaces the requested built-in console format with the DAB formatter producing the same
         /// record structure.
         /// </summary>
-        private static void SelectUtcTimestampFormatter(ConsoleLoggerOptions options, LegacyConsoleLoggerOptionsMarker legacy)
+        private static void SelectUtcTimestampFormatter(ConsoleLoggerOptions options)
         {
-            string requestedFormat;
-            if (string.IsNullOrEmpty(options.FormatterName))
-            {
-#pragma warning disable CS0618 // Type or member is obsolete
-                // A null FormatterName means the format is selected by the legacy Format member, and
-                // that the remaining legacy members apply to the selected formatter.
-                requestedFormat = options.Format == ConsoleLoggerFormat.Systemd
-                    ? ConsoleFormatterNames.Systemd
-                    : ConsoleFormatterNames.Simple;
-#pragma warning restore CS0618
-                legacy.IsActive = true;
-            }
-            else
-            {
-                requestedFormat = options.FormatterName;
-            }
+            // A null FormatterName means the format is selected by the legacy Format member.
+            string requestedFormat = string.IsNullOrEmpty(options.FormatterName)
+                ? GetLegacyFormatterName(options)
+                : options.FormatterName;
 
             if (string.Equals(requestedFormat, ConsoleFormatterNames.Simple, StringComparison.OrdinalIgnoreCase))
             {
@@ -376,18 +346,46 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         }
 
         /// <summary>
+        /// Maps the legacy <see cref="ConsoleLoggerOptions"/> format selection onto a formatter name.
+        /// </summary>
+        private static string GetLegacyFormatterName(ConsoleLoggerOptions options)
+        {
+#pragma warning disable CS0618 // Type or member is obsolete
+            return options.Format == ConsoleLoggerFormat.Systemd
+                ? ConsoleFormatterNames.Systemd
+                : ConsoleFormatterNames.Simple;
+#pragma warning restore CS0618
+        }
+
+        /// <summary>
         /// Copies the legacy <see cref="ConsoleLoggerOptions"/> members onto a formatter's options,
         /// reproducing what the console logger provider does when no formatter name is configured.
+        /// Selecting a DAB formatter sets that name, which would otherwise silently drop those settings.
         /// </summary>
+        /// <remarks>
+        /// The configured console logger options are rebuilt from their configure actions rather than
+        /// read through <see cref="IOptionsMonitor{TOptions}"/>: the monitored value has already been
+        /// post-configured with a DAB formatter name, and during a configuration reload it can still be
+        /// the value cached before the reload. Rebuilding keeps this in step with the current configuration.
+        /// </remarks>
         private static void ApplyLegacyConsoleLoggerOptions(
             ConsoleFormatterOptions formatterOptions,
-            IOptionsMonitor<ConsoleLoggerOptions> consoleLoggerOptionsMonitor,
-            LegacyConsoleLoggerOptionsMarker legacy)
+            IEnumerable<IConfigureOptions<ConsoleLoggerOptions>> consoleLoggerSetups)
         {
-            // Resolving the console logger options runs their configuration and post-configuration
-            // chain - including SelectUtcTimestampFormatter - which is what populates the marker.
-            ConsoleLoggerOptions consoleLoggerOptions = consoleLoggerOptionsMonitor.CurrentValue;
-            if (!legacy.IsActive)
+            ConsoleLoggerOptions consoleLoggerOptions = new();
+            foreach (IConfigureOptions<ConsoleLoggerOptions> setup in consoleLoggerSetups)
+            {
+                if (setup is IConfigureNamedOptions<ConsoleLoggerOptions> namedSetup)
+                {
+                    namedSetup.Configure(Options.DefaultName, consoleLoggerOptions);
+                }
+                else
+                {
+                    setup.Configure(consoleLoggerOptions);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(consoleLoggerOptions.FormatterName))
             {
                 return;
             }

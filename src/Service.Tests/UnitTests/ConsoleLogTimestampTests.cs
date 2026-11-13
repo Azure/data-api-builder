@@ -543,6 +543,93 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Console settings reload with the host's configuration, so moving from the legacy
+        /// <see cref="ConsoleLoggerOptions"/> members to FormatterName/FormatterOptions must take effect
+        /// without a restart - exactly as it would on a fresh start with the same settings - rather than
+        /// keep applying the legacy members observed before the reload.
+        /// </summary>
+        [TestMethod]
+        public void ConfigureHostLogging_ReloadFromLegacyToFormatterOptions_AppliesFormatterOptions()
+        {
+            IConfigurationRoot configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["Logging:Console:IncludeScopes"] = "true" })
+                .Build();
+
+            (string stdout, _, _, _) = CaptureConsole(() =>
+            {
+                using ServiceProvider provider = new ServiceCollection()
+                    .AddLogging(builder =>
+                    {
+                        builder.AddConfiguration(configuration.GetSection("Logging"));
+                        builder.AddConsole();
+                        Program.ConfigureHostLogging(builder, runMcpStdio: false);
+                    })
+                    .BuildServiceProvider();
+
+                ILogger logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("TestCategory");
+                logger.LogInformation("before reload");
+
+                configuration["Logging:Console:IncludeScopes"] = null;
+                configuration["Logging:Console:FormatterName"] = "json";
+                configuration["Logging:Console:FormatterOptions:IncludeScopes"] = "true";
+                configuration["Logging:Console:FormatterOptions:TimestampFormat"] = "HH:mm:ss";
+                configuration.Reload();
+
+                using (logger.BeginScope(SCOPE_MESSAGE))
+                {
+                    logger.LogInformation(LOG_MESSAGE);
+                }
+            });
+
+            string record = stdout.Split('\n').Single(line => line.Contains(LOG_MESSAGE, StringComparison.Ordinal));
+            using JsonDocument document = JsonDocument.Parse(record);
+            string timestamp = document.RootElement.GetProperty("Timestamp").GetString()!;
+            Assert.IsTrue(
+                Regex.IsMatch(timestamp, @"^\d{2}:\d{2}:\d{2}$"),
+                $"The reloaded FormatterOptions timestamp format must apply but got: '{record}'");
+            Assert.IsTrue(
+                document.RootElement.TryGetProperty("Scopes", out JsonElement scopes) && scopes.ToString().Contains(SCOPE_MESSAGE),
+                $"The reloaded FormatterOptions IncludeScopes setting must apply but got: '{record}'");
+        }
+
+        /// <summary>
+        /// A reload which only changes legacy <see cref="ConsoleLoggerOptions"/> members must take
+        /// effect too - here removing a legacy timestamp format restores the DAB UTC timestamp.
+        /// </summary>
+        [TestMethod]
+        public void ConfigureHostLogging_ReloadLegacyTimestampFormat_AppliesReloadedValue()
+        {
+            IConfigurationRoot configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["Logging:Console:TimestampFormat"] = "HH:mm:ss " })
+                .Build();
+
+            (string stdout, _, DateTime before, DateTime after) = CaptureConsole(() =>
+            {
+                using ServiceProvider provider = new ServiceCollection()
+                    .AddLogging(builder =>
+                    {
+                        builder.AddConfiguration(configuration.GetSection("Logging"));
+                        builder.AddConsole();
+                        Program.ConfigureHostLogging(builder, runMcpStdio: false);
+                    })
+                    .BuildServiceProvider();
+
+                ILogger logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("TestCategory");
+                logger.LogInformation("before reload");
+
+                configuration["Logging:Console:TimestampFormat"] = null;
+                configuration.Reload();
+
+                logger.LogInformation(LOG_MESSAGE);
+            });
+
+            string[] lines = stdout.Split('\n').Select(line => line.TrimEnd('\r')).ToArray();
+            int messageLine = Array.FindIndex(lines, line => line.Contains(LOG_MESSAGE, StringComparison.Ordinal));
+            Assert.IsTrue(messageLine > 0, $"Expected the reloaded entry in the output but got: '{stdout}'");
+            AssertStartsWithUtcTimestamp(lines[messageLine - 1], before, after);
+        }
+
+        /// <summary>
         /// In stdio mode the console providers are cleared so nothing can corrupt the
         /// JSON-RPC channel on stdout.
         /// </summary>

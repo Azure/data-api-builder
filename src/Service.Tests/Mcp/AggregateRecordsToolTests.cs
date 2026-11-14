@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -343,10 +344,117 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 groupby: new() { "category" });
 
             string result = InvokePrivate<string>(
-                "ApplyOrderByAndPagination", sql, args, structure, builder.Object, "price");
+                "ApplyOrderByAndPagination", sql, args, structure, builder.Object, "price", "sum_price");
 
             Assert.AreEqual(expected, result);
             Assert.AreEqual(paginate ? 2 : 0, structure.Parameters.Count);
+        }
+
+        public static IEnumerable<object[]> DwSqlOrderingCases =>
+            from function in new[] { "sum", "avg", "min", "max", "count" }
+            from useJsonFunctions in new[] { false, true }
+            from paginate in new[] { false, true }
+            from distinct in new[] { false, true }
+            from direction in new[] { "asc", "desc" }
+            from having in new[] { false, true }
+            select new object[] { function, function == "count" && !distinct ? "*" : "price", useJsonFunctions, paginate, distinct, direction, having };
+
+        [DataTestMethod]
+        [DynamicData(nameof(DwSqlOrderingCases), DynamicDataSourceType.Property)]
+        public void ApplyOrderByAndPagination_DwSqlOrdersInsideGroupedQuery(
+            string function, string field, bool useJsonFunctions, bool paginate, bool distinct, string direction, bool having)
+        {
+            var (structure, view, metadata) = CreateGroupedViewStructure();
+            AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(
+                function: function, field: field, isCountStar: field == "*",
+                distinct: distinct, orderby: direction,
+                after: paginate ? Convert.ToBase64String(Encoding.UTF8.GetBytes("4")) : null,
+                first: paginate ? 9 : null, groupby: new() { "category" },
+                havingOperators: having ? new() { ["gt"] = 10 } : null)
+                with
+            { UserProvidedOrderby = direction == "asc" };
+            string alias = AggregateRecordsTool.ComputeAlias(function, field);
+            InvokePrivate<object?>("BuildAggregationStructure",
+                args, structure, view, "book_price", alias, "Book", metadata.Object);
+            DwSqlQueryBuilder builder = new(enableNto1JoinOpt: useJsonFunctions);
+
+            string sql = InvokePrivate<string>("ApplyOrderByAndPagination",
+                builder.Build(structure), args, structure, builder, "book_price", alias);
+
+            string order = useJsonFunctions
+                ? $"{function.ToUpperInvariant()}({(distinct ? "DISTINCT " : string.Empty)}[table0].[book_price])"
+                : $"[{alias}]";
+            int havingParameterCount = having ? 1 : 0;
+            string offsetParameter = $"@param{havingParameterCount}";
+            string limitParameter = $"@param{havingParameterCount + 1}";
+            string paging = paginate ? $" OFFSET {offsetParameter} ROWS FETCH NEXT {limitParameter} ROWS ONLY" : string.Empty;
+            string suffix = useJsonFunctions ? " FOR JSON PATH, INCLUDE_NULL_VALUES" : ") AS [table0]";
+            StringAssert.EndsWith(sql, $" ORDER BY {order} {direction.ToUpperInvariant()}{paging}{suffix}");
+            StringAssert.Contains(sql, "GROUP BY [table0].[book_category]");
+            StringAssert.Contains(sql, $" AS [{alias}]");
+            Assert.AreEqual(!paginate, sql.Contains("SELECT TOP 10"));
+            Assert.AreEqual(havingParameterCount + (paginate ? 2 : 0), structure.Parameters.Count);
+            if (having)
+            {
+                int havingIndex = sql.IndexOf(" HAVING ", StringComparison.Ordinal);
+                Assert.IsTrue(havingIndex > sql.IndexOf(" GROUP BY ", StringComparison.Ordinal));
+                Assert.IsTrue(havingIndex < sql.LastIndexOf(" ORDER BY ", StringComparison.Ordinal));
+                Assert.AreEqual(10d, structure.Parameters["@param0"].Value);
+            }
+
+            if (paginate)
+            {
+                Assert.AreEqual(4, structure.Parameters[offsetParameter].Value);
+                Assert.AreEqual(10, structure.Parameters[limitParameter].Value);
+            }
+
+            if (useJsonFunctions)
+            {
+                Assert.IsFalse(sql.Contains("WITHIN GROUP"));
+            }
+            else
+            {
+                StringAssert.Contains(sql, $"WITHIN GROUP (ORDER BY [{alias}] {direction.ToUpperInvariant()})+']','[]') FROM (");
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow("SELECT value", false)]
+        [DataRow("SELECT value", true)]
+        [DataRow("SELECT value) AS [table0] trailing", false)]
+        [DataRow("SELECT value) AS [table0] trailing", true)]
+        public void ApplyOrderByAndPagination_UnexpectedDwSqlSuffix_Throws(string rebuiltSql, bool paginate)
+        {
+            SqlQueryStructure structure = CreateUninitializedQueryStructure();
+            Mock<DwSqlQueryBuilder> dwSqlBuilder = new(false) { CallBase = true };
+            Mock<IQueryBuilder> builder = dwSqlBuilder.As<IQueryBuilder>();
+            builder.Setup(x => x.Build(structure)).Returns(rebuiltSql);
+            AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(first: paginate ? 9 : null);
+
+            TargetInvocationException exception = Assert.ThrowsException<TargetInvocationException>(() =>
+                InvokePrivate<string>("ApplyOrderByAndPagination",
+                    "SELECT value) AS [table0]", args, structure, builder.Object, "book_price", "sum_price"));
+
+            Assert.IsInstanceOfType<InvalidOperationException>(exception.InnerException);
+            StringAssert.Contains(exception.InnerException!.Message, "expected derived-table alias");
+        }
+
+        [TestMethod]
+        public void ApplyOrderByAndPagination_DwSqlUsesSuppliedProjectionAlias()
+        {
+            var (structure, view, metadata) = CreateGroupedViewStructure();
+            AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(groupby: new() { "category" });
+            const string ALIAS = "projected_total";
+            InvokePrivate<object?>("BuildAggregationStructure",
+                args, structure, view, "book_price", ALIAS, "Book", metadata.Object);
+            DwSqlQueryBuilder builder = new();
+
+            string sql = InvokePrivate<string>("ApplyOrderByAndPagination",
+                builder.Build(structure), args, structure, builder, "book_price", ALIAS);
+
+            StringAssert.Contains(sql, $" AS [{ALIAS}]");
+            StringAssert.Contains(sql, $"WITHIN GROUP (ORDER BY [{ALIAS}] DESC)");
+            StringAssert.EndsWith(sql, $" ORDER BY [{ALIAS}] DESC) AS [table0]");
         }
 
         #endregion
@@ -1060,6 +1168,36 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 Groupby: groupby ?? new(),
                 HavingOperators: havingOperators,
                 HavingInValues: havingInValues);
+        }
+
+        private static (SqlQueryStructure Structure, DatabaseView View, Mock<ISqlMetadataProvider> Metadata) CreateGroupedViewStructure()
+        {
+            SqlQueryStructure structure = CreateUninitializedQueryStructure();
+            structure.IsListQuery = true;
+            ViewDefinition definition = new();
+            definition.Columns.Add("book_category", new ColumnDefinition { SystemType = typeof(string) });
+            definition.Columns.Add("book_price", new ColumnDefinition { SystemType = typeof(decimal) });
+            DatabaseView view = new("dbo", "books") { ViewDefinition = definition };
+            Mock<ISqlMetadataProvider> metadata = new();
+            metadata.Setup(x => x.GetSourceDefinition("Book")).Returns(definition);
+            metadata.Setup(x => x.TryGetBackingColumn("Book", "category", out It.Ref<string?>.IsAny))
+                .Returns((string _, string _, out string? backing) =>
+                {
+                    backing = "book_category";
+                    return true;
+                });
+            SetBackingField(structure, "EntityName", "Book");
+            SetBackingField(structure, "MetadataProvider", metadata.Object);
+            SetBackingField(structure, "DatabaseObject", view);
+            SetBackingField(structure, "JoinQueries", new Dictionary<string, SqlQueryStructure>());
+            SetBackingField(structure, "Joins", new List<SqlJoinStructure>());
+            SetBackingField(structure, "Predicates", new List<Predicate>());
+            SetBackingField(structure, "FilterPredicates", string.Empty);
+            SetBackingField(structure, "DbPolicyPredicatesForOperations", new Dictionary<EntityActionOperation, string?>());
+            SetBackingField(structure, "PaginationMetadata", new PaginationMetadata(structure));
+            typeof(SqlQueryStructure).GetField("_limit", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(structure, (uint?)10);
+            return (structure, view, metadata);
         }
 
         private static SqlQueryStructure CreateUninitializedQueryStructure()

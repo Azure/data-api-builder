@@ -30,6 +30,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return _builder.QuoteIdentifier(ident);
         }
 
+        protected override string Build(OrderByColumn column, bool printDirection = true)
+        {
+            if (string.IsNullOrEmpty(column.TableSchema) && string.IsNullOrEmpty(column.TableName) && string.IsNullOrEmpty(column.TableAlias))
+            {
+                return QuoteIdentifier(column.ColumnName) + (printDirection ? $" {column.Direction}" : string.Empty);
+            }
+
+            return base.Build(column, printDirection);
+        }
+
         /// <summary>
         /// Builds the sql query that will return the json result for DW.
         /// Sample: Get title of all books.
@@ -288,7 +298,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return $"JSON_OBJECT({joinedColumns})";
         }
 
-        private static string GenerateColumnsAsJson(SqlQueryStructure structure, bool subQueryStructure = false)
+        private string GenerateColumnsAsJson(SqlQueryStructure structure, bool subQueryStructure = false)
         {
             string columns;
             StringBuilder stringAgg = new();
@@ -364,6 +374,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             columns = $"STRING_AGG(\'{{\'+{stringAgg}+\'}}\',', ')";
+            if (structure.GroupByMetadata.Fields.Any() && structure.OrderByColumns.Any())
+            {
+                string ordering = string.Join(", ", structure.OrderByColumns.Select(column =>
+                {
+                    string label = structure.Columns.FirstOrDefault(projected => projected.ColumnName == column.ColumnName)?.Label
+                        ?? column.ColumnName;
+                    return $"{QuoteIdentifier(label)} {column.Direction}";
+                }));
+                columns += $" WITHIN GROUP (ORDER BY {ordering})";
+            }
+
             if (structure.IsListQuery)
             {
                 // Array wrappers if we are trying to get a list of objects.

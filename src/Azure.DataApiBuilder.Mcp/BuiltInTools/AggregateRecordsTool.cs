@@ -20,6 +20,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -273,7 +274,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 string sql = queryBuilder.Build(structure);
                 if (args.Groupby.Count > 0)
                 {
-                    sql = ApplyOrderByAndPagination(sql, args, structure, queryBuilder, backingField!);
+                    sql = ApplyOrderByAndPagination(sql, args, structure, queryBuilder, backingField!, alias);
                 }
 
                 // 8. Execute query and return results
@@ -947,7 +948,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             AggregateArguments args,
             SqlQueryStructure structure,
             IQueryBuilder queryBuilder,
-            string backingField)
+            string backingField,
+            string alias)
         {
             string direction = args.Orderby.Equals("asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
             string quotedCol = $"{queryBuilder.QuoteIdentifier(structure.SourceAlias)}.{queryBuilder.QuoteIdentifier(backingField)}";
@@ -955,6 +957,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 ? $"{args.Function.ToUpperInvariant()}(DISTINCT {quotedCol})"
                 : $"{args.Function.ToUpperInvariant()}({quotedCol})";
             string orderByClause = $" ORDER BY {orderByAggExpr} {direction}";
+            string paginationClause = string.Empty;
 
             if (args.First.HasValue)
             {
@@ -967,37 +970,33 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 string limitParam = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
                 structure.Parameters.Add(limitParam, new DbConnectionParam(fetchCount));
 
-                string paginationClause = $" OFFSET {offsetParam} ROWS FETCH NEXT {limitParam} ROWS ONLY";
-
-                // Remove TOP N from the SELECT clause (TOP conflicts with OFFSET/FETCH)
-                sql = Regex.Replace(sql, @"SELECT TOP \d+", "SELECT");
-
-                // Insert ORDER BY + pagination before FOR JSON PATH
-                int jsonPathIdx = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
-                if (jsonPathIdx > 0)
-                {
-                    sql = sql.Insert(jsonPathIdx, orderByClause + paginationClause);
-                }
-                else
-                {
-                    sql += orderByClause + paginationClause;
-                }
+                paginationClause = $" OFFSET {offsetParam} ROWS FETCH NEXT {limitParam} ROWS ONLY";
             }
-            else
+
+            int insertionIndex = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
+            if (insertionIndex < 0 && queryBuilder is DwSqlQueryBuilder)
             {
-                // Without pagination: insert ORDER BY before FOR JSON PATH
-                int jsonPathIdx = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
-                if (jsonPathIdx > 0)
+                structure.OrderByColumns.Add(new OrderByColumn(
+                    tableSchema: string.Empty,
+                    tableName: string.Empty,
+                    columnName: alias,
+                    direction: direction == "ASC" ? OrderBy.ASC : OrderBy.DESC));
+                sql = queryBuilder.Build(structure);
+                string suffix = $") AS {queryBuilder.QuoteIdentifier(structure.SourceAlias)}";
+                if (!sql.EndsWith(suffix, StringComparison.Ordinal))
                 {
-                    sql = sql.Insert(jsonPathIdx, orderByClause);
+                    throw new InvalidOperationException("The DWSQL grouped aggregate query does not end with the expected derived-table alias.");
                 }
-                else
-                {
-                    sql += orderByClause;
-                }
+
+                insertionIndex = sql.Length - suffix.Length;
+                orderByClause = string.Empty;
             }
 
-            return sql;
+            sql = insertionIndex > 0
+                ? sql.Insert(insertionIndex, orderByClause + paginationClause)
+                : sql + orderByClause + paginationClause;
+
+            return args.First.HasValue ? Regex.Replace(sql, @"SELECT TOP \d+", "SELECT") : sql;
         }
 
         #endregion

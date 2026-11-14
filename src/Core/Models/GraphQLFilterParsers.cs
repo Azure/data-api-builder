@@ -747,7 +747,7 @@ public static class FieldFilterParser
                     else
                     {
                         op = PredicateOperation.LIKE;
-                        value = $"%{EscapeLikeString((string)value)}%";
+                        value = SqlLikePattern.Create(LikeMatch.Contains, (string)value);
                         lengthOverride = true;
                     }
 
@@ -760,19 +760,19 @@ public static class FieldFilterParser
                     else
                     {
                         op = PredicateOperation.NOT_LIKE;
-                        value = $"%{EscapeLikeString((string)value)}%";
+                        value = SqlLikePattern.Create(LikeMatch.Contains, (string)value);
                         lengthOverride = true;
                     }
 
                     break;
                 case "startsWith":
                     op = PredicateOperation.LIKE;
-                    value = $"{EscapeLikeString((string)value)}%";
+                    value = SqlLikePattern.Create(LikeMatch.StartsWith, (string)value);
                     lengthOverride = true;
                     break;
                 case "endsWith":
                     op = PredicateOperation.LIKE;
-                    value = $"%{EscapeLikeString((string)value)}";
+                    value = SqlLikePattern.Create(LikeMatch.EndsWith, (string)value);
                     lengthOverride = true;
                     break;
                 case "isNull":
@@ -870,15 +870,5 @@ public static class FieldFilterParser
         }
 
         return new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName, lengthOverride)}" : value.ToString());
-    }
-
-    private static string EscapeLikeString(string input)
-    {
-        input = input.Replace(@"\", @"\\");
-        input = input.Replace(@"%", @"\%");
-        input = input.Replace(@"[", @"\[");
-        input = input.Replace(@"]", @"\]");
-        input = input.Replace(@"_", @"\_");
-        return input;
     }
 }

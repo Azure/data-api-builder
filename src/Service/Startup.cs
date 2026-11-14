@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service
         private RuntimeConfigProvider? _configProvider;
         internal EngineTelemetrySession? ProductTelemetry { get; set; }
         private ILogger<Startup> _logger = logger;
-        private LogBuffer _logBuffer = new();
+        private readonly LogBuffer _logBuffer = LogBuffer.Instance;
 
         public IConfiguration Configuration { get; } = configuration;
 
@@ -707,7 +707,7 @@ namespace Azure.DataApiBuilder.Service
                 options.Level = systemCompressionLevel;
             });
 
-            _logBuffer.BufferLog(LogLevel.Information, $"Response compression enabled with level '{compressionLevel}' for REST, GraphQL, and MCP endpoints.");
+            _logBuffer.BufferLog<Startup>(LogLevel.Information, $"Response compression enabled with level '{compressionLevel}' for REST, GraphQL, and MCP endpoints.");
         }
 
         /// <summary>
@@ -854,7 +854,7 @@ namespace Azure.DataApiBuilder.Service
             DynamicLogLevelProvider? logLevelProviderForAudit = app.ApplicationServices.GetService<DynamicLogLevelProvider>();
             if (logLevelProviderForAudit?.IsLogLevelLegacy is true)
             {
-                _logBuffer.BufferLog(LogLevel.Warning, "--LogLevel is deprecated, please use --log-level instead.");
+                _logBuffer.BufferLog<Startup>(LogLevel.Warning, "--LogLevel is deprecated, please use --log-level instead.");
             }
 
             ILoggerFactory? earlyLoggerFactory = app.ApplicationServices.GetService<ILoggerFactory>();
@@ -1196,7 +1196,7 @@ namespace Azure.DataApiBuilder.Service
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
 
-                        _logBuffer.BufferLog(LogLevel.Warning, AppServiceAuthenticationInfo.APPSERVICE_DEV_MISSING_ENV_CONFIG);
+                        _logBuffer.BufferLog<Startup>(LogLevel.Warning, AppServiceAuthenticationInfo.APPSERVICE_DEV_MISSING_ENV_CONFIG);
                     }
                     else if (easyAuthType == EasyAuthType.StaticWebApps && !swaEnvironmentDetected)
                     {
@@ -1210,7 +1210,7 @@ namespace Azure.DataApiBuilder.Service
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
 
-                        _logBuffer.BufferLog(LogLevel.Warning, StaticWebAppsAuthentication.SWA_DEV_MISSING_ENV_CONFIG);
+                        _logBuffer.BufferLog<Startup>(LogLevel.Warning, StaticWebAppsAuthentication.SWA_DEV_MISSING_ENV_CONFIG);
                     }
 
                     string defaultScheme = easyAuthType == EasyAuthType.AppService
@@ -1220,7 +1220,7 @@ namespace Azure.DataApiBuilder.Service
                     services.AddAuthentication(defaultScheme)
                             .AddEnvDetectedEasyAuth();
 
-                    _logBuffer.BufferLog(LogLevel.Information, $"Registered EasyAuth scheme: {defaultScheme}");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Information, $"Registered EasyAuth scheme: {defaultScheme}");
 
                 }
                 else if (authOptions.IsUnauthenticatedAuthenticationProvider())
@@ -1289,13 +1289,13 @@ namespace Azure.DataApiBuilder.Service
 
                 if (!AppInsightsOptions.Enabled)
                 {
-                    _logBuffer.BufferLog(LogLevel.Information, "Application Insights are disabled.");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Information, "Application Insights are disabled.");
                     return;
                 }
 
                 if (string.IsNullOrWhiteSpace(AppInsightsOptions.ConnectionString))
                 {
-                    _logBuffer.BufferLog(LogLevel.Warning, "Logs won't be sent to Application Insights because an Application Insights connection string is not available in the runtime config.");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Warning, "Logs won't be sent to Application Insights because an Application Insights connection string is not available in the runtime config.");
                     return;
                 }
 
@@ -1303,7 +1303,7 @@ namespace Azure.DataApiBuilder.Service
 
                 if (appTelemetryClient is null)
                 {
-                    _logBuffer.BufferLog(LogLevel.Error, "Telemetry client is not initialized.");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Error, "Telemetry client is not initialized.");
                     return;
                 }
 
@@ -1337,14 +1337,14 @@ namespace Azure.DataApiBuilder.Service
 
                 if (!OpenTelemetryOptions.Enabled)
                 {
-                    _logBuffer.BufferLog(LogLevel.Information, "Open Telemetry is disabled.");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Information, "Open Telemetry is disabled.");
                     return;
                 }
 
                 if (string.IsNullOrWhiteSpace(OpenTelemetryOptions?.Endpoint)
                     || !Uri.TryCreate(OpenTelemetryOptions.Endpoint, UriKind.Absolute, out _))
                 {
-                    _logBuffer.BufferLog(LogLevel.Warning, "Logs won't be sent to Open Telemetry because a valid Open Telemetry endpoint URI is not available in the runtime config.");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Warning, "Logs won't be sent to Open Telemetry because a valid Open Telemetry endpoint URI is not available in the runtime config.");
                     return;
                 }
 
@@ -1368,26 +1368,26 @@ namespace Azure.DataApiBuilder.Service
 
                 if (!AzureLogAnalyticsOptions.Enabled)
                 {
-                    _logBuffer.BufferLog(LogLevel.Information, "Azure Log Analytics is disabled.");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Information, "Azure Log Analytics is disabled.");
                     return;
                 }
 
                 bool isAuthIncomplete = false;
                 if (string.IsNullOrEmpty(AzureLogAnalyticsOptions.Auth?.CustomTableName))
                 {
-                    _logBuffer.BufferLog(LogLevel.Error, "Logs won't be sent to Azure Log Analytics because the Custom Table Name is not available in the config file.");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Error, "Logs won't be sent to Azure Log Analytics because the Custom Table Name is not available in the config file.");
                     isAuthIncomplete = true;
                 }
 
                 if (string.IsNullOrEmpty(AzureLogAnalyticsOptions.Auth?.DcrImmutableId))
                 {
-                    _logBuffer.BufferLog(LogLevel.Error, "Logs won't be sent to Azure Log Analytics because the DCR Immutable Id is not available in the config file.");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Error, "Logs won't be sent to Azure Log Analytics because the DCR Immutable Id is not available in the config file.");
                     isAuthIncomplete = true;
                 }
 
                 if (string.IsNullOrEmpty(AzureLogAnalyticsOptions.Auth?.DceEndpoint))
                 {
-                    _logBuffer.BufferLog(LogLevel.Error, "Logs won't be sent to Azure Log Analytics because the DCE Endpoint is not available in the config file.");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Error, "Logs won't be sent to Azure Log Analytics because the DCE Endpoint is not available in the config file.");
                     isAuthIncomplete = true;
                 }
 
@@ -1417,20 +1417,20 @@ namespace Azure.DataApiBuilder.Service
 
                 if (!FileSinkOptions.Enabled)
                 {
-                    _logBuffer.BufferLog(LogLevel.Information, "File is disabled.");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Information, "File is disabled.");
                     return;
                 }
 
                 if (string.IsNullOrWhiteSpace(FileSinkOptions.Path))
                 {
-                    _logBuffer.BufferLog(LogLevel.Error, "Logs won't be sent to File because the Path is not available in the config file.");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Error, "Logs won't be sent to File because the Path is not available in the config file.");
                     return;
                 }
 
                 Logger? serilogLogger = app.ApplicationServices.GetService<Logger>();
                 if (serilogLogger is null)
                 {
-                    _logBuffer.BufferLog(LogLevel.Error, "Serilog Logger Configuration is not set.");
+                    _logBuffer.BufferLog<Startup>(LogLevel.Error, "Serilog Logger Configuration is not set.");
                     return;
                 }
 
@@ -1896,10 +1896,21 @@ namespace Azure.DataApiBuilder.Service
             try
             {
                 FileSystemRuntimeConfigLoader configLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
-                configLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
+                ILogger<FileSystemRuntimeConfigLoader> configLoaderLogger = app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>();
+                configLoader.SetLogger(configLoaderLogger);
 
-                _logBuffer.FlushToLogger(_logger);
-                configLoader.FlushLogBuffer();
+                ILoggerFactory loggerFactory = app.ApplicationServices.GetRequiredService<ILoggerFactory>();
+                _logBuffer.FlushToLogger(category =>
+                {
+                    if (category is null || category == typeof(Startup).FullName)
+                    {
+                        return _logger;
+                    }
+
+                    return category == typeof(FileSystemRuntimeConfigLoader).FullName
+                        ? configLoaderLogger
+                        : loggerFactory.CreateLogger(category);
+                });
             }
             catch (Exception ex)
             {

@@ -253,7 +253,7 @@ public class UtilsTests
 
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-        LogBuffer logBuffer = new();
+        LogBuffer logBuffer = LogBuffer.Instance;
 
         Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
 
@@ -308,7 +308,7 @@ public class UtilsTests
         }
 
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
-        LogBuffer logBuffer = new();
+        LogBuffer logBuffer = LogBuffer.Instance;
 
         Assert.AreEqual(
             expectedIsMergedConfigAvailable,

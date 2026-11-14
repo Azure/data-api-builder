@@ -9,6 +9,13 @@
     <NoWarn>NU1603</NoWarn>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Only the ILogger abstractions, so this project stays dependency light and can be
+         referenced by any component (including the Aspire AppHost) without pulling in a
+         wider dependency graph. -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
   <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>

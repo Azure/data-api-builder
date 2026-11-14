@@ -10,6 +10,7 @@ using System.IO;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -126,6 +127,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "Failure reporting must not bypass the loader's shutdown drain.");
             if (failDuringStdio)
             {
+                StringAssert.Matches(reported, new Regex(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z fail: "),
+                    "The report is a diagnostic, so it must carry the same UTC timestamp prefix as every console log entry.");
                 StringAssert.Contains(reported, "MCP stdio host",
                     "The operator needs to know which host failed, not only that one did.");
                 StringAssert.Contains(reported, failure.Message,

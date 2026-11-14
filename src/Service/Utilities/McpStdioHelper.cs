@@ -11,10 +11,12 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Azure.DataApiBuilder.Service.Utilities
@@ -136,7 +138,7 @@ namespace Azure.DataApiBuilder.Service.Utilities
                 // Program has already pointed stderr at TextWriter.Null, so write the stream directly in
                 // that case rather than installing a writer that would outlive this call. stdout is left
                 // untouched for JSON-RPC.
-                string report = $"{STDIO_HOST_FAILED_MESSAGE} {ex}";
+                string report = BootstrapLogger.FormatEntry(LogLevel.Error, $"{STDIO_HOST_FAILED_MESSAGE} {ex}");
 
                 if (ReferenceEquals(Console.Error, TextWriter.Null))
                 {

@@ -1990,6 +1990,64 @@
         }
       }
     },
+    "GeometryType": {
+      "source": {
+        "object": "geometry_type_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "GeometryType",
+          "plural": "GeometryTypes"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        }
+      ]
+    },
+    "TemporalGeometryType": {
+      "source": {
+        "object": "temporal_geometry_type_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "TemporalGeometryType",
+          "plural": "TemporalGeometryTypes"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        }
+      ]
+    },
     "Profile": {
       "source": {
         "object": "profiles",

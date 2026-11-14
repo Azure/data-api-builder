@@ -65,8 +65,35 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(0, secondLogger.Messages.Count, "A drained buffer should emit nothing on a subsequent flush.");
         }
 
+        /// <summary>
+        /// Entries from different categories are emitted in the order they were buffered, each to its
+        /// own resolved logger; entries whose category does not resolve stay buffered for a later flush.
+        /// </summary>
+        [TestMethod]
+        public void FlushToLogger_RoutesByCategoryInOrder_AndRetainsUnresolved()
+        {
+            LogBuffer buffer = new();
+            buffer.BufferLog(LogLevel.Information, "a-1", category: "A");
+            buffer.BufferLog(LogLevel.Information, "b-1", category: "B");
+            buffer.BufferLog(LogLevel.Information, "c-1", category: "C");
+            buffer.BufferLog(LogLevel.Information, "a-2", category: "A");
+
+            List<string> sequence = new();
+            CapturingLogger loggerA = new(sequence);
+            CapturingLogger loggerB = new(sequence);
+            buffer.FlushToLogger(category => category switch { "A" => loggerA, "B" => loggerB, _ => null });
+
+            CollectionAssert.AreEqual(new[] { "a-1", "b-1", "a-2" }, sequence.ToArray());
+            CollectionAssert.AreEqual(new[] { "a-1", "a-2" }, loggerA.Messages.ToArray());
+            CollectionAssert.AreEqual(new[] { "b-1" }, loggerB.Messages.ToArray());
+
+            CapturingLogger fallback = new();
+            buffer.FlushToLogger(fallback);
+            CollectionAssert.AreEqual(new[] { "c-1" }, fallback.Messages.ToArray());
+        }
+
         /// <summary>Minimal in-memory <see cref="ILogger"/> that records formatted messages for assertions.</summary>
-        private sealed class CapturingLogger : ILogger
+        private sealed class CapturingLogger(List<string> sharedSequence = null) : ILogger
         {
             public List<string> Messages { get; } = new();
 
@@ -75,7 +102,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             public bool IsEnabled(LogLevel logLevel) => true;
 
             public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
-                => Messages.Add(formatter(state, exception));
+            {
+                string message = formatter(state, exception);
+                Messages.Add(message);
+                sharedSequence?.Add(message);
+            }
 
             private sealed class NullScope : IDisposable
             {

@@ -42,6 +42,8 @@ Data API builder (DAB) is an open-source, no-code tool that creates secure, full
 
 Use the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get-started/get-started-with-data-api-builder) tutorial to quickly explore the core tools and concepts.
 
+For source builds, see [building and publishing multi-architecture container images](docker/README.md).
+
 ### 1. Install the `dotnet` [command line](https://get.dot.net)
 
 https://get.dot.net

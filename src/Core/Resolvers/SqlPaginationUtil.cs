@@ -6,6 +6,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -28,6 +29,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// </summary>
     public static class SqlPaginationUtil
     {
+        /// <summary>
+        /// Maximum number of characters of a client-supplied request value written to a log entry.
+        /// </summary>
+        private const int MAX_LOGGED_REQUEST_VALUE_LENGTH = 256;
+
         /// <summary>
         /// Receives the result of a query as a JsonElement and parses:
         /// <list type="bullet">
@@ -778,7 +784,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 // Log a warning and ignore the invalid value, fallback to request's scheme
                 // This static helper has no injected ILogger, so the shared bootstrap logger is used.
-                BootstrapLogger.Instance.LogWarning($"Invalid scheme '{rawScheme}' in X-Forwarded-Proto header. Falling back to request scheme: '{req.Scheme}'.");
+                BootstrapLogger.Instance.LogWarning($"Invalid scheme '{SanitizeForLog(rawScheme)}' in X-Forwarded-Proto header. Falling back to request scheme: '{SanitizeForLog(req.Scheme)}'.");
                 return req.Scheme;
             }
 
@@ -803,11 +809,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 // Log a warning and ignore the invalid value, fallback to request's host
                 // This static helper has no injected ILogger, so the shared bootstrap logger is used.
-                BootstrapLogger.Instance.LogWarning($"Invalid host '{rawHost}' in X-Forwarded-Host header. Falling back to request host: '{req.Host}'.");
+                BootstrapLogger.Instance.LogWarning($"Invalid host '{SanitizeForLog(rawHost)}' in X-Forwarded-Host header. Falling back to request host: '{SanitizeForLog(req.Host.ToString())}'.");
                 return req.Host.ToString();
             }
 
             return isValid ? trimmed! : req.Host.ToString();
+        }
+
+        /// <summary>
+        /// Makes a client-supplied request value safe to log: control characters (including CR and LF)
+        /// are escaped as \uXXXX so the value can't forge entries or emit terminal escape sequences,
+        /// and a longer result is cut to <see cref="MAX_LOGGED_REQUEST_VALUE_LENGTH"/> characters plus "...".
+        /// </summary>
+        private static string SanitizeForLog(string? value)
+        {
+            string escaped = Regex.Replace(value ?? string.Empty, @"\p{Cc}", match => $"\\u{(int)match.Value[0]:X4}");
+            return escaped.Length > MAX_LOGGED_REQUEST_VALUE_LENGTH
+                ? escaped[..MAX_LOGGED_REQUEST_VALUE_LENGTH] + "..."
+                : escaped;
         }
 
         /// <summary>

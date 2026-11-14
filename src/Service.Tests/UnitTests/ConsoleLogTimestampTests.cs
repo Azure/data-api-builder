@@ -773,32 +773,66 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Resolves the scheme or host of <paramref name="request"/>, whichever <paramref name="header"/> forwards.
+        /// </summary>
+        private static void ResolveForwardedHeader(HttpRequest request, string header)
+        {
+            if (header == "X-Forwarded-Proto")
+            {
+                SqlPaginationUtil.ResolveRequestScheme(request);
+            }
+            else
+            {
+                SqlPaginationUtil.ResolveRequestHost(request);
+            }
+        }
+
+        /// <summary>
         /// Migrated diagnostic: invalid X-Forwarded-* headers produce a timestamped warning
-        /// instead of a bare Console.WriteLine.
+        /// instead of a bare Console.WriteLine. The header value is client-controlled, so its control
+        /// characters are escaped rather than written raw: it can't forge an entry or emit a terminal
+        /// escape sequence.
         /// </summary>
         [DataTestMethod]
-        [DataRow("X-Forwarded-Proto", "not a scheme", "X-Forwarded-Proto header", DisplayName = "Invalid forwarded scheme is timestamped")]
-        [DataRow("X-Forwarded-Host", "in valid host", "X-Forwarded-Host header", DisplayName = "Invalid forwarded host is timestamped")]
+        [DataRow("X-Forwarded-Proto", "not a scheme", "Invalid scheme 'not a scheme' in X-Forwarded-Proto header", DisplayName = "Invalid forwarded scheme is timestamped")]
+        [DataRow("X-Forwarded-Host", "in valid host", "Invalid host 'in valid host' in X-Forwarded-Host header", DisplayName = "Invalid forwarded host is timestamped")]
+        [DataRow("X-Forwarded-Proto", "https\r\n2026-01-01T00:00:00.000Z fail: forged", @"Invalid scheme 'https\u000D\u000A2026-01-01T00:00:00.000Z fail: forged'", DisplayName = "Forwarded scheme line break is escaped")]
+        [DataRow("X-Forwarded-Proto", "\u001b[31mhttps", @"Invalid scheme '\u001B[31mhttps'", DisplayName = "Forwarded scheme escape sequence is escaped")]
+        [DataRow("X-Forwarded-Host", "evil.com\r\n2026-01-01T00:00:00.000Z fail: forged", @"Invalid host 'evil.com\u000D\u000A2026-01-01T00:00:00.000Z fail: forged'", DisplayName = "Forwarded host line break is escaped")]
+        [DataRow("X-Forwarded-Host", "evil.com\u001b[31m", @"Invalid host 'evil.com\u001B[31m'", DisplayName = "Forwarded host escape sequence is escaped")]
         public void SqlPaginationUtil_InvalidForwardedHeader_LogsTimestampedWarning(string header, string value, string expectedText)
         {
             DefaultHttpContext httpContext = new();
             httpContext.Request.Headers[header] = value;
 
-            (string stdout, _, DateTime before, DateTime after) = CaptureConsole(() =>
-            {
-                if (header == "X-Forwarded-Proto")
-                {
-                    SqlPaginationUtil.ResolveRequestScheme(httpContext.Request);
-                }
-                else
-                {
-                    SqlPaginationUtil.ResolveRequestHost(httpContext.Request);
-                }
-            });
+            (string stdout, _, DateTime before, DateTime after) = CaptureConsole(
+                () => ResolveForwardedHeader(httpContext.Request, header));
 
+            Assert.IsFalse(stdout.TrimEnd('\r', '\n').Any(char.IsControl),
+                $"The header value must not reach the console with raw control characters but got: '{stdout}'");
             AssertEveryEntryTimestamped(stdout, before, after);
             StringAssert.Contains(stdout, "warn:");
             StringAssert.Contains(stdout, expectedText);
+        }
+
+        /// <summary>
+        /// A forwarded header value can be as large as the server's header limit, so the warning
+        /// only carries a bounded, visibly truncated prefix of it.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("X-Forwarded-Proto", DisplayName = "Oversized forwarded scheme is truncated")]
+        [DataRow("X-Forwarded-Host", DisplayName = "Oversized forwarded host is truncated")]
+        public void SqlPaginationUtil_OversizedForwardedHeader_LogsTruncatedValue(string header)
+        {
+            DefaultHttpContext httpContext = new();
+            httpContext.Request.Headers[header] = "invalid " + new string('a', 10_000);
+
+            (string stdout, _, _, _) = CaptureConsole(() => ResolveForwardedHeader(httpContext.Request, header));
+
+            StringAssert.Contains(stdout, "'invalid aaa");
+            StringAssert.Contains(stdout, $"aaa...' in {header} header");
+            Assert.IsTrue(stdout.Length < 1_000,
+                $"The logged header value must be bounded but the entry was {stdout.Length} characters long.");
         }
 
         /// <summary>

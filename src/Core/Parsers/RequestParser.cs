@@ -38,6 +38,19 @@ namespace Azure.DataApiBuilder.Core.Parsers
         public const string AFTER_URL = "$after";
 
         /// <summary>
+        /// Builds the query string the OData parser expects from an OData expression that did not
+        /// arrive through a URL, such as an MCP tool argument. The OData parser URL-decodes its input,
+        /// so the expression is escaped first to keep characters like +, %, &amp; and # literal.
+        /// </summary>
+        /// <param name="queryOption">OData query option, e.g. <see cref="FILTER_URL"/>.</param>
+        /// <param name="expression">The OData expression as written by the caller, not URL-encoded.</param>
+        /// <returns>The query string, e.g. ?$filter=title%20eq%20%27G%2B1%27</returns>
+        public static string BuildQueryStringFromExpression(string queryOption, string expression)
+        {
+            return $"?{queryOption}={Uri.EscapeDataString(expression)}";
+        }
+
+        /// <summary>
         /// Parses the primary key string to identify the field names composing the key
         /// and their values.
         /// </summary>

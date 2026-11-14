@@ -207,6 +207,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// The filter argument is a plain OData expression rather than part of a URL, so characters
+        /// with a special meaning in URLs must reach the database as written.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("title eq 'SOME%CONN'", 1, DisplayName = "Literal percent sign matches the row.")]
+        [DataRow("title eq 'SOME%25CONN'", 0, DisplayName = "Percent-encoded value isn't decoded.")]
+        [DataRow("title eq 'SOME&CONN'", 0, DisplayName = "Ampersand doesn't truncate the filter.")]
+        [DataRow("title eq 'SOME#CONN'", 0, DisplayName = "Number sign doesn't truncate the filter.")]
+        public async Task ReadRecords_FilterWithUrlSpecialCharacters_IsNotUrlDecoded(string filter, int expectedCount)
+        {
+            CallToolResult result = await ExecuteReadAsync("Book", filter: filter);
+
+            AssertSuccess(result, $"ReadRecords with filter '{filter}' should succeed.");
+            Assert.AreEqual(expectedCount, GetRecordsArray(ParseResultRoot(result)).GetArrayLength());
+        }
+
+        /// <summary>
         /// Reads the first page with first=2, extracts the after cursor, then reads the second page
         /// and verifies it returns different records.
         /// </summary>

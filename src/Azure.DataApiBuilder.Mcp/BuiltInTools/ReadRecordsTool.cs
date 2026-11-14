@@ -232,13 +232,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!string.IsNullOrWhiteSpace(filter))
                 {
-                    string filterQueryString = $"?{RequestParser.FILTER_URL}={filter}";
+                    string filterQueryString = RequestParser.BuildQueryStringFromExpression(RequestParser.FILTER_URL, filter);
                     context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
                 }
 
                 if (orderby is not null && orderby.Count != 0)
                 {
-                    string sortQueryString = $"?{RequestParser.SORT_URL}={string.Join(", ", orderby)}";
+                    string sortQueryString = RequestParser.BuildQueryStringFromExpression(RequestParser.SORT_URL, string.Join(", ", orderby));
                     (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = RequestParser.GenerateOrderByLists(context, sqlMetadataProvider, sortQueryString);
                 }
 

@@ -1,13 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using Azure.DataApiBuilder.Core.Telemetry.Product;
 
-namespace Azure.DataApiBuilder.Service.Telemetry
+namespace Azure.DataApiBuilder.Core.Telemetry.Product.Export
 {
     /// <summary>Maps the immutable product contract to the SDK's custom-event attributes.</summary>
     internal static class ApplicationInsightsEventAttributes
@@ -20,7 +16,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         private const int MAX_PROPERTY_NAME_LENGTH = 150;
         private const int MAX_PROPERTY_VALUE_LENGTH = 8192;
 
-        internal static KeyValuePair<string, object?>[] Create(EngineTelemetryEvent record)
+        internal static KeyValuePair<string, object?>[] Create(IProductTelemetryEvent record)
         {
             ArgumentNullException.ThrowIfNull(record);
             if (string.IsNullOrWhiteSpace(record.Name) || record.Name.Length > 512 || record.Properties.Count > MAX_PROPERTIES)
@@ -42,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
                 if (key.StartsWith("microsoft.", StringComparison.OrdinalIgnoreCase) ||
                     key.StartsWith("ai.", StringComparison.OrdinalIgnoreCase) ||
                     key.StartsWith("enduser.", StringComparison.OrdinalIgnoreCase) ||
-                    key is "user_agent.original" or "{OriginalFormat}" or "CategoryName" or "EventId" or "EventName")
+                    key is "user_agent.original" or "{OriginalFormat}" or "CategoryName" or "EventId" or "EventName" or "dab_config_epoch")
                 {
                     continue;
                 }
@@ -64,7 +60,11 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             attributes["dab_process_session_id"] = record.SessionId.ToString("D");
             attributes["dab_sequence"] = record.Sequence.ToString(CultureInfo.InvariantCulture);
             attributes["dab_occurred_at"] = record.OccurredAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
-            attributes["dab_config_epoch"] = record.ConfigurationEpoch.ToString(CultureInfo.InvariantCulture);
+            if (record is EngineTelemetryEvent engineRecord)
+            {
+                attributes["dab_config_epoch"] = engineRecord.ConfigurationEpoch.ToString(CultureInfo.InvariantCulture);
+            }
+
             attributes["dab_schema_version"] = "1";
             attributes["dab_is_synthetic"] = record.IsSynthetic ? "true" : "false";
             return attributes.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToArray();

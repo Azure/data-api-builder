@@ -13,6 +13,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.Telemetry;
+using Azure.DataApiBuilder.Core.Telemetry.Product.Export;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

@@ -471,6 +471,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [DataRow("hash==|dab_oss_1.2.3" + PAYLOAD, "hash==|")]
         [DataRow("hash==|my_dab_app,dab_hosted_1.2.3" + PAYLOAD, "hash==|my_dab_app")]
         [DataRow("Customer,dab_oss_1.2.3,dab_hosted_2.3.4" + PAYLOAD, "Customer")]
+        [DataRow("Customer,dab_oss_1.2.3+XXSX|W0LN00|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?+", "Customer")]
         [DataRow("Customer,dab_hosted_9.8.7+XXPXQ|10|MMMM00MMM00MMMMMMMMM9|MMM?MMMMMMMMM?9+", "Customer")]
         [DataRow("Customer,dab_oss_1.2.3+XXSX|L1AC01|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?+", "Customer")]
         [DataRow("hash==|Customer,dab_hosted_1.2.3+XXPX|W0LN10|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?+", "hash==|Customer")]

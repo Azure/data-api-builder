@@ -22,6 +22,7 @@ using Azure.Core.Pipeline;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
+using Azure.DataApiBuilder.Core.Telemetry.Product.Export;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

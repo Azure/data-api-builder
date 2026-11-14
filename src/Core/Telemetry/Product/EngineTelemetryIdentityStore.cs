@@ -27,21 +27,13 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
     /// Linux requires an owner-controlled directory and a private, owner-readable identity file.
     /// Static directory links and final-component links are rejected; final reads also use native
     /// no-follow handles. This is not a sandbox against a directory owner replacing ancestors or
-    /// mounts during a call. Persistence supports Windows and Linux x64/arm64 with statx; other
-    /// platforms/native APIs fail closed to ephemeral identity. No permission changes are attempted.
+    /// mounts during a call. Persistence supports Windows and Linux x64/arm64 with statx and
+    /// renameat2; unavailable platforms/native APIs fail closed. No permission changes are attempted.
     /// No directories, installation IDs, network clients, locks or retry loops are created. Local
     /// filesystem calls themselves have no hard time limit; filesystem crash durability is best effort.
     /// </remarks>
     internal static class EngineTelemetryIdentityStore
     {
-        private const string SIDECAR_SUFFIX = ".dab-telemetry.json";
-        private const int SCHEMA_VERSION = 1;
-        private const int MAX_STATE_BYTES = 1024;
-        private const UnixFileMode PRIVATE_FILE_MODE = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-        private const UnixFileMode UNSAFE_DIRECTORY_MODE = UnixFileMode.GroupWrite | UnixFileMode.OtherWrite;
-        private const FileAttributes UNSAFE_FILE_ATTRIBUTES = FileAttributes.Directory
-            | FileAttributes.ReparsePoint | FileAttributes.Device | FileAttributes.Offline;
-
         /// <summary>
         /// Resolves once for the supplied root/merged configuration, not individual constituent files.
         /// Returns only newly_saved, reused or ephemeral stability. Opt-out performs no filesystem I/O;
@@ -55,29 +47,94 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         /// <summary>Per-call test seam; does not mutate or depend on the process environment.</summary>
         internal static EngineTelemetryIdentity Resolve(string? configPath, Func<string, string?> readEnvironmentVariable)
         {
-            string? temporaryPath = null;
-            bool ownsTemporaryFile = false;
+            return TelemetryIdentityPersistence.ResolveApiId(configPath, readEnvironmentVariable, allowCreate: true) is { } saved
+                ? new(saved.Id, saved.Created ? "newly_saved" : "reused")
+                : CreateEphemeral();
+        }
 
+        /// <summary>
+        /// Looks up only the supplied root/merged configuration's existing, safe v1 sidecar.
+        /// Never creates state, directories or an ephemeral ID. Opt-out precedes all path I/O.
+        /// The caller must separately enforce telemetry enablement before invoking this method.
+        /// </summary>
+        internal static EngineTelemetryIdentity? Lookup(string? configPath, Func<string, string?>? readEnvironmentVariable = null)
+        {
+            return TelemetryIdentityPersistence.ResolveApiId(configPath,
+                readEnvironmentVariable ?? Environment.GetEnvironmentVariable, allowCreate: false) is { } saved
+                ? new(saved.Id, "reused")
+                : null;
+        }
+
+        /// <summary>
+        /// Returns false because persistent notice state is unavailable in this implementation.
+        /// Does not read or write anything, even when opted out. The session must show the notice
+        /// once per enabled run before its first transmission; false must not suppress that notice.
+        /// </summary>
+        public static bool TryMarkNoticeShown(string? configPath)
+        {
+            _ = configPath;
+            return false;
+        }
+
+        private static EngineTelemetryIdentity CreateEphemeral() => new(Guid.NewGuid(), "ephemeral");
+    }
+
+    /// <summary>
+    /// Narrow shared random-state persistence, not a general filesystem API. Only the two
+    /// policy-gated identity entry points are exposed; native I/O, validation and publication
+    /// remain private. Installation-specific directory/ACL policy is in the other partial.
+    /// </summary>
+    internal static partial class TelemetryIdentityPersistence
+    {
+        private const string SIDECAR_SUFFIX = ".dab-telemetry.json";
+        private const int SCHEMA_VERSION = 1;
+        private const int MAX_STATE_BYTES = 1024;
+        private const UnixFileMode PRIVATE_FILE_MODE = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+        private const UnixFileMode UNSAFE_DIRECTORY_MODE = UnixFileMode.GroupWrite | UnixFileMode.OtherWrite;
+        private const FileAttributes UNSAFE_FILE_ATTRIBUTES = FileAttributes.Directory
+            | FileAttributes.ReparsePoint | FileAttributes.Device | FileAttributes.Offline;
+
+        internal static (Guid Id, bool Created)? ResolveApiId(string? configPath,
+            Func<string, string?> readEnvironmentVariable, bool allowCreate)
+        {
             try
             {
                 ArgumentNullException.ThrowIfNull(readEnvironmentVariable);
                 if (ProductTelemetryPolicy.IsOptedOut(readEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR))
                     || !TryGetStoragePaths(configPath, out string directory, out string sidecar))
                 {
-                    return CreateEphemeral();
+                    return null;
                 }
 
-                ReadResult result = ReadIdentity(sidecar, out Guid savedId);
+                return ResolveState(directory, sidecar, "apiId", allowCreate,
+                    () => IsSafeDirectory(directory), requireWindowsOwner: false);
+            }
+            catch (Exception exception) when (IsStorageFailure(exception))
+            {
+                // Telemetry must not fail the caller or log paths, file contents or exceptions.
+                return null;
+            }
+        }
+
+        private static (Guid Id, bool Created)? ResolveState(string directory, string statePath,
+            string idPropertyName, bool allowCreate, Func<bool> isSafeDirectory, bool requireWindowsOwner)
+        {
+            string? temporaryPath = null;
+            bool ownsTemporaryFile = false;
+
+            try
+            {
+                ReadResult result = ReadIdentity(statePath, idPropertyName, requireWindowsOwner, out Guid savedId);
                 if (result == ReadResult.Valid)
                 {
-                    return IsSafeDirectory(directory) ? new(savedId, "reused") : CreateEphemeral();
+                    return isSafeDirectory() ? (savedId, false) : null;
                 }
 
                 // An existing but invalid/unreadable file belongs to its owner. Never repair,
                 // truncate, replace or remove it, including future versions of our own schema.
-                if (result != ReadResult.Missing || !CanCreateInDirectory(directory))
+                if (!allowCreate || result != ReadResult.Missing || !CanCreateInDirectory(directory))
                 {
-                    return CreateEphemeral();
+                    return null;
                 }
 
                 Guid candidate = Guid.NewGuid();
@@ -96,14 +153,16 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                     options.UnixCreateMode = PRIVATE_FILE_MODE;
                 }
 
-                using (FileStream stream = new(temporaryPath, options))
+                using (FileStream stream = requireWindowsOwner && OperatingSystem.IsWindows()
+                    ? CreatePrivateWindowsFile(temporaryPath)
+                    : new(temporaryPath, options))
                 {
                     // A failed CreateNew must not trigger cleanup of an existing file.
                     ownsTemporaryFile = true;
                     using Utf8JsonWriter writer = new(stream);
                     writer.WriteStartObject();
                     writer.WriteNumber("version", SCHEMA_VERSION);
-                    writer.WriteString("apiId", candidate);
+                    writer.WriteString(idPropertyName, candidate);
                     writer.WriteEndObject();
                     writer.Flush();
                     stream.Flush(flushToDisk: true);
@@ -111,48 +170,24 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
 
                 // Recheck the directory before publishing; no overwrite also protects a file
                 // or link created by another process after the initial missing-file observation.
-                if (!IsSafeDirectory(directory)
-                    || ReadIdentity(temporaryPath, out Guid stagedId) != ReadResult.Valid || stagedId != candidate)
+                if (!isSafeDirectory()
+                    || ReadIdentity(temporaryPath, idPropertyName, requireWindowsOwner, out Guid stagedId) != ReadResult.Valid
+                    || stagedId != candidate)
                 {
-                    return CreateEphemeral();
+                    return null;
                 }
 
-                bool published = false;
-                try
-                {
-                    if (OperatingSystem.IsLinux())
-                    {
-                        // File.Move(overwrite: false) can check then rename on Unix, allowing
-                        // concurrent creators to overwrite each other. Publish atomically with
-                        // no replacement; unsupported kernels/filesystems fail closed instead.
-                        published = NativeMethods.RenameLinuxFile(NativeMethods.AT_FDCWD, temporaryPath,
-                            NativeMethods.AT_FDCWD, sidecar, NativeMethods.RENAME_NOREPLACE) == 0;
-                    }
-                    else
-                    {
-                        File.Move(temporaryPath, sidecar, overwrite: false);
-                        published = true;
-                    }
+                bool published = TryPublishState(temporaryPath, statePath);
+                ownsTemporaryFile = !published;
 
-                    ownsTemporaryFile = !published;
-                }
-                catch (IOException)
+                // Possibly lost a creation race. Read the winner once, never retry publication.
+                if (!isSafeDirectory() || ReadIdentity(statePath, idPropertyName, requireWindowsOwner, out savedId) != ReadResult.Valid
+                    || !isSafeDirectory() || (published && savedId != candidate))
                 {
-                    // Possibly lost a creation race. Read the winner once, never retry publication.
+                    return null;
                 }
 
-                if (!IsSafeDirectory(directory) || ReadIdentity(sidecar, out savedId) != ReadResult.Valid
-                    || !IsSafeDirectory(directory) || (published && savedId != candidate))
-                {
-                    return CreateEphemeral();
-                }
-
-                return new(savedId, published ? "newly_saved" : "reused");
-            }
-            catch (Exception exception) when (IsStorageFailure(exception))
-            {
-                // Telemetry must not fail the engine or log paths, file contents or exception text.
-                return CreateEphemeral();
+                return (savedId, published);
             }
             finally
             {
@@ -160,7 +195,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 {
                     try
                     {
-                        if (IsSafeDirectory(Path.GetDirectoryName(temporaryPath)!))
+                        if (isSafeDirectory())
                         {
                             File.Delete(temporaryPath);
                         }
@@ -174,18 +209,34 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             }
         }
 
-        /// <summary>
-        /// Returns false because persistent notice state is unavailable in this implementation.
-        /// Does not read or write anything, even when opted out. The session must show the notice
-        /// once per enabled run before its first transmission; false must not suppress that notice.
-        /// </summary>
-        public static bool TryMarkNoticeShown(string? configPath)
+        private static bool TryPublishState(string temporaryPath, string statePath)
         {
-            _ = configPath;
-            return false;
-        }
+            if (OperatingSystem.IsLinux())
+            {
+                // File.Move(overwrite: false) can check then rename on Unix, allowing concurrent
+                // creators to overwrite each other, including a newly arrived file or dangling link.
+                // Publish atomically with no replacement. Unsupported kernels/filesystems return
+                // failure; missing libc entry points reach the callers' storage-failure catches.
+                // Never fall back to the unsafe managed move, repair permissions or log native errors.
+                return NativeMethods.RenameLinuxFile(NativeMethods.AT_FDCWD, temporaryPath,
+                    NativeMethods.AT_FDCWD, statePath, NativeMethods.RENAME_NOREPLACE) == 0;
+            }
 
-        private static EngineTelemetryIdentity CreateEphemeral() => new(Guid.NewGuid(), "ephemeral");
+            if (!OperatingSystem.IsWindows())
+            {
+                return false;
+            }
+
+            try
+            {
+                File.Move(temporaryPath, statePath, overwrite: false);
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+        }
 
         private static bool TryGetStoragePaths(string? configPath, out string directory, out string sidecar)
         {
@@ -308,7 +359,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             return (File.GetUnixFileMode(path) & required) == required;
         }
 
-        private static ReadResult ReadIdentity(string path, out Guid apiId)
+        private static ReadResult ReadIdentity(string path, string idPropertyName, bool requireWindowsOwner, out Guid apiId)
         {
             apiId = default;
             if (OperatingSystem.IsLinux())
@@ -343,7 +394,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 }
             }
             else if (NativeMethods.GetFileType(handle) != NativeMethods.DISK_FILE
-                || (File.GetAttributes(handle) & UNSAFE_FILE_ATTRIBUTES) != 0)
+                || (File.GetAttributes(handle) & UNSAFE_FILE_ATTRIBUTES) != 0
+                || (requireWindowsOwner && (!OperatingSystem.IsWindows() || !HasSafeWindowsOwnership(handle))))
             {
                 return ReadResult.Unavailable;
             }
@@ -391,7 +443,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 {
                     hasVersion = true;
                 }
-                else if (property.NameEquals("apiId") && !hasId
+                else if (property.NameEquals(idPropertyName) && !hasId
                     && property.Value.ValueKind == JsonValueKind.String
                     && TryParseRandomId(property.Value.GetString(), out apiId))
                 {
@@ -480,7 +532,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             public ushort Mode;
         }
 
-        private static class NativeMethods
+        private static partial class NativeMethods
         {
             internal const uint GENERIC_READ = 0x80000000;
             internal const uint OPEN_REPARSE_POINT = 0x00200000;

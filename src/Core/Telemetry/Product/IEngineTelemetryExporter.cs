@@ -8,8 +8,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
     /// and during I/O. Export and disposal never run on a request's enqueueing thread. Successful
     /// acknowledgement does not guarantee later backend storage or exactly-once delivery.
     /// </summary>
-    internal interface IEngineTelemetryExporter : IDisposable
+    internal interface IEngineTelemetryExporter : IProductTelemetryExporter<EngineTelemetryEvent>
     {
-        ValueTask<bool> ExportAsync(EngineTelemetryEvent record, CancellationToken cancellationToken);
     }
 }

@@ -16,6 +16,9 @@ namespace Azure.DataApiBuilder.Config.Telemetry;
 public sealed class TelemetryConfigurationPresence
 {
     private static readonly AsyncLocal<Func<bool>?> _capturePermission = new();
+    private static readonly AsyncLocal<bool> _boundedCommandCapture = new();
+    internal const int MAX_COMMAND_JSON_CHARACTERS = 1024 * 1024;
+    internal const int MAX_COMMAND_ENTITIES = 4096;
     public const string TEST_MODE_ENV_VAR = ProductTelemetryPolicy.TEST_MODE_ENV_VAR;
     public const int SETTING_COUNT = 26;
     public const int ENTITY_FEATURE_COUNT = 5;
@@ -75,14 +78,75 @@ public sealed class TelemetryConfigurationPresence
             return null; // Nested child loaders inherit the root's evaluated permission.
         }
 
-        CaptureScope scope = new(_capturePermission.Value);
+        CaptureScope scope = new(_capturePermission.Value, _boundedCommandCapture.Value);
         _capturePermission.Value = permission;
+        // A host's explicit policy takes precedence over an enclosing CLI invocation.
+        _boundedCommandCapture.Value = false;
         return scope;
     }
 
-    private sealed class CaptureScope(Func<bool>? previous) : IDisposable
+    /// <summary>
+    /// Authorize provenance for this command's normal loads, not ambient test mode or a shared
+    /// loader mutation. Child loaders inherit it; an explicit engine policy takes precedence.
+    /// Null permission suppresses an enclosing scope without allocating on an ordinary disabled path.
+    /// </summary>
+    internal static IDisposable? BeginCommandCapture(Func<bool>? permission)
     {
-        public void Dispose() => _capturePermission.Value = previous;
+        if (permission is null && _capturePermission.Value is null)
+        {
+            return null;
+        }
+
+        CaptureScope scope = new(_capturePermission.Value, _boundedCommandCapture.Value);
+        _capturePermission.Value = permission ?? (() => false);
+        _boundedCommandCapture.Value = true;
+        return scope;
+    }
+
+    internal static TelemetryConfigurationPresence? TryCaptureForCurrentScope(string json, RuntimeConfig config)
+    {
+        try
+        {
+            if (!IsCaptureEnabled())
+            {
+                return null;
+            }
+
+            return _boundedCommandCapture.Value ? TryCaptureBounded(json, config, enabled: true)
+                : TryCapture(json, config, enabled: true);
+        }
+        catch (Exception)
+        {
+            // Optional provenance failures must not turn a successful product parse into failure.
+            return null;
+        }
+    }
+
+    internal static TelemetryConfigurationPresence? TryCaptureBounded(string json, RuntimeConfig config, bool enabled)
+    {
+        if (!enabled)
+        {
+            return null;
+        }
+
+        try
+        {
+            return json.Length <= MAX_COMMAND_JSON_CHARACTERS
+                ? Capture(json, config, MAX_COMMAND_ENTITIES) : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    private sealed class CaptureScope(Func<bool>? previous, bool previousBounded) : IDisposable
+    {
+        public void Dispose()
+        {
+            _capturePermission.Value = previous;
+            _boundedCommandCapture.Value = previousBounded;
+        }
     }
 
     /// <summary>
@@ -100,6 +164,11 @@ public sealed class TelemetryConfigurationPresence
             return null;
         }
 
+        return Capture(json, config, int.MaxValue);
+    }
+
+    private static TelemetryConfigurationPresence? Capture(string json, RuntimeConfig config, int maxEntities)
+    {
         ArgumentNullException.ThrowIfNull(config);
         try
         {
@@ -152,8 +221,14 @@ public sealed class TelemetryConfigurationPresence
             Cursor originalEntities = root.Child("entities");
             if (originalEntities.IsObject)
             {
+                int inspected = 0;
                 foreach ((string name, Entity entity) in config.Entities)
                 {
+                    if (++inspected > maxEntities)
+                    {
+                        return null;
+                    }
+
                     // Look up the last JSON property, as the product dictionary deserializer does.
                     // Iterate the accepted dictionary so duplicate JSON names cannot inflate counts.
                     // An absent definition can belong to a child or be generated; it proves no omission.

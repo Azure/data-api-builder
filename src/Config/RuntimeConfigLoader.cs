@@ -29,7 +29,7 @@ public abstract class RuntimeConfigLoader
     private HotReloadEventHandler<HotReloadEventArgs>? _handler;
     protected readonly string? _connectionString;
 
-    protected static LogBuffer _logBuffer = new();
+    protected static LogBuffer _logBuffer = LogBuffer.Instance;
 
     /// <summary>
     /// Logger used to drain buffered logs. <c>null</c> on a base loader with no logging; loaders that
@@ -45,9 +45,11 @@ public abstract class RuntimeConfigLoader
     /// </summary>
     public void FlushLogBuffer()
     {
-        if (Logger is not null)
+        ILogger? logger = Logger;
+        if (logger is not null)
         {
-            _logBuffer.FlushToLogger(Logger);
+            // Only drain this loader's entries; other components' entries stay buffered for their own flush.
+            _logBuffer.FlushToLogger(category => category == typeof(FileSystemRuntimeConfigLoader).FullName ? logger : null);
         }
     }
 
@@ -527,7 +529,7 @@ public abstract class RuntimeConfigLoader
         {
             // Emit the telemetry-bearing Application Name (never the full connection string, which can
             // contain secrets) at Debug, once per pool, as required by the telemetry design.
-            _logBuffer.BufferLog(LogLevel.Debug, $"DAB telemetry Application Name computed for '{liveDataSource?.DatabaseType}' data source: {applicationName}");
+            _logBuffer.BufferLog<FileSystemRuntimeConfigLoader>(LogLevel.Debug, $"DAB telemetry Application Name computed for '{liveDataSource?.DatabaseType}' data source: {applicationName}");
         }
 
         string defaultApplicationName = new SqlConnectionStringBuilder().ApplicationName;
@@ -635,7 +637,7 @@ public abstract class RuntimeConfigLoader
         {
             // Emit the telemetry-bearing Application Name (never the full connection string, which can
             // contain secrets) at Debug, once per pool, as required by the telemetry design.
-            _logBuffer.BufferLog(LogLevel.Debug, $"DAB telemetry Application Name computed for '{liveDataSource?.DatabaseType}' data source: {applicationName}");
+            _logBuffer.BufferLog<FileSystemRuntimeConfigLoader>(LogLevel.Debug, $"DAB telemetry Application Name computed for '{liveDataSource?.DatabaseType}' data source: {applicationName}");
         }
 
         // If the connection string does not contain the `Application Name` property, add it.

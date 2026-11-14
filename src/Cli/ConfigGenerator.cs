@@ -3074,7 +3074,7 @@ namespace Cli
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile, options.CliBuffer, options.ProductTelemetry))
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile, LogBuffer.Instance, options.ProductTelemetry))
             {
                 return false;
             }
@@ -3089,14 +3089,14 @@ namespace Cli
                 // duplicate output (stderr + stdout).
                 if (!loader.IsParseErrorEmitted)
                 {
-                    options.CliBuffer.BufferLog(LogLevel.Error, $"Failed to parse the config file: {runtimeConfigFile}.");
+                    LogBuffer.Instance.BufferLog(LogLevel.Error, $"Failed to parse the config file: {runtimeConfigFile}.");
                 }
 
                 return false;
             }
             else
             {
-                options.CliBuffer.BufferLog(LogLevel.Information, $"Loaded config file: {runtimeConfigFile}");
+                LogBuffer.Instance.BufferLog(LogLevel.Information, $"Loaded config file: {runtimeConfigFile}");
             }
 
             CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, deserializedRuntimeConfig);
@@ -3104,7 +3104,7 @@ namespace Cli
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource?.ConnectionString))
             {
                 options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
-                options.CliBuffer.BufferLog(LogLevel.Error, "Invalid connection-string provided in the config.");
+                LogBuffer.Instance.BufferLog(LogLevel.Error, "Invalid connection-string provided in the config.");
                 return false;
             }
 
@@ -3132,7 +3132,7 @@ namespace Cli
             }
             else if (options.LogLevelLegacy is not null)
             {
-                options.CliBuffer.BufferLog(LogLevel.Warning, $"--LogLevel is deprecated, please use --log-level instead.");
+                LogBuffer.Instance.BufferLog(LogLevel.Warning, $"--LogLevel is deprecated, please use --log-level instead.");
                 logLevel = options.LogLevelLegacy;
             }
 
@@ -3141,7 +3141,7 @@ namespace Cli
                 if (logLevel is < LogLevel.Trace or > LogLevel.None)
                 {
                     options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
-                    options.CliBuffer.BufferLog(LogLevel.Error,
+                    LogBuffer.Instance.BufferLog(LogLevel.Error,
                         $"LogLevel's valid range is 0 to 6, your value: {logLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel");
                     return false;
                 }
@@ -3166,14 +3166,36 @@ namespace Cli
                 }
             }
 
-            options.CliBuffer.BufferLog(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");
+            LogBuffer.Instance.BufferLog(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");
 
             Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli(minimumLogLevel);
 
             // Update logger for StartOptions and
             // flush all current logs saved in LogBuffer
             ILogger<Program> programLogger = Utils.LoggerFactoryForCli.CreateLogger<Program>();
-            options.CliBuffer.FlushToLogger(programLogger);
+            ILoggerFactory cliLoggerFactory = Utils.LoggerFactoryForCli;
+            Dictionary<string, Microsoft.Extensions.Logging.ILogger> configLevelLoggers = new();
+            LogBuffer.Instance.FlushToLogger(category =>
+            {
+                if (category is null)
+                {
+                    return programLogger;
+                }
+
+                if (logLevel is not null)
+                {
+                    return cliLoggerFactory.CreateLogger(category);
+                }
+
+                // Without --log-level, honor the config's per-class log-level, as the engine's loggers do.
+                if (!configLevelLoggers.TryGetValue(category, out Microsoft.Extensions.Logging.ILogger? categoryLogger))
+                {
+                    categoryLogger = new CustomLoggerProvider(deserializedRuntimeConfig.GetConfiguredLogLevel(category)).CreateLogger(category);
+                    configLevelLoggers[category] = categoryLogger;
+                }
+
+                return categoryLogger;
+            });
 
             // Update logger for Utils
             ILogger<Utils> utilsLogger = Utils.LoggerFactoryForCli.CreateLogger<Utils>();

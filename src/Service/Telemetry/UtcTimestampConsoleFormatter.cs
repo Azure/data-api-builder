@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
     /// <c>DateTimeOffset.ToString(TimestampFormat)</c>, which resolves against
     /// <see cref="CultureInfo.CurrentCulture"/>. Its <c>UseUtcTimestamp</c> option only selects the
     /// time zone, not the calendar or the digits, so on a machine using a non-Gregorian culture
-    /// (ar-SA, th-TH, fa-IR, ...) the built-in formatter emits e.g. <c>2569-08-29T05:29:44.113Z</c>
+    /// (th-TH, fa-IR, ...) the built-in formatter emits e.g. <c>2569-08-29T05:29:44.113Z</c>
     /// instead of the required Gregorian <c>2026-08-29T05:29:44.113Z</c>.
     /// </summary>
     public sealed class UtcTimestampConsoleFormatter : ConsoleFormatter, IDisposable

@@ -324,7 +324,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataTestMethod]
         [DataRow("en-US")]
         [DataRow("th-TH")]
-        [DataRow("ar-SA")]
+        [DataRow("fa-IR")]
         [DataRow("fi-FI")]
         public void ConfigureHostLogging_ExplicitJsonFormatter_EmitsTimestampedJsonRecord(string cultureName)
         {
@@ -381,7 +381,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataTestMethod]
         [DataRow("en-US")]
         [DataRow("th-TH")]
-        [DataRow("ar-SA")]
+        [DataRow("fa-IR")]
         [DataRow("fi-FI")]
         public void ConfigureHostLogging_ExplicitSystemdFormatter_EmitsTimestampedSystemdRecord(string cultureName)
         {
@@ -679,7 +679,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Guards against the regression tests below silently passing on a runtime built with
         /// globalization-invariant mode, where every culture behaves like the invariant culture.
         /// Asserts that the culture really does render the shared timestamp format differently from
-        /// the invariant culture - through a different calendar (ar-SA, th-TH) or through a
+        /// the invariant culture - through a different calendar (fa-IR, th-TH) or through a
         /// different time separator (fi-FI).
         /// </summary>
         private static void AssertCultureAffectsTimestampRendering(string cultureName)
@@ -703,8 +703,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// TimestampFormat option would produce e.g. '2569-08-29T...' under th-TH.
         /// </summary>
         [DataTestMethod]
-        [DataRow("ar-SA", false, DisplayName = "ar-SA, normal mode")]
-        [DataRow("ar-SA", true, DisplayName = "ar-SA, stdio mode")]
+        [DataRow("fa-IR", false, DisplayName = "fa-IR, normal mode")]
+        [DataRow("fa-IR", true, DisplayName = "fa-IR, stdio mode")]
         [DataRow("th-TH", false, DisplayName = "th-TH, normal mode")]
         [DataRow("th-TH", true, DisplayName = "th-TH, stdio mode")]
         public void GetLoggerFactoryForLogLevel_NonGregorianCulture_EmitsInvariantUtcTimestamp(string cultureName, bool stdio)
@@ -730,7 +730,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// UTC prefix under a non-Gregorian ambient culture, still exactly once per event.
         /// </summary>
         [DataTestMethod]
-        [DataRow("ar-SA")]
+        [DataRow("fa-IR")]
         [DataRow("th-TH")]
         public void ConfigureHostLogging_NonGregorianCulture_EmitsInvariantUtcTimestamp(string cultureName)
         {
@@ -759,7 +759,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// same requirement.
         /// </summary>
         [DataTestMethod]
-        [DataRow("ar-SA")]
+        [DataRow("fa-IR")]
         [DataRow("th-TH")]
         public void BootstrapLogger_NonGregorianCulture_EmitsInvariantUtcTimestamp(string cultureName)
         {

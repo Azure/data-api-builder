@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         /// <see cref="ConsoleFormatterOptions.TimestampFormat"/> through
         /// <c>DateTimeOffset.ToString(format)</c>, which resolves against
         /// <see cref="CultureInfo.CurrentCulture"/> - that yields a non-Gregorian year under cultures
-        /// such as th-TH (2569) or ar-SA (1448), and a culture specific time separator under cultures
+        /// such as th-TH (2569) or fa-IR (1405), and a culture specific time separator under cultures
         /// such as fi-FI (08.04.02 rather than 08:04:02).
         /// An explicitly configured <see cref="ConsoleFormatterOptions.TimestampFormat"/> is an
         /// intentional override, so it keeps the built-in semantics (current culture, and the time

@@ -93,8 +93,54 @@ namespace Azure.DataApiBuilder.Service
             return StartEngineCore(args, runMcpStdio, mcpRole, productTelemetry, validateUrls: false);
         }
 
+        // Only the CLI's actual preflight-approved handoff supplies linkage. No process-global
+        // markers are used, and the original public service entry points remain independent.
+        internal static bool StartEngine(string[] args, ProductTelemetryLaunchContext? launchContext, Action? startupFailureObserved = null)
+            => StartEngine(args, launchContext, EngineLaunchDependencies.Default,
+                startupFailureObserved: startupFailureObserved);
+
+        // Instance-scoped validation seam: tests exercise this same bootstrap and serving loop
+        // with an offline sender and local host transport, never a mutable static factory.
+        internal static bool StartEngine(string[] args, ProductTelemetryLaunchContext? launchContext,
+            EngineLaunchDependencies dependencies, Action? startupFailureObserved = null)
+        {
+            bool stdio = McpStdioHelper.ShouldRunMcpStdio(args, out string? role);
+            string? configPath = null;
+            if (launchContext is not null)
+            {
+                try
+                {
+                    configPath = new ConfigurationBuilder().AddCommandLine(args).Build()["ConfigFileName"];
+                }
+                catch (Exception)
+                {
+                    // Optional correlation must not replace the application's parser behavior.
+                }
+            }
+
+            using EngineTelemetrySession productTelemetry = dependencies.SessionFactory(stdio, launchContext, configPath);
+            try
+            {
+                return StartEngineCore(args, stdio, role, productTelemetry, validateUrls: false, dependencies.ConfigureHost);
+            }
+            finally
+            {
+                if (productTelemetry.HasStartupFailed)
+                {
+                    try
+                    {
+                        startupFailureObserved?.Invoke();
+                    }
+                    catch (Exception)
+                    {
+                        // An optional observer cannot alter the legacy return/exception path.
+                    }
+                }
+            }
+        }
+
         internal static bool StartEngineCore(string[] args, bool runMcpStdio, string? mcpRole,
-            EngineTelemetrySession productTelemetry, bool validateUrls)
+            EngineTelemetrySession productTelemetry, bool validateUrls, Func<IHostBuilder, IHostBuilder>? configureHost = null)
         {
             try
             {
@@ -132,7 +178,10 @@ namespace Azure.DataApiBuilder.Service
                     }
                 }
 
-                using IHost host = CreateHostBuilderCore(args, runMcpStdio, mcpRole, productTelemetry).Build();
+                IHostBuilder hostBuilder = CreateHostBuilderCore(args, runMcpStdio, mcpRole, productTelemetry);
+                // Each runner owns host disposal: web Run/RunAsync disposes in its finally;
+                // the stdio helper drains the config loader and telemetry before disposing.
+                IHost host = (configureHost is null ? hostBuilder : configureHost(hostBuilder)).Build();
 
                 if (runMcpStdio)
                 {

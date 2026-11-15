@@ -14,8 +14,10 @@ using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Service;
 using Cli.Commands;
+using Cli.Telemetry;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -67,6 +69,8 @@ namespace Cli
             // File existence checked to avoid overwriting the existing configuration.
             if (fileSystem.File.Exists(runtimeConfigFile))
             {
+                CliTelemetryHosting.ObserveConfiguration(options.ProductTelemetry, fileSystem, runtimeConfigFile);
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("Config file: {runtimeConfigFile} already exists. Please provide a different name or remove the existing config file.",
                     fileSystem.Path.GetFullPath(runtimeConfigFile));
                 return false;
@@ -75,10 +79,23 @@ namespace Cli
             // Creating a new json file with runtime configuration
             if (!TryCreateRuntimeConfig(options, loader, fileSystem, out RuntimeConfig? runtimeConfig))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 return false;
             }
 
-            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+            if (!WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem, options.ProductTelemetry))
+            {
+                return false;
+            }
+
+            // Only a successful init write is a configuration-creation boundary. Ordinary
+            // updates and source-file loads must never mint or copy another root's identity.
+            if (options.ProductTelemetry is { IsEnabled: true } telemetry)
+            {
+                telemetry.ConfigurationCreated(CliTelemetryHosting.ResolveConfigurationPath(fileSystem, runtimeConfigFile));
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -358,12 +375,13 @@ namespace Cli
         /// </summary>
         public static bool TryAddEntityToConfigWithOptions(AddOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile, logBuffer: null, telemetry: options.ProductTelemetry))
             {
                 return false;
             }
 
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig))
             {
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
@@ -371,6 +389,7 @@ namespace Cli
 
             if (runtimeConfig.DataSource is null)
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError(
                     "Cannot add an entity to '{runtimeConfigFile}' because it has no data source. " +
                     "If this is a root config (uses data-source-files), run 'dab add' against the specific child config file instead.",
@@ -380,11 +399,12 @@ namespace Cli
 
             if (!TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
                 _logger.LogError("Failed to add a new entity.");
                 return false;
             }
 
-            return WriteRuntimeConfigToFile(runtimeConfigFile, updatedRuntimeConfig, fileSystem);
+            return WriteRuntimeConfigToFile(runtimeConfigFile, updatedRuntimeConfig, fileSystem, options.ProductTelemetry);
         }
 
         /// <summary>
@@ -402,6 +422,7 @@ namespace Cli
             //
             if (initialRuntimeConfig.Entities.ContainsKey(options.Entity))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogWarning("Entity '{entityName}' is already present. No new changes are added to Config.", options.Entity);
                 return false;
             }
@@ -620,12 +641,13 @@ namespace Cli
         /// <returns>True if the effective permissions were successfully displayed; otherwise, false.</returns>
         public static bool TryShowEffectivePermissions(ConfigureOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile, logBuffer: null, telemetry: options.ProductTelemetry))
             {
                 return false;
             }
 
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig))
             {
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
@@ -673,12 +695,13 @@ namespace Cli
         /// <returns>True if the update was successful, false otherwise.</returns>
         public static bool TryConfigureSettings(ConfigureOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile, logBuffer: null, telemetry: options.ProductTelemetry))
             {
                 return false;
             }
 
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig))
             {
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
@@ -686,6 +709,7 @@ namespace Cli
 
             if (runtimeConfig.DataSource is null)
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError(
                     "Cannot configure '{runtimeConfigFile}' because it has no data source. " +
                     "If this is a root config (uses data-source-files), run 'dab configure' against the specific child config file instead.",
@@ -695,25 +719,29 @@ namespace Cli
 
             if (!TryUpdateConfiguredDataSourceOptions(options, ref runtimeConfig))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
                 return false;
             }
 
             if (!TryUpdateConfiguredRuntimeOptions(options, ref runtimeConfig))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
                 return false;
             }
 
             if (options.DepthLimit is not null && !TryUpdateDepthLimit(options, ref runtimeConfig))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
                 return false;
             }
 
             if (!TryUpdateConfiguredAzureKeyVaultOptions(options, ref runtimeConfig))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
                 return false;
             }
 
-            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem, options.ProductTelemetry);
         }
 
         /// <summary>
@@ -919,6 +947,7 @@ namespace Cli
             }
             catch (Exception e)
             {
+                CliTelemetryHosting.MarkException(options.ProductTelemetry, e);
                 _logger.LogError("Failed to update the depth limit: {e}", e);
                 return false;
             }
@@ -1288,6 +1317,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
+                CliTelemetryHosting.MarkException(options?.ProductTelemetry, ex);
                 _logger.LogError("Failed to update RuntimeConfig.Rest with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
@@ -1354,6 +1384,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
+                CliTelemetryHosting.MarkException(options?.ProductTelemetry, ex);
                 _logger.LogError("Failed to update RuntimeConfig.GraphQL with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
@@ -1515,6 +1546,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
+                CliTelemetryHosting.MarkException(options?.ProductTelemetry, ex);
                 _logger.LogError("Failed to update RuntimeConfig.Mcp with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
@@ -1564,6 +1596,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
+                CliTelemetryHosting.MarkException(options?.ProductTelemetry, ex);
                 _logger.LogError("Failed to update RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
@@ -1595,6 +1628,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
+                CliTelemetryHosting.MarkException(options?.ProductTelemetry, ex);
                 _logger.LogError("Failed to configure RuntimeConfig.Compression with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
@@ -1745,6 +1779,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
+                CliTelemetryHosting.MarkException(options?.ProductTelemetry, ex);
                 _logger.LogError("Failed to update RuntimeConfig.Host with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
@@ -1829,6 +1864,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
+                CliTelemetryHosting.MarkException(options.ProductTelemetry, ex);
                 _logger.LogError($"Failed to update configuration with runtime.telemetry.azure-log-analytics. Exception message: {ex.Message}.");
                 return false;
             }
@@ -1897,6 +1933,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
+                CliTelemetryHosting.MarkException(options.ProductTelemetry, ex);
                 _logger.LogError($"Failed to update configuration with runtime.telemetry.file. Exception message: {ex.Message}.");
                 return false;
             }
@@ -2185,6 +2222,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
+                CliTelemetryHosting.MarkException(options.ProductTelemetry, ex);
                 _logger.LogError("Failed to update RuntimeConfig.Embeddings with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
@@ -2232,12 +2270,13 @@ namespace Cli
         /// </summary>
         public static bool TryUpdateEntityWithOptions(UpdateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile, logBuffer: null, telemetry: options.ProductTelemetry))
             {
                 return false;
             }
 
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig))
             {
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
@@ -2245,6 +2284,7 @@ namespace Cli
 
             if (runtimeConfig.DataSource is null)
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError(
                     "Cannot update an entity in '{runtimeConfigFile}' because it has no data source. " +
                     "If this is a root config (uses data-source-files), run 'dab update' against the specific child config file instead.",
@@ -2254,11 +2294,12 @@ namespace Cli
 
             if (!TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedConfig))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
                 _logger.LogError("Failed to update the Entity: {entityName}.", options.Entity);
                 return false;
             }
 
-            return WriteRuntimeConfigToFile(runtimeConfigFile, updatedConfig, fileSystem);
+            return WriteRuntimeConfigToFile(runtimeConfigFile, updatedConfig, fileSystem, options.ProductTelemetry);
         }
 
         /// <summary>
@@ -2275,6 +2316,7 @@ namespace Cli
             // Check if Entity is present
             if (!initialConfig.Entities.TryGetValue(options.Entity, out Entity? entity))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("Entity: '{entityName}' not found. Please add the entity first.", options.Entity);
                 return false;
             }
@@ -3033,7 +3075,7 @@ namespace Cli
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile, options.CliBuffer))
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile, LogBuffer.Instance, options.ProductTelemetry))
             {
                 return false;
             }
@@ -3042,24 +3084,28 @@ namespace Cli
             // Replaces all the environment variables while deserializing when starting DAB.
             if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 // When IsParseErrorEmitted is true, TryLoadConfig already emitted the
                 // detailed error to Console.Error. Only log a generic message to avoid
                 // duplicate output (stderr + stdout).
                 if (!loader.IsParseErrorEmitted)
                 {
-                    options.CliBuffer.BufferLog(LogLevel.Error, $"Failed to parse the config file: {runtimeConfigFile}.");
+                    LogBuffer.Instance.BufferLog(LogLevel.Error, $"Failed to parse the config file: {runtimeConfigFile}.");
                 }
 
                 return false;
             }
             else
             {
-                options.CliBuffer.BufferLog(LogLevel.Information, $"Loaded config file: {runtimeConfigFile}");
+                LogBuffer.Instance.BufferLog(LogLevel.Information, $"Loaded config file: {runtimeConfigFile}");
             }
+
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, deserializedRuntimeConfig);
 
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource?.ConnectionString))
             {
-                options.CliBuffer.BufferLog(LogLevel.Error, "Invalid connection-string provided in the config.");
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
+                LogBuffer.Instance.BufferLog(LogLevel.Error, "Invalid connection-string provided in the config.");
                 return false;
             }
 
@@ -3087,7 +3133,7 @@ namespace Cli
             }
             else if (options.LogLevelLegacy is not null)
             {
-                options.CliBuffer.BufferLog(LogLevel.Warning, $"--LogLevel is deprecated, please use --log-level instead.");
+                LogBuffer.Instance.BufferLog(LogLevel.Warning, $"--LogLevel is deprecated, please use --log-level instead.");
                 logLevel = options.LogLevelLegacy;
             }
 
@@ -3095,7 +3141,8 @@ namespace Cli
             {
                 if (logLevel is < LogLevel.Trace or > LogLevel.None)
                 {
-                    options.CliBuffer.BufferLog(LogLevel.Error,
+                    options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
+                    LogBuffer.Instance.BufferLog(LogLevel.Error,
                         $"LogLevel's valid range is 0 to 6, your value: {logLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel");
                     return false;
                 }
@@ -3120,14 +3167,36 @@ namespace Cli
                 }
             }
 
-            options.CliBuffer.BufferLog(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");
+            LogBuffer.Instance.BufferLog(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");
 
             Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli(minimumLogLevel);
 
             // Update logger for StartOptions and
             // flush all current logs saved in LogBuffer
             ILogger<Program> programLogger = Utils.LoggerFactoryForCli.CreateLogger<Program>();
-            options.CliBuffer.FlushToLogger(programLogger);
+            ILoggerFactory cliLoggerFactory = Utils.LoggerFactoryForCli;
+            Dictionary<string, Microsoft.Extensions.Logging.ILogger> configLevelLoggers = new();
+            LogBuffer.Instance.FlushToLogger(category =>
+            {
+                if (category is null)
+                {
+                    return programLogger;
+                }
+
+                if (logLevel is not null)
+                {
+                    return cliLoggerFactory.CreateLogger(category);
+                }
+
+                // Without --log-level, honor the config's per-class log-level, as the engine's loggers do.
+                if (!configLevelLoggers.TryGetValue(category, out Microsoft.Extensions.Logging.ILogger? categoryLogger))
+                {
+                    categoryLogger = new CustomLoggerProvider(deserializedRuntimeConfig.GetConfiguredLogLevel(category)).CreateLogger(category);
+                    configLevelLoggers[category] = categoryLogger;
+                }
+
+                return categoryLogger;
+            });
 
             // Update logger for Utils
             ILogger<Utils> utilsLogger = Utils.LoggerFactoryForCli.CreateLogger<Utils>();
@@ -3154,7 +3223,48 @@ namespace Cli
                 args.Add(effectiveRole);
             }
 
-            return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
+            string[] engineArgs = args.ToArray();
+            ProductTelemetryLaunchContext? launchContext = null;
+            if (options.ProductTelemetryLaunchReservation is { } reservation)
+            {
+                // A scheduled export helper can reach this actual handoff after CLI shutdown.
+                // A consumed/revoked ticket must not fall back to an ordinary second launch.
+                if (reservation.IsAvailable)
+                {
+                    launchContext = reservation.Begin(CliTelemetryHosting.ResolveConfigurationPath(fileSystem, runtimeConfigFile),
+                        CliTelemetryDatabaseTypeFormatter.FromConfiguration(deserializedRuntimeConfig));
+                }
+            }
+            else if (options.ProductTelemetry is { IsEnabled: true } telemetry)
+            {
+                launchContext = telemetry.BeginEngineLaunch(
+                    CliTelemetryHosting.ResolveConfigurationPath(fileSystem, runtimeConfigFile),
+                    options.ProductTelemetryLaunchSource ?? (options.McpStdio ? CliTelemetryLaunchSource.StartStdio : CliTelemetryLaunchSource.StartWeb),
+                    CliTelemetryDatabaseTypeFormatter.FromConfiguration(deserializedRuntimeConfig));
+            }
+
+            // Both handoffs enqueue before the service creates its session; never wait
+            // for network delivery here. The engine retains ownership of its own lifetime.
+            try
+            {
+                Action? startupFailureObserved = options.ProductTelemetry is { } parent ? parent.ObserveEngineStartupFailure : null;
+                bool started = options.Dependencies.EngineLauncher is { } engineLauncher
+                    ? engineLauncher(engineArgs, launchContext, startupFailureObserved)
+                    : launchContext is null
+                        ? Azure.DataApiBuilder.Service.Program.StartEngine(engineArgs)
+                        : Azure.DataApiBuilder.Service.Program.StartEngine(engineArgs, launchContext, startupFailureObserved);
+                if (!started)
+                {
+                    options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ExecutionFailure, CliTelemetryFailureCategory.Initialization);
+                }
+
+                return started;
+            }
+            catch (Exception exception)
+            {
+                CliTelemetryHosting.MarkException(options.ProductTelemetry, exception, CliTelemetryFailureCategory.Initialization);
+                throw;
+            }
         }
 
         /// <summary>
@@ -3162,15 +3272,16 @@ namespace Cli
         /// </summary>
         public static bool IsConfigValid(ValidateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile, logBuffer: null, telemetry: options.ProductTelemetry))
             {
                 return false;
             }
 
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
-            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? _))
+            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? loadedConfig))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 // When IsParseErrorEmitted is true, TryLoadConfig already emitted the
                 // detailed error to Console.Error. Only log a generic message to avoid
                 // duplicate output (stderr + stdout).
@@ -3182,10 +3293,16 @@ namespace Cli
                 return false;
             }
 
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, loadedConfig);
+
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
 
             bool isValid = runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
+            if (!isValid)
+            {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
+            }
 
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
             {
@@ -3244,6 +3361,15 @@ namespace Cli
             IFileSystem fileSystem,
             out string runtimeConfigFile,
             LogBuffer? logBuffer = null)
+            => TryGetConfigForRuntimeEngine(configToBeUsed, loader, fileSystem, out runtimeConfigFile, logBuffer, telemetry: null);
+
+        internal static bool TryGetConfigForRuntimeEngine(
+            string? configToBeUsed,
+            FileSystemRuntimeConfigLoader loader,
+            IFileSystem fileSystem,
+            out string runtimeConfigFile,
+            LogBuffer? logBuffer,
+            CliTelemetrySession? telemetry)
         {
             if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, logBuffer, out configToBeUsed))
             {
@@ -3257,7 +3383,7 @@ namespace Cli
                 }
             }
 
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out runtimeConfigFile, logBuffer))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out runtimeConfigFile, logBuffer, telemetry))
             {
                 if (logBuffer is null)
                 {
@@ -3272,6 +3398,9 @@ namespace Cli
             }
 
             loader.UpdateConfigFilePath(runtimeConfigFile);
+            // The merged file, when selected, is a distinct root. Do not observe its inputs,
+            // copy their sidecars, or manufacture an identity merely because a merge wrote it.
+            CliTelemetryHosting.ObserveConfiguration(telemetry, fileSystem, runtimeConfigFile);
 
             return true;
         }
@@ -3462,12 +3591,13 @@ namespace Cli
         /// </summary>
         public static bool TryAddTelemetry(AddTelemetryOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile, logBuffer: null, telemetry: options.ProductTelemetry))
             {
                 return false;
             }
 
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig))
             {
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
@@ -3475,18 +3605,21 @@ namespace Cli
 
             if (runtimeConfig.Runtime is null)
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("Invalid or missing 'runtime' section in config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
 
             if (options.AppInsightsEnabled is CliBool.True && string.IsNullOrWhiteSpace(options.AppInsightsConnString))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
                 _logger.LogError("Invalid Application Insights connection string provided.");
                 return false;
             }
 
             if (options.OpenTelemetryEnabled is CliBool.True && string.IsNullOrWhiteSpace(options.OpenTelemetryEndpoint))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
                 _logger.LogError("Invalid OTEL endpoint provided.");
                 return false;
             }
@@ -3523,7 +3656,7 @@ namespace Cli
                 }
             };
 
-            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem, options.ProductTelemetry);
         }
 
         /// <summary>
@@ -3536,12 +3669,13 @@ namespace Cli
         /// <returns>True if the autoentities definition was successfully configured; otherwise, false.</returns>
         public static bool TryConfigureAutoentities(AutoConfigOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile, logBuffer: null, telemetry: options.ProductTelemetry))
             {
                 return false;
             }
 
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig))
             {
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
@@ -3566,6 +3700,7 @@ namespace Cli
             AutoentityTemplate? template = BuildAutoentityTemplate(options, existingAutoentity);
             if (template is null)
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
                 return false;
             }
 
@@ -3575,6 +3710,7 @@ namespace Cli
             // Check if permissions parsing failed (non-empty input but failed to parse)
             if (permissions is null && options.Permissions is not null && options.Permissions.Count() > 0)
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
                 _logger.LogError("Failed to parse permissions.");
                 return false;
             }
@@ -3595,7 +3731,7 @@ namespace Cli
                 Autoentities = new RuntimeAutoentities(autoEntitiesDictionary)
             };
 
-            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem, options.ProductTelemetry);
         }
 
         /// <summary>
@@ -3815,14 +3951,15 @@ namespace Cli
         /// <returns>True if the simulation completed successfully; otherwise, false.</returns>
         public static bool TrySimulateAutoentities(AutoConfigSimulateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile, logBuffer: null, telemetry: options.ProductTelemetry))
             {
                 return false;
             }
 
             // Load config with env var replacement so the connection string is fully resolved.
             DeserializationVariableReplacementSettings replacementSettings = new(doReplaceEnvVar: true);
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, replacementSettings: replacementSettings))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig, replacementSettings: replacementSettings))
             {
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
@@ -3830,12 +3967,14 @@ namespace Cli
 
             if (runtimeConfig.DataSource?.DatabaseType != DatabaseType.MSSQL)
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("The autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource?.DatabaseType);
                 return false;
             }
 
             if (runtimeConfig.Autoentities?.Autoentities is null || runtimeConfig.Autoentities.Autoentities.Count == 0)
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("No autoentities definitions found in the config file.");
                 return false;
             }
@@ -3843,6 +3982,7 @@ namespace Cli
             string connectionString = runtimeConfig.DataSource.ConnectionString;
             if (string.IsNullOrWhiteSpace(connectionString))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("Connection string is missing or empty in config file.");
                 return false;
             }
@@ -3900,13 +4040,14 @@ namespace Cli
             }
             catch (Exception ex)
             {
+                CliTelemetryHosting.MarkException(options.ProductTelemetry, ex);
                 _logger.LogError("Failed to query the database: {Message}", ex.Message);
                 return false;
             }
 
             if (!string.IsNullOrWhiteSpace(options.Output))
             {
-                return WriteSimulationResultsToCsvFile(options.Output, results, fileSystem);
+                return WriteSimulationResultsToCsvFile(options.Output, results, fileSystem, options.ProductTelemetry);
             }
             else
             {
@@ -3960,7 +4101,8 @@ namespace Cli
         private static bool WriteSimulationResultsToCsvFile(
             string outputPath,
             Dictionary<string, List<(string EntityName, string SchemaName, string ObjectName)>> results,
-            IFileSystem fileSystem)
+            IFileSystem fileSystem,
+            CliTelemetrySession? telemetry)
         {
             try
             {
@@ -3981,6 +4123,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
+                CliTelemetryHosting.MarkException(telemetry, ex, CliTelemetryFailureCategory.Storage);
                 _logger.LogError("Failed to write output file: {Message}", ex.Message);
                 return false;
             }
@@ -4117,6 +4260,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
+                CliTelemetryHosting.MarkException(options.ProductTelemetry, ex);
                 _logger.LogError("Failed to update RuntimeConfig.AzureKeyVault with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }

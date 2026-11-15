@@ -2,14 +2,20 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
 using ModelContextProtocol.Protocol;
 using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 
@@ -30,8 +36,101 @@ namespace Azure.DataApiBuilder.Mcp.Utils
         /// <param name="arguments">The parsed JSON arguments for the tool (may be null).</param>
         /// <param name="serviceProvider">The service provider for resolving dependencies.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
+        /// <param name="stdioCompletion">For stdio, the caller-owned scope completed after the server writes and flushes its response.</param>
+        /// <param name="sdkResponseItems">SDK-owned nonserialized context for per-message HTTP response completion.</param>
         /// <returns>The result of the tool execution.</returns>
         public static async Task<CallToolResult> ExecuteWithTelemetryAsync(
+            IMcpTool tool,
+            string toolName,
+            JsonDocument? arguments,
+            IServiceProvider serviceProvider,
+            CancellationToken cancellationToken,
+            ProductRequestCompletion? stdioCompletion = null,
+            IDictionary<string, object?>? sdkResponseItems = null)
+        {
+            EngineTelemetrySession? session = stdioCompletion?.Session;
+            HttpContext? httpContext = null;
+            bool isStdio = stdioCompletion is not null;
+            // A stdio request belongs to the server, including its ambient scope. Do not
+            // dispose it when tool execution returns: serialization/write/flush is still ahead.
+            using EngineTelemetryRequestScope? ownedRequest = stdioCompletion is null
+                ? BeginProductRequest(tool, toolName, serviceProvider, isStdioInvocation: false,
+                    out session, out httpContext, out isStdio)
+                : null;
+            EngineTelemetryRequestScope? request = stdioCompletion?.Request ?? ownedRequest;
+            ProductRequestCompletion? completion = ownedRequest is null ? null : new(ownedRequest, sdkResponseItems is null ? httpContext : null);
+            McpProductResponseCompletion? sdkCompletion = null;
+            if (ownedRequest is not null && sdkResponseItems is not null)
+            {
+                sdkCompletion = McpProductResponseCompletion.Attach(sdkResponseItems, ownedRequest, cancellationToken);
+            }
+
+            try
+            {
+                // Keep the existing customer span and its attributes scoped to tool execution.
+                // Product collection does not consume that activity, its errors or its content.
+                CallToolResult result;
+                using (EngineTelemetryMeasurementScope? operation = request is null ? null : BeginProductOperation(session!, tool, toolName, arguments))
+                {
+                    try
+                    {
+                        result = await ExecuteWithCustomerTelemetryAsync(
+                            tool, toolName, arguments, serviceProvider, cancellationToken);
+                        EngineTelemetryOutcome outcome = ClassifyProductResult(result, cancellationToken);
+                        request?.SetOutcome(outcome);
+                        operation?.Complete(outcome);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        operation?.Complete(EngineTelemetryOutcome.Canceled);
+                        throw;
+                    }
+                }
+
+                // Logical operation completion precedes transport completion. A failed write
+                // must not retroactively turn a successfully executed operation into a failure.
+
+                if (!isStdio && httpContext is null && sdkResponseItems is null)
+                {
+                    // An embedded call has no response transport to wait for.
+                    completion?.Complete();
+                }
+
+                // SDK HTTP completes per message after write/flush; other HTTP callers use
+                // OnCompleted. The stdio server owns writing and completion; a bare invocation must
+                // not be counted as served just because tool execution returned a value.
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                sdkCompletion?.Abandon(sdkResponseItems!);
+                completion?.Fail(EngineTelemetryOutcome.Canceled);
+                throw;
+            }
+            catch (Exception)
+            {
+                sdkCompletion?.Abandon(sdkResponseItems!);
+                completion?.Fail(cancellationToken.IsCancellationRequested || httpContext?.RequestAborted.IsCancellationRequested == true
+                    ? EngineTelemetryOutcome.Canceled
+                    : EngineTelemetryOutcome.Failure);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Begins a stdio request in the caller's execution context. The server retains this
+        /// scope through response write/flush and reports transport success or failure itself.
+        /// A disabled/ineligible request still returns a no-op completion, never a write delegate.
+        /// </summary>
+        internal static ProductRequestCompletion BeginStdioRequest(IMcpTool tool, string toolName, IServiceProvider services)
+        {
+            EngineTelemetryRequestScope? request = BeginProductRequest(
+                tool, toolName, services, isStdioInvocation: true,
+                out EngineTelemetrySession? session, out _, out _);
+            return new(request, httpContext: null, session: session);
+        }
+
+        private static async Task<CallToolResult> ExecuteWithCustomerTelemetryAsync(
             IMcpTool tool,
             string toolName,
             JsonDocument? arguments,
@@ -95,6 +194,243 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 string errorCode = MapExceptionToErrorCode(ex);
                 activity?.TrackMcpToolExecutionFinishedWithException(ex, errorCode: errorCode);
                 throw;
+            }
+        }
+
+        internal static bool IsProductDataTool(IMcpTool tool, string toolName)
+            => ClassifyProductOperation(tool, toolName) != EngineTelemetryOperation.Unknown;
+
+        internal static EngineTelemetryOperation ClassifyProductOperation(IMcpTool tool, string toolName)
+        {
+            if (tool.ToolType == ToolType.Custom)
+            {
+                return EngineTelemetryOperation.Execute;
+            }
+
+            // Unlike the customer operation label, an unknown built-in is not an execute
+            // request. Discovery and JSON-RPC protocol/control messages are not usage.
+            if (tool.ToolType != ToolType.BuiltIn)
+            {
+                return EngineTelemetryOperation.Unknown;
+            }
+
+            return toolName.ToLowerInvariant() switch
+            {
+                "read_records" or "aggregate_records" => EngineTelemetryOperation.Read,
+                "create_record" or "update_record" or "delete_record" => EngineTelemetryOperation.Write,
+                "execute_entity" => EngineTelemetryOperation.Execute,
+                _ => EngineTelemetryOperation.Unknown
+            };
+        }
+
+        private static EngineTelemetryOutcome ClassifyProductResult(CallToolResult result, CancellationToken cancellationToken)
+        {
+            if (result.IsError != true)
+            {
+                return EngineTelemetryOutcome.Success;
+            }
+
+            return cancellationToken.IsCancellationRequested
+                ? EngineTelemetryOutcome.Canceled
+                : EngineTelemetryOutcome.Failure;
+        }
+
+        private static EngineTelemetryMeasurementScope? BeginProductOperation(
+            EngineTelemetrySession session, IMcpTool tool, string toolName, JsonDocument? arguments)
+        {
+            try
+            {
+                // Names are used only by the session's local accepted-config lookup. No name,
+                // argument, stored procedure identifier or result is passed to the aggregator.
+                string? entityName = null;
+                if (tool is DynamicCustomTool customTool)
+                {
+                    entityName = customTool.EntityName;
+                }
+                else if (arguments?.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    entityName = ExtractEntityNameFromArguments(arguments);
+                }
+
+                return session.BeginOperation(entityName, ClassifyProductOperation(tool, toolName));
+            }
+            catch (Exception)
+            {
+                // Product enrichment must not change tool validation or execution behavior.
+                return null;
+            }
+        }
+
+        private static EngineTelemetryRequestScope? BeginProductRequest(
+            IMcpTool tool,
+            string toolName,
+            IServiceProvider services,
+            bool isStdioInvocation,
+            out EngineTelemetrySession? session,
+            out HttpContext? httpContext,
+            out bool isStdio)
+        {
+            try
+            {
+                return BeginProductRequestCore(tool, toolName, services, isStdioInvocation,
+                    out session, out httpContext, out isStdio);
+            }
+            catch (Exception)
+            {
+                // Optional product dependencies/configuration must not change tool execution
+                // or emit failures to the customer's existing telemetry pipeline.
+                session = null;
+                httpContext = null;
+                isStdio = isStdioInvocation;
+                return null;
+            }
+        }
+
+        private static EngineTelemetryRequestScope? BeginProductRequestCore(
+            IMcpTool tool,
+            string toolName,
+            IServiceProvider services,
+            bool isStdioInvocation,
+            out EngineTelemetrySession? session,
+            out HttpContext? httpContext,
+            out bool isStdio)
+        {
+            session = null;
+            httpContext = null;
+            isStdio = isStdioInvocation;
+            if (!IsProductDataTool(tool, toolName))
+            {
+                return null;
+            }
+
+            session = services.GetService<EngineTelemetrySession>()
+                ?? services.GetService<RuntimeConfigProvider>()?.ProductTelemetry;
+            if (session?.IsEnabled != true)
+            {
+                return null;
+            }
+
+            IConfiguration? configuration = services.GetService<IConfiguration>();
+            isStdio |= configuration?.GetValue<bool>("MCP:StdioMode") == true;
+            // Stdio's authorization shim is a DefaultHttpContext, NOT a response socket.
+            // Do not read its status or register HTTP response callbacks on it.
+            if (!isStdio)
+            {
+                httpContext = services.GetService<IHttpContextAccessor>()?.HttpContext;
+            }
+
+            // Preserve HTTP header cardinality: joining multiple values would invent a
+            // custom role instead of marking the ambiguous input as unknown.
+            StringValues roleHeader = httpContext?.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] ?? StringValues.Empty;
+            string? role = isStdio
+                ? configuration?.GetValue<string>("MCP:Role")
+                : roleHeader.Count == 1 ? roleHeader[0] : null;
+            EngineTelemetryRole roleClass = roleHeader.Count > 1
+                ? EngineTelemetryRole.Unknown
+                : EngineTelemetrySession.ClassifyRole(role, httpContext?.User.Identity?.IsAuthenticated == true);
+            EngineTelemetryTransport transport = EngineTelemetryTransport.InProcess;
+            if (isStdio)
+            {
+                transport = EngineTelemetryTransport.Stdio;
+            }
+            else if (httpContext is not null)
+            {
+                transport = EngineTelemetryTransport.Http;
+            }
+
+            return session.BeginRequest(EngineTelemetryApi.Mcp, transport, roleClass);
+        }
+
+        /// <summary>
+        /// Owns one request's transport completion, without a per-request event queue or any
+        /// names, arguments, error messages or serialized tool results in product telemetry.
+        /// </summary>
+        internal sealed class ProductRequestCompletion : IDisposable
+        {
+            private static readonly ConditionalWeakTable<HttpContext, object> _registrationGates = new();
+            private readonly HttpContext? _httpContext;
+            private CancellationTokenRegistration _abortRegistration;
+            private int _completed;
+
+            internal EngineTelemetryRequestScope? Request { get; }
+            internal EngineTelemetrySession? Session { get; }
+
+            internal ProductRequestCompletion(EngineTelemetryRequestScope? request, HttpContext? httpContext, EngineTelemetrySession? session = null)
+            {
+                Request = request;
+                _httpContext = httpContext;
+                Session = session;
+                if (request is not null && httpContext is not null)
+                {
+                    // Batch callers can register concurrently. Never lock the public context
+                    // or use unsynchronized Items initialization for our registration gate.
+                    lock (_registrationGates.GetValue(httpContext, static _ => new object()))
+                    {
+                        httpContext.Response.OnCompleted(static state => ((ProductRequestCompletion)state).ResponseCompletedAsync(), this);
+                    }
+
+                    _abortRegistration = httpContext.RequestAborted.UnsafeRegister(
+                        static state => ((ProductRequestCompletion)state!).Fail(EngineTelemetryOutcome.Canceled), this);
+                    if (Volatile.Read(ref _completed) != 0)
+                    {
+                        _abortRegistration.Unregister();
+                    }
+                }
+            }
+
+            internal void Complete() => Complete(Request?.Outcome ?? EngineTelemetryOutcome.Unknown, httpStatusCode: null);
+
+            internal void Fail(EngineTelemetryOutcome outcome) => Complete(outcome, httpStatusCode: null);
+
+            public void Dispose() => Request?.Dispose();
+
+            private Task ResponseCompletedAsync()
+            {
+                if (Volatile.Read(ref _completed) != 0)
+                {
+                    return Task.CompletedTask;
+                }
+
+                if (_httpContext!.RequestAborted.IsCancellationRequested)
+                {
+                    Fail(EngineTelemetryOutcome.Canceled);
+                }
+                else
+                {
+                    int status = _httpContext.Response.StatusCode;
+                    EngineTelemetryOutcome outcome = Request!.Outcome;
+                    if (outcome is EngineTelemetryOutcome.Success or EngineTelemetryOutcome.Unknown)
+                    {
+                        if (status >= StatusCodes.Status400BadRequest)
+                        {
+                            outcome = EngineTelemetryOutcome.Failure;
+                        }
+                        else if (status >= StatusCodes.Status300MultipleChoices || status < StatusCodes.Status200OK)
+                        {
+                            outcome = EngineTelemetryOutcome.Unknown;
+                        }
+                    }
+
+                    Complete(outcome, status);
+                }
+
+                return Task.CompletedTask;
+            }
+
+            private void Complete(EngineTelemetryOutcome outcome, int? httpStatusCode)
+            {
+                if (Interlocked.Exchange(ref _completed, 1) == 0)
+                {
+                    _abortRegistration.Unregister();
+                    try
+                    {
+                        Request?.Complete(outcome, httpStatusCode);
+                    }
+                    catch (Exception)
+                    {
+                        // Never affect the tool/response or forward product failures to customer telemetry.
+                    }
+                }
             }
         }
 

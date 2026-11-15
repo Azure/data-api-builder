@@ -27,6 +27,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Moq.Protected;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -178,6 +179,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null, null);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+            ConfigureConnectionLeases(queryExecutor);
 
             queryExecutor.Setup(x => x.CreateConnection(
                It.IsAny<string>())).CallBase();
@@ -289,6 +291,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, handler, oboTokenProvider);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+            ConfigureConnectionLeases(queryExecutor);
 
             queryExecutor.Setup(x => x.CreateConnection(
                It.IsAny<string>())).CallBase();
@@ -373,6 +376,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null, null);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+            ConfigureConnectionLeases(queryExecutor);
 
             // Call the actual ExecuteQueryAsync method.
             queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
@@ -426,6 +430,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, handler, oboTokenProvider);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+            ConfigureConnectionLeases(queryExecutor);
 
             // Call the actual CreateConnection method.
             queryExecutor.Setup(x => x.CreateConnection(
@@ -1482,6 +1487,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null, null);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+            ConfigureConnectionLeases(queryExecutor);
 
             queryExecutor.Setup(x => x.CreateConnection(
                It.IsAny<string>())).CallBase();
@@ -1601,6 +1607,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null, null);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+            ConfigureConnectionLeases(queryExecutor);
 
             queryExecutor.Setup(x => x.CreateConnection(
                It.IsAny<string>())).CallBase();
@@ -1997,6 +2004,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(
                 parameters.Values.Any(p => p.Value?.ToString() == "admin"),
                 "User claim values should NOT be in parameters when set-session-context is false");
+        }
+
+        private static void ConfigureConnectionLeases(Mock<MsSqlQueryExecutor> queryExecutor)
+        {
+            // These partial mocks opt into real connection ownership while keeping provider execution mocked.
+            queryExecutor.Protected()
+                .Setup<QueryExecutor<SqlConnection>.ConnectionLease>("AcquireConnection", ItExpr.IsAny<string>())
+                .CallBase();
+            queryExecutor.Protected()
+                .Setup<ValueTask<QueryExecutor<SqlConnection>.ConnectionLease>>("AcquireConnectionAsync",
+                    ItExpr.IsAny<string>(), ItExpr.IsAny<CancellationToken>())
+                .CallBase();
         }
 
         [TestCleanup]

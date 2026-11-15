@@ -60,6 +60,8 @@ switch (aspireDB)
             BootstrapLogger.Instance.LogInformation("No connection string provided, starting a local PostgreSQL container.");
 
             postgresDB = builder.AddPostgres("postgres")
+                // Keep the existing database major version when upgrading the Aspire hosting packages.
+                .WithImageTag("17")
                 .WithPgAdmin()
                 .WithLifetime(ContainerLifetime.Persistent)
                 .AddDatabase("pgDb", "postgres")

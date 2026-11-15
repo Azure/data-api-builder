@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
+using Azure.DataApiBuilder.Core.Telemetry.Product.Export;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ZiggyCreatures.Caching.Fusion;
@@ -31,11 +32,12 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             _lifetime = lifetime;
         }
 
-        internal static EngineTelemetrySession CreateStandalone(bool stdio)
+        internal static EngineTelemetrySession CreateStandalone(bool stdio, ProductTelemetryLaunchContext? launchContext = null,
+            string? configPath = null)
         {
             try
             {
-                return CreateStandaloneCore(stdio);
+                return CreateStandaloneCore(stdio, launchContext, configPath);
             }
             catch (Exception)
             {
@@ -44,26 +46,27 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             }
         }
 
-        private static EngineTelemetrySession CreateStandaloneCore(bool stdio)
+        private static EngineTelemetrySession CreateStandaloneCore(bool stdio, ProductTelemetryLaunchContext? launchContext,
+            string? configPath)
         {
             // Setting the destination alone never enables collection. These switches are only
             // for deliberately synthetic validation before the production privacy gate opens.
-            bool testModeEnabled = ProductTelemetryPolicy.IsSyntheticCollectionEnabled(
-                Environment.GetEnvironmentVariable(TEST_MODE_VARIABLE),
-                Environment.GetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR));
-            if (!testModeEnabled || !EngineTelemetryApplicationInsightsExporter.AreSdkStatisticsDisabled())
+            if (!ProductTelemetryBootstrap.TryGetDestination(out ApplicationInsightsTelemetryDestination? destination))
             {
                 return EngineTelemetrySession.Create();
             }
 
-            string? connectionString = Environment.GetEnvironmentVariable(CONNECTION_STRING_VARIABLE);
-            if (!ApplicationInsightsTelemetryDestination.TryParse(connectionString, out ApplicationInsightsTelemetryDestination? destination))
-            {
-                return EngineTelemetrySession.Create();
-            }
+            return EngineTelemetrySession.Create(() => new EngineSenderLease(ProductTelemetrySenderPool.Acquire(destination)),
+                enableSyntheticCollection: true, executionMode: stdio ? "mcp_stdio" : "web",
+                configPath: configPath, launchContext: launchContext);
+        }
 
-            return EngineTelemetrySession.Create(() => new EngineTelemetryApplicationInsightsExporter(destination),
-                enableSyntheticCollection: true, executionMode: stdio ? "mcp_stdio" : "web");
+        private sealed class EngineSenderLease(IProductTelemetryExporter<IProductTelemetryEvent> lease) : IEngineTelemetryExporter
+        {
+            public ValueTask<bool> ExportAsync(EngineTelemetryEvent record, CancellationToken cancellationToken)
+                => lease.ExportAsync(record, cancellationToken);
+
+            public void Dispose() => lease.Dispose();
         }
 
         public Task StartAsync(CancellationToken cancellationToken)

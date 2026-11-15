@@ -1,20 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Diagnostics;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using Azure.Core.Pipeline;
-using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 
-namespace Azure.DataApiBuilder.Service.Telemetry
+namespace Azure.DataApiBuilder.Core.Telemetry.Product.Export
 {
     /// <summary>
     /// Uses the supported Azure Monitor custom-event exporter on the delivery worker, never a
@@ -24,9 +19,10 @@ namespace Azure.DataApiBuilder.Service.Telemetry
     /// Validation only: 1.9.0 shares SDK transmitters by connection string and caches some process
     /// settings. Use a dedicated process with SDK statistics disabled before startup. Distinct
     /// adapter objects do not guarantee isolation from a foreign exporter with the same routing.
+    /// Product owners share this adapter through ProductTelemetrySenderPool instead.
     /// Production and public embedded enablement remain off pending that integration review.
     /// </remarks>
-    internal sealed class EngineTelemetryApplicationInsightsExporter : IEngineTelemetryExporter
+    internal sealed class EngineTelemetryApplicationInsightsExporter : IProductTelemetryExporter<IProductTelemetryEvent>, IEngineTelemetryExporter
     {
         internal const string STATSBEAT_DISABLED_VARIABLE = "APPLICATIONINSIGHTS_STATSBEAT_DISABLED";
         internal const string SDK_STATS_DISABLED_VARIABLE = "APPLICATIONINSIGHTS_SDKSTATS_DISABLED";
@@ -99,9 +95,12 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         // The SDK exposes synchronous Export. Do not add Task.Run or another queue per event:
         // the existing delivery worker owns this call and its bounded cancellation/deadline.
         public ValueTask<bool> ExportAsync(EngineTelemetryEvent record, CancellationToken cancellationToken)
+            => ExportAsync((IProductTelemetryEvent)record, cancellationToken);
+
+        public ValueTask<bool> ExportAsync(IProductTelemetryEvent record, CancellationToken cancellationToken)
             => ValueTask.FromResult(Export(record, cancellationToken));
 
-        private bool Export(EngineTelemetryEvent record, CancellationToken cancellationToken)
+        private bool Export(IProductTelemetryEvent record, CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(record);
             if (Volatile.Read(ref _disposed) != 0 || cancellationToken.IsCancellationRequested || !record.IsSynthetic)
@@ -151,9 +150,11 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             }
         }
 
-        internal static bool AreSdkStatisticsDisabled() =>
-            string.Equals(Environment.GetEnvironmentVariable(STATSBEAT_DISABLED_VARIABLE), "true", StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(Environment.GetEnvironmentVariable(SDK_STATS_DISABLED_VARIABLE), "true", StringComparison.OrdinalIgnoreCase);
+        internal static bool AreSdkStatisticsDisabled() => AreSdkStatisticsDisabled(Environment.GetEnvironmentVariable);
+
+        internal static bool AreSdkStatisticsDisabled(Func<string, string?> readEnvironmentVariable) =>
+            string.Equals(readEnvironmentVariable(STATSBEAT_DISABLED_VARIABLE), "true", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(readEnvironmentVariable(SDK_STATS_DISABLED_VARIABLE), "true", StringComparison.OrdinalIgnoreCase);
 
         internal static AzureMonitorExporterOptions CreateExporterOptions(string connectionString, HttpClientTransport transport)
         {

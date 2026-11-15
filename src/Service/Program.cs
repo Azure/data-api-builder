@@ -144,6 +144,7 @@ namespace Azure.DataApiBuilder.Service
         internal static bool StartEngineCore(string[] args, bool runMcpStdio, string? mcpRole,
             EngineTelemetrySession productTelemetry, bool validateUrls, Func<IHostBuilder, IHostBuilder>? configureHost = null)
         {
+            bool previousStandardErrorRouting = BootstrapLogger.WriteAllOutputToStandardError;
             try
             {
                 // Main's existing URL preflight belongs to the same bootstrap lifetime as
@@ -221,6 +222,9 @@ namespace Azure.DataApiBuilder.Service
             }
             finally
             {
+                // Stdio routing is scoped to this run; in-process hosts must not inherit it.
+                BootstrapLogger.WriteAllOutputToStandardError = previousStandardErrorRouting;
+
                 // Keep the synchronous public API: delivery awaits never capture the caller's
                 // SynchronizationContext, and graceful draining has a shared two-second budget.
                 productTelemetry.StopAsync().GetAwaiter().GetResult();

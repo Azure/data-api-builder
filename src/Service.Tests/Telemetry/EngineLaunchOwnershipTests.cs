@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.DataApiBuilder.Service.Utilities;
 using Microsoft.Extensions.Configuration;
@@ -83,6 +84,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             string[] args = stdio
                 ? ["--mcp-stdio", "role:anonymous", "--log-level", "Error"]
                 : ["--log-level", "Error"];
+            bool routingBefore = BootstrapLogger.WriteAllOutputToStandardError;
             bool result;
             if (throughLaunchSeam)
             {
@@ -108,6 +110,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             }
 
             Assert.AreEqual(completion == "success", result);
+            Assert.AreEqual(routingBefore, BootstrapLogger.WriteAllOutputToStandardError,
+                "Routing bootstrap output to stderr for stdio must not outlive the engine run.");
             Assert.AreEqual(throughLaunchSeam ? 1 : 0, factories);
             Assert.AreEqual(1, configuredHosts);
             Assert.IsNotNull(wrappedBuilder, "The real bootstrap must reach host construction.");

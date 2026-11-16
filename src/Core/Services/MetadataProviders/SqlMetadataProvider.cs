@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
@@ -82,6 +83,9 @@ namespace Azure.DataApiBuilder.Core.Services
         private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
+
+        // Keyed by schema table, which entities over the same database object share.
+        private readonly Dictionary<DataTable, UnreadableColumns> _unreadableColumnsBySchemaTable = new();
 
         protected IAbstractQueryManagerFactory QueryManagerFactory { get; init; }
 
@@ -350,6 +354,7 @@ namespace Azure.DataApiBuilder.Core.Services
             await PopulateObjectDefinitionForEntities(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             GenerateExposedToBackingColumnMapsForEntities();
+            ValidateReferencesToUnreadableColumns();
 
             // When IsLateConfigured is true we are in a hosted scenario and do not reveal primary key information.
             if (!_runtimeConfigProvider.IsLateConfigured)
@@ -1613,6 +1618,17 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (sourceDefinition.PrimaryKey.Count == 0)
             {
+                UnreadableColumns? unreadableColumns = GetUnreadableColumns(schemaName, tableName);
+                if (unreadableColumns is not null && unreadableColumns.KeyColumns.Count > 0)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Entity '{entityName}' ({schemaName}.{tableName}) has no usable primary key: key column(s) "
+                            + $"{FormatColumns(unreadableColumns.TypeNameByColumn.Where(column => unreadableColumns.KeyColumns.Contains(column.Key)))} "
+                            + "have a data type that is not supported. Configure source.key-fields with supported columns that identify a row.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
                 throw new DataApiBuilderException(
                        message: $"Primary key not configured on the given database object {tableName}",
                        statusCode: HttpStatusCode.ServiceUnavailable,
@@ -1635,6 +1651,12 @@ namespace Azure.DataApiBuilder.Core.Services
                 schemaName,
                 tableName,
                 cancellationToken);
+
+            if (_unreadableColumnsBySchemaTable.TryGetValue(dataTable, out UnreadableColumns? skippedColumns))
+            {
+                ThrowIfReferencesUnreadableColumn(entityName, skippedColumns, sourceDefinition.PrimaryKey, "the primary key");
+            }
+
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
@@ -1809,6 +1831,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 try
                 {
                     dataTable = await FillSchemaForTableAsync(
+                        entityName,
                         schemaName,
                         tableName,
                         cancellationToken);
@@ -1893,6 +1916,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// and adds the corresponding DataTable to the entities data set.
         /// </summary>
         private async Task<DataTable> FillSchemaForTableAsync(
+            string entityName,
             string schemaName,
             string tableName,
             CancellationToken cancellationToken)
@@ -1984,10 +2008,359 @@ namespace Azure.DataApiBuilder.Core.Services
                     ex,
                     cancellationToken);
             }
+            catch (InvalidOperationException)
+            {
+                // The data adapter rejects the whole object when the provider reports no CLR type for a column.
+                DataTable? schemaWithoutUnreadableColumns = await FillSchemaWithoutUnreadableColumnsAsync(
+                    entityName,
+                    schemaName,
+                    tableName,
+                    selectCommand,
+                    cancellationToken);
+
+                if (schemaWithoutUnreadableColumns is null)
+                {
+                    throw;
+                }
+
+                return schemaWithoutUnreadableColumns;
+            }
 
             cancellationToken.ThrowIfCancellationRequested();
             return dataTable[0];
         }
+
+        /// <summary>
+        /// Builds the schema the data adapter would have built, minus the columns the provider reports no CLR
+        /// type for, such as SQL Server's geometry, geography and hierarchyid. Returns null when there are none,
+        /// so the caller rethrows the adapter's error.
+        /// </summary>
+        private async Task<DataTable?> FillSchemaWithoutUnreadableColumnsAsync(
+            string entityName,
+            string schemaName,
+            string tableName,
+            DbCommand selectCommand,
+            CancellationToken cancellationToken)
+        {
+            DataTable? readerSchema;
+            try
+            {
+                using DbDataReader reader = await selectCommand.ExecuteReaderAsync(
+                    CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo,
+                    cancellationToken);
+                readerSchema = await reader.GetSchemaTableAsync(cancellationToken);
+            }
+            catch (Exception ex) when (cancellationToken.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(
+                    "Schema discovery was canceled during shutdown.",
+                    ex,
+                    cancellationToken);
+            }
+
+            DataRow[] columns = readerSchema?.Rows.Cast<DataRow>()
+                .OrderBy(column => Convert.ToInt32(column[SchemaTableColumn.ColumnOrdinal], System.Globalization.CultureInfo.InvariantCulture))
+                .ToArray() ?? [];
+
+            if (!columns.Any(column => column[SchemaTableColumn.DataType] is not Type))
+            {
+                return null;
+            }
+
+            DataTable schemaTable = new(GetTableNameWithSchemaPrefix(schemaName, tableName));
+            Dictionary<string, string> unreadableColumns = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (DataRow column in columns.Where(column => !IsSchemaFlagSet(column, SchemaTableOptionalColumn.IsHidden)))
+            {
+                string columnName = (string)column[SchemaTableColumn.ColumnName];
+                if (column[SchemaTableColumn.DataType] is Type dataType)
+                {
+                    schemaTable.Columns.Add(CreateColumnAsDataAdapterWould(column, columnName, dataType));
+                }
+                else
+                {
+                    unreadableColumns[columnName] = GetDatabaseTypeName(column);
+                }
+            }
+
+            if (schemaTable.Columns.Count == 0)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Entity '{entityName}' ({schemaName}.{tableName}) cannot be exposed: every column has a data type "
+                        + $"that is not supported: {FormatColumns(unreadableColumns)}.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            List<DataRow> keyRows = GetKeyAsDataAdapterWould(columns);
+            List<string> unreadableKeyColumns = keyRows
+                .Where(column => column[SchemaTableColumn.DataType] is not Type)
+                .Select(column => (string)column[SchemaTableColumn.ColumnName])
+                .ToList();
+
+            if (keyRows.Count > 0 && unreadableKeyColumns.Count == 0)
+            {
+                DataColumn[] keyColumns = keyRows
+                    .Select(column => schemaTable.Columns[(string)column[SchemaTableColumn.ColumnName]]!)
+                    .ToArray();
+
+                // Like the data adapter, only a key without nullable columns becomes the primary key.
+                if (keyColumns.All(keyColumn => !keyColumn.AllowDBNull))
+                {
+                    schemaTable.PrimaryKey = keyColumns;
+                }
+            }
+
+            EntitiesDataSet.Tables.Add(schemaTable);
+            _unreadableColumnsBySchemaTable[schemaTable] = new UnreadableColumns(unreadableColumns, unreadableKeyColumns);
+
+            if (unreadableColumns.Count > 0)
+            {
+                // Hosted deployments don't log schema details; see LogPrimaryKeys.
+                if (_runtimeConfigProvider.IsLateConfigured)
+                {
+                    _logger.LogWarning(
+                        "Skipped {columnCount} column(s) whose data type is not supported. They are not exposed through REST, GraphQL or MCP.",
+                        unreadableColumns.Count);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Skipped column(s) of {databaseObject} whose data type is not supported: {columns}. They are not exposed through REST, GraphQL or MCP.",
+                        $"{schemaName}.{tableName}",
+                        FormatColumns(unreadableColumns));
+                }
+            }
+
+            return schemaTable;
+        }
+
+        /// <summary>
+        /// Returns the key columns the data adapter would infer: the visible key columns, unless a hidden key
+        /// column of the same object shows that the key is not fully selected.
+        /// </summary>
+        private static List<DataRow> GetKeyAsDataAdapterWould(IEnumerable<DataRow> columns)
+        {
+            List<DataRow> keyColumns = new();
+            string? keyBaseTable = null;
+            bool keySpansBaseTables = false;
+
+            foreach (DataRow column in columns)
+            {
+                if (!IsSchemaFlagSet(column, SchemaTableColumn.IsKey))
+                {
+                    continue;
+                }
+
+                string? baseTable = column[SchemaTableColumn.BaseTableName] as string;
+
+                if (IsSchemaFlagSet(column, SchemaTableOptionalColumn.IsHidden))
+                {
+                    if (keySpansBaseTables || baseTable == keyBaseTable)
+                    {
+                        return new List<DataRow>();
+                    }
+
+                    continue;
+                }
+
+                if (baseTable != keyBaseTable)
+                {
+                    if (keyBaseTable is null)
+                    {
+                        keyBaseTable = baseTable;
+                    }
+                    else
+                    {
+                        keySpansBaseTables = true;
+                    }
+                }
+
+                keyColumns.Add(column);
+            }
+
+            return keyColumns;
+        }
+
+        /// <summary>
+        /// Creates a column with the nullability and auto-increment flags the data adapter derives from a schema row.
+        /// </summary>
+        private static DataColumn CreateColumnAsDataAdapterWould(DataRow column, string columnName, Type dataType)
+        {
+            bool isKey = IsSchemaFlagSet(column, SchemaTableColumn.IsKey);
+            bool isAutoIncrement = IsSchemaFlagSet(column, SchemaTableOptionalColumn.IsAutoIncrement) && IsAutoIncrementType(dataType);
+            bool isUniqueNonKey = IsSchemaFlagSet(column, SchemaTableColumn.IsUnique) && !isKey && !dataType.IsArray;
+            bool isReadOnly = IsSchemaFlagSet(column, SchemaTableOptionalColumn.IsReadOnly);
+            bool allowsNull = !column.Table.Columns.Contains(SchemaTableColumn.AllowDBNull)
+                || column[SchemaTableColumn.AllowDBNull] is not bool allowDbNull
+                || allowDbNull;
+
+            return new DataColumn(columnName, dataType)
+            {
+                AutoIncrement = isAutoIncrement,
+                AllowDBNull = allowsNull || !(isAutoIncrement || !isReadOnly || isKey || isUniqueNonKey)
+            };
+        }
+
+        // Mirrors the internal DataColumn.IsAutoIncrementType; the data adapter marks only these types auto-increment.
+        private static bool IsAutoIncrementType(Type dataType) =>
+            dataType == typeof(int) || dataType == typeof(long) || dataType == typeof(short) || dataType == typeof(decimal)
+            || dataType == typeof(System.Numerics.BigInteger) || dataType == typeof(System.Data.SqlTypes.SqlInt32)
+            || dataType == typeof(System.Data.SqlTypes.SqlInt64) || dataType == typeof(System.Data.SqlTypes.SqlInt16)
+            || dataType == typeof(System.Data.SqlTypes.SqlDecimal);
+
+        private static bool IsSchemaFlagSet(DataRow column, string flag) =>
+            column.Table.Columns.Contains(flag) && column[flag] is bool isSet && isSet;
+
+        // SQL Server qualifies a CLR type's name with its database and schema, e.g. "master.sys.geometry".
+        private static string GetDatabaseTypeName(DataRow column)
+        {
+            string? typeName = column.Table.Columns.Contains("DataTypeName") ? column["DataTypeName"] as string : null;
+            return string.IsNullOrWhiteSpace(typeName) ? "unknown" : typeName[(typeName.LastIndexOf('.') + 1)..];
+        }
+
+        private static string FormatColumns(IEnumerable<KeyValuePair<string, string>> typeNameByColumn) =>
+            string.Join(", ", typeNameByColumn.Select(column => $"{column.Key} ({column.Value})"));
+
+        private UnreadableColumns? GetUnreadableColumns(string schemaName, string tableName)
+        {
+            DataTable? schemaTable = EntitiesDataSet.Tables[GetTableNameWithSchemaPrefix(schemaName, tableName)];
+            return schemaTable is not null && _unreadableColumnsBySchemaTable.TryGetValue(schemaTable, out UnreadableColumns? columns)
+                ? columns
+                : null;
+        }
+
+        private UnreadableColumns? GetUnreadableColumnsForEntity(string entityName) =>
+            EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject)
+                && databaseObject is not DatabaseStoredProcedure
+                ? GetUnreadableColumns(databaseObject.SchemaName, databaseObject.Name)
+                : null;
+
+        /// <summary>
+        /// Fails initialization when configuration names a column that schema discovery skipped, instead of
+        /// letting every request that uses the reference fail.
+        /// </summary>
+        private void ValidateReferencesToUnreadableColumns()
+        {
+            if (_unreadableColumnsBySchemaTable.Count == 0)
+            {
+                return;
+            }
+
+            foreach ((string entityName, Entity entity) in Entities)
+            {
+                try
+                {
+                    ValidateReferencesToUnreadableColumns(entityName, entity);
+                }
+                catch (Exception e)
+                {
+                    HandleOrRecordException(e);
+                }
+            }
+        }
+
+        private void ValidateReferencesToUnreadableColumns(string entityName, Entity entity)
+        {
+            UnreadableColumns? unreadableColumns = GetUnreadableColumnsForEntity(entityName);
+
+            if (unreadableColumns is not null)
+            {
+                ThrowIfReferencesUnreadableColumn(entityName, unreadableColumns, entity.Mappings?.Keys, "mappings");
+                ThrowIfReferencesUnreadableColumn(entityName, unreadableColumns, entity.Fields?.Select(field => field.Name), "fields");
+
+                foreach (EntityPermission permission in entity.Permissions)
+                {
+                    foreach (EntityAction action in permission.Actions)
+                    {
+                        ThrowIfReferencesUnreadableColumn(
+                            entityName,
+                            unreadableColumns,
+                            action.Fields?.Include,
+                            $"fields.include of role '{permission.Role}'");
+
+                        // Policies name exposed fields, like the OData model they are parsed against.
+                        IEnumerable<string> policyColumns = AuthorizationResolver
+                            .GetFieldReferencesInDatabasePolicy(action.Policy?.Database)
+                            .Select(field => TryGetBackingColumn(entityName, field, out string? backingColumn) ? backingColumn : field);
+                        ThrowIfReferencesUnreadableColumn(
+                            entityName,
+                            unreadableColumns,
+                            policyColumns,
+                            $"the database policy of role '{permission.Role}'");
+                    }
+                }
+            }
+
+            if (entity.Relationships is null)
+            {
+                return;
+            }
+
+            // Relationship fields name backing columns, so they are compared as configured.
+            foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships)
+            {
+                ThrowIfReferencesUnreadableColumn(
+                    entityName,
+                    unreadableColumns,
+                    relationship.SourceFields,
+                    $"source.fields of relationship '{relationshipName}'");
+                ThrowIfReferencesUnreadableColumn(
+                    entityName,
+                    GetUnreadableColumnsForEntity(relationship.TargetEntity),
+                    relationship.TargetFields,
+                    $"target.fields of relationship '{relationshipName}'");
+
+                if (!string.IsNullOrWhiteSpace(relationship.LinkingObject))
+                {
+                    (string linkingSchemaName, string linkingTableName) = ParseSchemaAndDbTableName(relationship.LinkingObject);
+                    UnreadableColumns? linkingColumns = GetUnreadableColumns(linkingSchemaName, linkingTableName);
+                    ThrowIfReferencesUnreadableColumn(
+                        entityName,
+                        linkingColumns,
+                        relationship.LinkingSourceFields,
+                        $"linking.source.fields of relationship '{relationshipName}'");
+                    ThrowIfReferencesUnreadableColumn(
+                        entityName,
+                        linkingColumns,
+                        relationship.LinkingTargetFields,
+                        $"linking.target.fields of relationship '{relationshipName}'");
+                }
+            }
+        }
+
+        private static void ThrowIfReferencesUnreadableColumn(
+            string entityName,
+            UnreadableColumns? unreadableColumns,
+            IEnumerable<string>? columnNames,
+            string configurationSection)
+        {
+            if (unreadableColumns is null || columnNames is null)
+            {
+                return;
+            }
+
+            foreach (string columnName in columnNames)
+            {
+                if (unreadableColumns.TypeNameByColumn.TryGetValue(columnName, out string? typeName))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Entity '{entityName}': {configurationSection} references column '{columnName}', whose data type "
+                            + $"'{typeName}' is not supported. Remove the reference or use a supported column.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Columns a schema read left out because the data provider reports no CLR type for them.
+        /// </summary>
+        /// <param name="TypeNameByColumn">Each skipped column with its database type name.</param>
+        /// <param name="KeyColumns">Skipped columns that belong to the key the data adapter would have inferred.</param>
+        private sealed record UnreadableColumns(
+            IReadOnlyDictionary<string, string> TypeNameByColumn,
+            IReadOnlyList<string> KeyColumns);
 
         /// <summary>
         /// Gets the correctly formatted table name with schema as prefix, if one exists.

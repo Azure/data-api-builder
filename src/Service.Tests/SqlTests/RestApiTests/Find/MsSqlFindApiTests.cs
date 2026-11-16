@@ -591,6 +591,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"SELECT * FROM { _integrationBrokenMappingTable } " +
                 $"WHERE habitat = 'forestland' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindOnTableWithUnsupportedColumnType",
+                $"SELECT [id], [name] FROM geometry_type_table " +
+                $"ORDER BY [id] FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindByIdOnTableWithUnsupportedColumnType",
+                $"SELECT [id], [name] FROM geometry_type_table " +
+                $"WHERE [id] = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
         #region Test Fixture Setup
@@ -671,6 +681,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         #endregion
 
         #region RestApiTests Outliers
+
+        /// <summary>
+        /// A table with a geometry column, which the data provider can't read, is served without that column.
+        /// </summary>
+        [TestMethod]
+        public async Task FindOnTableWithUnsupportedColumnType()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: "GeometryType",
+                sqlQuery: GetQuery(nameof(FindOnTableWithUnsupportedColumnType)));
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: string.Empty,
+                entityNameOrPath: "GeometryType",
+                sqlQuery: GetQuery("FindByIdOnTableWithUnsupportedColumnType"));
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?$select=geom",
+                entityNameOrPath: "GeometryType",
+                sqlQuery: string.Empty,
+                exceptionExpected: true,
+                expectedErrorMessage: "Invalid field to be returned requested: geom",
+                expectedStatusCode: HttpStatusCode.BadRequest);
+        }
 
         /// <summary>
         /// Tests we ensure that an invalid query in the EasyAuth header

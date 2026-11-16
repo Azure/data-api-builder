@@ -126,6 +126,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PutOneUpdateWithHiddenPeriodColumns",
+                $"SELECT [id], [name] FROM temporal_geometry_type_table " +
+                $"WHERE [id] = 1 AND [name] = 'Renamed collar' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PutOneInsertWithRowversionFieldMissingFromRequestBody",
                 $"SELECT * FROM {_tableWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Best seller' " +
                 $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL AND [row_version] is NOT NULL " +
@@ -328,8 +334,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// PUT nulls the writable columns a request leaves out, so on this temporal table, which also has a skipped
+        /// geometry column, it succeeds only if the HIDDEN period columns stay out of the entity's columns.
+        /// </summary>
+        [TestMethod]
+        public async Task PutOneWithHiddenPeriodColumnsInTemporalTable()
+        {
+            string requestBody = @"
+            {
+                ""name"": ""Renamed collar""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1",
+                    queryString: null,
+                    entityNameOrPath: "TemporalGeometryType",
+                    sqlQuery: GetQuery("PutOneUpdateWithHiddenPeriodColumns"),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
         /// Test to validate successful execution of a request when a rowversion field is missing from the request body.
-        /// In such a case, we don't attempt to NULL out rowversion field (as per PUT semantics) but instead skip updating/inserting the field. 
+        /// In such a case, we don't attempt to NULL out rowversion field (as per PUT semantics) but instead skip updating/inserting the field.
         /// </summary>
         [TestMethod]
         public async Task PutOneWithRowversionFieldMissingFromRequestBody()

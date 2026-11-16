@@ -978,7 +978,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     {
         if (_logger is null)
         {
-            _logBuffer.BufferLog(logLevel, message);
+            _logBuffer.BufferLog<FileSystemRuntimeConfigLoader>(logLevel, message);
         }
         else
         {

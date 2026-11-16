@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Azure.DataApiBuilder.Service.Tests" />
+    <InternalsVisibleTo Include="Cli.Tests" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,13 +41,23 @@
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
   </ItemGroup>
 
-  <!-- Mcp uses internal APIs from Core and its bundled Config assembly. Pin the
-       Core package version resolved by pack, including PackageVersion overrides. -->
-  <Target Name="LockCorePackageDependencyVersion" AfterTargets="_GetProjectReferenceVersions">
+  <!-- MCP and Core share release-private contracts. Pin the packed dependency without
+       replacing the project reference or changing ordinary restore/build behavior. -->
+  <Target Name="PinCorePackageDependency" AfterTargets="_GetProjectReferenceVersions">
+    <PropertyGroup>
+      <_CorePackProject>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '..', 'Core', 'Azure.DataApiBuilder.Core.csproj'))</_CorePackProject>
+    </PropertyGroup>
     <ItemGroup>
-      <_ProjectReferencesWithVersions Update="@(_ProjectReferencesWithVersions)"
-                                      Condition="'%(_ProjectReferencesWithVersions.Filename)' == 'Azure.DataApiBuilder.Core'">
-        <ProjectVersion>[%(_ProjectReferencesWithVersions.ProjectVersion)]</ProjectVersion>
+      <_CorePackReference Include="@(_ProjectReferencesWithVersions)"
+                          Condition="'%(_ProjectReferencesWithVersions.FullPath)' == '$(_CorePackProject)'" />
+    </ItemGroup>
+    <Error Condition="'@(_CorePackReference->Count())' != '1'"
+           Text="Packing MCP requires exactly one versioned Core project reference." />
+    <Error Condition="'%(_CorePackReference.ProjectVersion)' != '$(PackageVersion)'"
+           Text="MCP and Core must have the same PackageVersion: MCP=$(PackageVersion), Core=%(_CorePackReference.ProjectVersion)." />
+    <ItemGroup>
+      <_ProjectReferencesWithVersions Update="@(_CorePackReference)">
+        <ProjectVersion>[$(PackageVersion)]</ProjectVersion>
       </_ProjectReferencesWithVersions>
     </ItemGroup>
   </Target>

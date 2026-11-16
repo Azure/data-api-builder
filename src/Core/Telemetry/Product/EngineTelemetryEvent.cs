@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         DateTimeOffset OccurredAt,
         long ConfigurationEpoch,
         string Name,
-        ImmutableDictionary<string, string> Properties)
+        ImmutableDictionary<string, string> Properties) : IProductTelemetryEvent
     {
         // Production collection/export enablement is not part of this implementation.
         public bool IsSynthetic { get; } = true;

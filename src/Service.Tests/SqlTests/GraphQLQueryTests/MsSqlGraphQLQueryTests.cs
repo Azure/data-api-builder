@@ -808,6 +808,38 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// A table with a geometry column, which the data provider can't read, is queryable without that column.
+        /// </summary>
+        [TestMethod]
+        public async Task QueryTableWithUnsupportedColumnType()
+        {
+            string graphQLQuery = @"{
+                geometryTypes(orderBy: { id: ASC }) {
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, "geometryTypes", isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(
+                "SELECT [id], [name] FROM geometry_type_table ORDER BY [id] FOR JSON PATH, INCLUDE_NULL_VALUES");
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+
+            graphQLQuery = @"{
+                geometryType_by_pk(id: 1) {
+                    geom
+                }
+            }";
+
+            JsonElement error = await ExecuteGraphQLRequestAsync(graphQLQuery, "geometryType_by_pk", isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                error.ToString(),
+                message: "The field `geom` does not exist on the type `GeometryType`.");
+        }
+
+        /// <summary>
         /// Test to check GraphQL support for aggregations with aliases.
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>

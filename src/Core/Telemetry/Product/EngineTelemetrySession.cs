@@ -7,6 +7,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Telemetry;
 using static Azure.DataApiBuilder.Core.Telemetry.Product.EngineTelemetryValueFormatter;
+using Path = System.IO.Path;
 
 namespace Azure.DataApiBuilder.Core.Telemetry.Product
 {
@@ -45,15 +46,19 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         private ImmutableDictionary<string, string> _snapshot = ImmutableDictionary<string, string>.Empty;
         private EngineTelemetryIdentity? _identity;
         private Lazy<EngineTelemetryIdentity>? _identityResolution;
+        private string? _launchConfigurationPath;
         private Task? _stopTask;
 
         private EngineTelemetrySession(bool enabled, Func<IEngineTelemetryExporter>? exporterFactory,
             string? configPath, string executionMode, TimeProvider clock, Action? showNotice,
-            Func<string?, EngineTelemetryIdentity>? resolveIdentity, bool startTimer, Func<string, string?> readEnvironmentVariable)
+            Func<string?, EngineTelemetryIdentity>? resolveIdentity, bool startTimer, Func<string, string?> readEnvironmentVariable,
+            ProductTelemetryLaunchContext? launchContext)
         {
             _clock = clock;
             _configPath = configPath;
-            _resolveIdentity = resolveIdentity ?? EngineTelemetryIdentityStore.Resolve;
+            // The session already captured its opt-out policy. Later environment changes apply
+            // to newly initialized lifetimes; explicit Disable is this lifetime's veto.
+            _resolveIdentity = resolveIdentity ?? (path => EngineTelemetryIdentityStore.Resolve(path, _ => null));
             _aggregator = EngineTelemetryAggregator.Create(new() { EnableSyntheticCollection = enabled }, clock, _ => null);
             _context = ImmutableDictionary<string, string>.Empty;
             if (!enabled || exporterFactory is null)
@@ -63,14 +68,52 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
 
             try
             {
-                // No notice/sender/identity work occurs on the disabled path. Failure to show
-                // the required notice fails closed, without using the customer's logging sinks.
-                (showNotice ?? ShowNotice)();
-                _sessionId = Guid.NewGuid();
+                bool linked = launchContext is { EngineSessionId: var engineId, ParentCliSessionId: var parentId }
+                    && engineId != Guid.Empty && parentId != Guid.Empty && engineId != parentId
+                    && Enum.IsDefined(launchContext.Source);
+                // A valid internal CLI bridge means the parent already showed this invocation's
+                // notice. Direct engines and invalid links still require their own disclosure;
+                // failure to show it fails closed, without using the customer's logging sinks.
+                if (!linked)
+                {
+                    (showNotice ?? ShowNotice)();
+                }
+
+                _sessionId = linked ? launchContext!.EngineSessionId : Guid.NewGuid();
                 HealthProbeToken = Guid.NewGuid().ToString("N");
                 _started = clock.GetTimestamp();
                 _lastHeartbeat = _started;
                 _context = EngineTelemetryContext.Create(executionMode, readEnvironmentVariable);
+                if (linked)
+                {
+                    _context = _context.SetItem("launcher", "cli")
+                        .Add("dab_parent_cli_session_id", launchContext!.ParentCliSessionId.ToString("D"))
+                        .Add("launch_source", launchContext.Source switch
+                        {
+                            CliTelemetryLaunchSource.StartWeb => "start_web",
+                            CliTelemetryLaunchSource.StartStdio => "start_stdio",
+                            _ => "export_graphql"
+                        });
+                    CliTelemetryInstallation installation = launchContext.Installation;
+                    bool savedInstallation = installation.InstallationId is Guid id && id != Guid.Empty
+                        && installation.Stability is "newly_saved" or "reused";
+                    _context = _context.Add("dab_installation_id_stability", savedInstallation ? installation.Stability : "unavailable");
+                    if (savedInstallation)
+                    {
+                        _context = _context.Add("dab_installation_id", installation.InstallationId!.Value.ToString("D"));
+                    }
+
+                    // Config paths stay local to bootstrap and are never part of the bridge or
+                    // an event. Only the actual CLI-selected root may inherit its API identity.
+                    if (!string.IsNullOrWhiteSpace(configPath) && launchContext.ApiIdentity is { } apiIdentity
+                        && apiIdentity.ApiId != Guid.Empty && apiIdentity.Stability is "newly_saved" or "reused" or "ephemeral")
+                    {
+                        _launchConfigurationPath = Path.GetFullPath(configPath);
+                        _identity = apiIdentity;
+                        _identityResolution = new(() => apiIdentity);
+                    }
+                }
+
                 _delivery = new EngineTelemetryDelivery(exporterFactory);
                 _enabled = true;
                 Emit("process_started", 0, ImmutableDictionary<string, string>.Empty);
@@ -100,7 +143,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         internal static EngineTelemetrySession Create(Func<IEngineTelemetryExporter>? exporterFactory = null,
             bool enableSyntheticCollection = false, string? configPath = null, string executionMode = "embedded",
             TimeProvider? clock = null, Func<string, string?>? readEnvironmentVariable = null,
-            Action? showNotice = null, Func<string?, EngineTelemetryIdentity>? resolveIdentity = null, bool startTimer = true)
+            Action? showNotice = null, Func<string?, EngineTelemetryIdentity>? resolveIdentity = null, bool startTimer = true,
+            ProductTelemetryLaunchContext? launchContext = null)
         {
             bool enabled = enableSyntheticCollection && exporterFactory is not null;
             if (enabled)
@@ -109,10 +153,14 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             }
 
             return new(enabled, exporterFactory, configPath, executionMode, clock ?? TimeProvider.System, showNotice, resolveIdentity, startTimer,
-                readEnvironmentVariable ?? Environment.GetEnvironmentVariable);
+                readEnvironmentVariable ?? Environment.GetEnvironmentVariable, launchContext);
         }
 
         public bool IsEnabled => Volatile.Read(ref _enabled);
+
+        // Retained after StopAsync so the explicit CLI handoff can distinguish a legacy web
+        // host's normal Run return from successful initialization, without changing its exit code.
+        internal bool HasStartupFailed => Volatile.Read(ref _startupFailed);
 
         // In-memory self-probe correlation only. Never exported, persisted or used for auth.
         internal string? HealthProbeToken { get; }
@@ -159,6 +207,20 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
 
                     // Resolve once, but never hold the session gate across filesystem I/O.
                     // Disable/shutdown must not wait for an identity read on a slow volume.
+                    if (_launchConfigurationPath is not null)
+                    {
+                        string? acceptedPath = configPath ?? _configPath;
+                        if (string.IsNullOrWhiteSpace(acceptedPath) || !string.Equals(_launchConfigurationPath,
+                            Path.GetFullPath(acceptedPath), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                        {
+                            // Do not apply a supplied identity to a different accepted root.
+                            _identity = null;
+                            _identityResolution = null;
+                        }
+
+                        _launchConfigurationPath = null;
+                    }
+
                     identityResolution = _identityResolution ??= new(
                         () => _resolveIdentity(configPath ?? _configPath), LazyThreadSafetyMode.ExecutionAndPublication);
                 }

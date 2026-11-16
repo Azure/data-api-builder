@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 Assert.IsNotNull(deliveryField);
                 delivery = deliveryField.GetValue(session) as EngineTelemetryDelivery;
                 Assert.IsNotNull(delivery);
-                FieldInfo? clockField = typeof(EngineTelemetryDelivery).GetField("_timeProvider", BindingFlags.Instance | BindingFlags.NonPublic);
+                FieldInfo? clockField = typeof(ProductTelemetryDelivery<EngineTelemetryEvent>).GetField("_timeProvider", BindingFlags.Instance | BindingFlags.NonPublic);
                 Assert.IsNotNull(clockField);
                 clockField.SetValue(delivery, clock);
 

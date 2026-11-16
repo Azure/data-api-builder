@@ -146,29 +146,32 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
             AccessToken testValidToken = new(accessToken: DEFAULT_TOKEN, expiresOn: DateTimeOffset.MaxValue);
-            if (expectManagedIdentityAccessToken)
+            if (expectManagedIdentityAccessToken && !isDefaultAzureCredential)
             {
-                if (isDefaultAzureCredential)
-                {
-                    Mock<DefaultAzureCredential> dacMock = new();
-                    dacMock
-                        .Setup(m => m.GetTokenAsync(It.IsAny<TokenRequestContext>(),
-                            It.IsAny<System.Threading.CancellationToken>()))
-                        .Returns(ValueTask.FromResult(testValidToken));
-                    postgreSqlQueryExecutor.AzureCredential = dacMock.Object;
-                }
-                else
-                {
-                    await provider.Initialize(
-                        provider.GetConfig().ToJson(),
-                        graphQLSchema: null,
-                        connectionString: connectionString,
-                        accessToken: CONFIG_TOKEN,
-                        replacementSettings: new());
-                    postgreSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
-                }
+                await provider.Initialize(
+                    provider.GetConfig().ToJson(),
+                    graphQLSchema: null,
+                    connectionString: connectionString,
+                    accessToken: CONFIG_TOKEN,
+                    replacementSettings: new());
+                postgreSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
             }
 
+            // Every case is synthetic, including credential-unavailable cases. Never let a
+            // developer's Azure CLI/IDE login supply a real token or reach assertion output.
+            Mock<DefaultAzureCredential> credential = new(MockBehavior.Strict);
+            if (expectManagedIdentityAccessToken && isDefaultAzureCredential)
+            {
+                credential.Setup(value => value.GetTokenAsync(It.IsAny<TokenRequestContext>(),
+                    It.IsAny<System.Threading.CancellationToken>())).Returns(ValueTask.FromResult(testValidToken));
+            }
+            else
+            {
+                credential.Setup(value => value.GetTokenAsync(It.IsAny<TokenRequestContext>(),
+                    It.IsAny<System.Threading.CancellationToken>())).Throws(new CredentialUnavailableException("Synthetic credential unavailable."));
+            }
+
+            postgreSqlQueryExecutor.AzureCredential = credential.Object;
             using NpgsqlConnection conn = new(connectionString);
             await postgreSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, string.Empty);
             NpgsqlConnectionStringBuilder connStringBuilder = new(conn.ConnectionString);
@@ -186,7 +189,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                Assert.AreEqual(connectionString, conn.ConnectionString);
+                Assert.IsTrue(string.Equals(connectionString, conn.ConnectionString, StringComparison.Ordinal),
+                    "A credential-unavailable or password-authenticated connection must remain unchanged.");
             }
         }
     }

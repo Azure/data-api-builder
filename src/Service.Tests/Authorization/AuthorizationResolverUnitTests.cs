@@ -1982,6 +1982,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             bool didResolveUnauthenticatedOidClaim = resolvedClaims["oid"] == "1337";
             Assert.AreEqual(expected: false, actual: didResolveUnauthenticatedRoleClaim, message: "Unauthenticated oid claim erroneously resolved.");
         }
+
+        [DataTestMethod]
+        [DataRow(null, "", DisplayName = "No policy")]
+        [DataRow("@item.id eq @claims.userId and @item.owner_id ne 1", "id,owner_id", DisplayName = "Fields next to a claim")]
+        [DataRow("@item.name eq '@item.geom'", "name", DisplayName = "Reference inside a string literal")]
+        [DataRow("@item.name ne 'it''s @item.geom' or @item.id gt 1", "name,id", DisplayName = "Escaped quote inside a string literal")]
+        public void GetFieldReferencesInDatabasePolicySkipsStringLiterals(string policy, string expectedFields)
+        {
+            Assert.AreEqual(expectedFields, string.Join(",", AuthorizationResolver.GetFieldReferencesInDatabasePolicy(policy)));
+        }
         #endregion
 
         #region Helpers

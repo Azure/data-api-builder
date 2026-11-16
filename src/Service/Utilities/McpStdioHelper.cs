@@ -95,12 +95,14 @@ namespace Azure.DataApiBuilder.Service.Utilities
         /// reported, which Program.Main surfaces as a non-zero exit code.</returns>
         public static bool RunMcpStdioHost(IHost host)
         {
-            EngineTelemetrySession? productTelemetry = host.Services.GetService<EngineTelemetrySession>();
-            TelemetryFailureContext? failure = productTelemetry?.IsEnabled == true ? TelemetryFailureContext.Current ?? new() : null;
-            using IDisposable? failureScope = TelemetryFailureContext.Enter(failure);
+            EngineTelemetrySession? productTelemetry = null;
+            TelemetryFailureContext? failure = null;
             TelemetryFailureStage stage = TelemetryFailureStage.Serving;
             try
             {
+                productTelemetry = host.Services.GetService<EngineTelemetrySession>();
+                failure = productTelemetry?.IsEnabled == true ? TelemetryFailureContext.Current ?? new() : null;
+                using IDisposable? failureScope = TelemetryFailureContext.Enter(failure);
                 // Resolve the protocol loop without inferring database metadata. The server
                 // answers initialize immediately and reports readiness only after its first
                 // tools/list or tools/call successfully initializes metadata and the registry.
@@ -108,6 +110,10 @@ namespace Azure.DataApiBuilder.Service.Utilities
                     host.Services.GetRequiredService<IHostApplicationLifetime>();
                 IMcpStdioServer stdio =
                     host.Services.GetRequiredService<IMcpStdioServer>();
+
+                // Stdio never starts the HTTP host. Observe caches, but do not infer readiness
+                // from opening the protocol loop or completing the early initialize handshake.
+                // McpStdioServer owns readiness/failure at its deferred tool initialization.
                 host.Services.GetService<EngineTelemetryHosting>()?.StartAsync(default).GetAwaiter().GetResult();
 
                 stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
@@ -178,6 +184,13 @@ namespace Azure.DataApiBuilder.Service.Utilities
                         }
                     }
                 }
+                catch (Exception)
+                {
+                    // Report before the unconditional telemetry drain below. The outer CLI
+                    // handoff must still observe pre-ready cleanup failure after this runner stops.
+                    productTelemetry?.StartupFailed(TelemetryFailureStage.Serving);
+                    throw;
+                }
                 finally
                 {
                     try
@@ -186,6 +199,8 @@ namespace Azure.DataApiBuilder.Service.Utilities
                     }
                     finally
                     {
+                        // This runner owns the host even if service resolution or a shutdown
+                        // hook fails. StartEngineCore must not add a second disposal owner.
                         host.Dispose();
                     }
                 }

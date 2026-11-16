@@ -583,36 +583,84 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [TestMethod]
         public async Task ConcurrentCreatorsReadOneImmutableWinnerAndCleanTheirOwnTemporaryFiles()
         {
-            // Repeated independent races exercise the native publication path, not a cached
-            // identity or a process-local lock. Every attempt must preserve one immutable winner.
+            // Repeat independent native publication races while retaining the platform-specific
+            // fail-closed read semantics and the immutable winner's schema/privacy assertions.
             for (int iteration = 0; iteration < 20; iteration++)
             {
-                using TemporaryConfig files = new();
-                using Barrier start = new(12);
-                Task<EngineTelemetryIdentity>[] creators = Enumerable.Range(0, 12).Select(_ =>
-                    Task.Factory.StartNew(() =>
+                await AssertConcurrentCreatorsAsync();
+            }
+        }
+
+        private static async Task AssertConcurrentCreatorsAsync()
+        {
+            using TemporaryConfig files = new();
+            using Barrier start = new(12);
+            Task<EngineTelemetryIdentity>[] creators = Enumerable.Range(0, 12).Select(_ =>
+                Task.Factory.StartNew(() =>
+                {
+                    if (!start.SignalAndWait(TimeSpan.FromSeconds(10)))
                     {
-                        if (!start.SignalAndWait(TimeSpan.FromSeconds(10)))
-                        {
-                            throw new TimeoutException("Synthetic concurrent start did not complete.");
-                        }
+                        throw new TimeoutException("Synthetic concurrent start did not complete.");
+                    }
 
-                        return ResolveEnabled(files.ConfigPath);
-                    }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ToArray();
+                    return ResolveEnabled(files.ConfigPath);
+                }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ToArray();
 
-                EngineTelemetryIdentity[] identities = await Task.WhenAll(creators).WaitAsync(TimeSpan.FromSeconds(30));
+            EngineTelemetryIdentity[] identities = await Task.WhenAll(creators).WaitAsync(TimeSpan.FromSeconds(30));
 
-                Assert.AreEqual(1, identities.Count(identity => identity.Stability == "newly_saved"), $"Iteration {iteration}.");
-                Assert.AreEqual(11, identities.Count(identity => identity.Stability == "reused"), $"Iteration {iteration}.");
-                Assert.AreEqual(1, identities.Select(identity => identity.ApiId).Distinct().Count(), $"Iteration {iteration}.");
-                AssertRandomGuid(identities[0].ApiId);
-                byte[] winnerBytes = File.ReadAllBytes(files.SidecarPath);
+            // Read the persisted winner before any post-contention call can create state.
+            // The sidecar schema and privacy fields remain exactly version + random apiId.
+            byte[] winnerBytes = File.ReadAllBytes(files.SidecarPath);
+            Assert.IsTrue(winnerBytes.Length is > 0 and <= 1024);
+            using JsonDocument document = JsonDocument.Parse(winnerBytes);
+            CollectionAssert.AreEquivalent(new[] { "version", "apiId" },
+                document.RootElement.EnumerateObject().Select(property => property.Name).ToArray());
+            Assert.AreEqual(1, document.RootElement.GetProperty("version").GetInt32());
+            string? winnerText = document.RootElement.GetProperty("apiId").GetString();
+            Assert.IsNotNull(winnerText);
+            Assert.AreEqual(36, winnerText.Length);
+            Assert.IsTrue(Guid.TryParseExact(winnerText, "D", out Guid winner));
+            AssertRandomGuid(winner);
+
+            if (OperatingSystem.IsWindows())
+            {
+                // Match TelemetryIdentityPublicationTests: its deterministic DELETE-handle
+                // control proves that strict reads can encounter ERROR_SHARING_VIOLATION
+                // during publication. Preserve fail-closed storage, not retry for availability.
+                Assert.IsTrue(identities.Count(identity => identity.Stability == "newly_saved") <= 1);
+            }
+            else
+            {
+                Assert.AreEqual(1, identities.Count(identity => identity.Stability == "newly_saved"));
+                Assert.AreEqual(11, identities.Count(identity => identity.Stability == "reused"));
+                Assert.AreEqual(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(files.SidecarPath));
+            }
+
+            foreach (EngineTelemetryIdentity identity in identities)
+            {
+                if (identity.Stability is "newly_saved" or "reused")
+                {
+                    Assert.AreEqual(winner, identity.ApiId, "Every persisted result must match the one saved winner.");
+                }
+                else
+                {
+                    Assert.IsTrue(OperatingSystem.IsWindows(), "Linux creators must all return the persisted winner.");
+                    AssertEphemeral(identity);
+                    Assert.AreNotEqual(winner, identity.ApiId, "A fallback must not claim saved identity evidence.");
+                }
+            }
+
+            // After all competing handles close, every caller must reuse the same immutable
+            // winner, including callers that received ephemeral IDs during Windows contention.
+            for (int caller = 0; caller < identities.Length; caller++)
+            {
                 EngineTelemetryIdentity subsequent = ResolveEnabled(files.ConfigPath);
                 Assert.AreEqual("reused", subsequent.Stability);
-                Assert.AreEqual(identities[0].ApiId, subsequent.ApiId);
+                Assert.AreEqual(winner, subsequent.ApiId);
                 CollectionAssert.AreEqual(winnerBytes, File.ReadAllBytes(files.SidecarPath));
-                CollectionAssert.AreEquivalent(new[] { files.ConfigPath, files.SidecarPath }, Directory.GetFiles(files.DirectoryPath));
             }
+
+            CollectionAssert.AreEquivalent(new[] { files.ConfigPath, files.SidecarPath }, Directory.GetFiles(files.DirectoryPath));
         }
 
         [TestMethod]

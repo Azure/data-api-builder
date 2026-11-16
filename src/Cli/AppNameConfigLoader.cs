@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Cli;
@@ -58,8 +59,9 @@ internal static class AppNameConfigLoader
 
         try
         {
+            string json = fileSystem.File.ReadAllText(fullPath);
             JsonObject document = JsonNode.Parse(
-                fileSystem.File.ReadAllText(fullPath),
+                json,
                 documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip }) as JsonObject
                 ?? throw new JsonException("Configuration must be a JSON object.");
 
@@ -67,6 +69,10 @@ internal static class AppNameConfigLoader
             document.Remove("data-source-files");
             RuntimeConfig root = document.Deserialize<RuntimeConfig>(options)
                 ?? throw new JsonException("Configuration is empty.");
+
+            // Reuse the original input under the invocation's bounded, default-off policy.
+            // Capture before merging so child entities retain only their own file's provenance.
+            TelemetryConfigurationPresence? presence = TelemetryConfigurationPresence.TryCaptureForCurrentScope(json, root);
 
             // Removing only the child-file property preserves the standard converters/defaults for
             // every other property while preventing constructor-driven runtime secret resolution.
@@ -98,7 +104,10 @@ internal static class AppNameConfigLoader
             // Use the existing explicit-data-source-map constructor: it performs no file loading.
             // This snapshot is for inspection only, never published to the runtime/provider.
             RuntimeConfig result = new(root.Schema, root.DataSource!, root.Runtime!, new(entities),
-                root.DefaultDataSourceName, sources, entitySources, files, root.AzureKeyVault, new(autoentities));
+                root.DefaultDataSourceName, sources, entitySources, files, root.AzureKeyVault, new(autoentities))
+            {
+                TelemetryPresence = presence
+            };
             result.ChildConfigs.AddRange(children);
             return result;
         }

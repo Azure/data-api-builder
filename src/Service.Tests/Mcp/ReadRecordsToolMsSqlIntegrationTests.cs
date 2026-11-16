@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
@@ -221,6 +222,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             AssertSuccess(result, $"ReadRecords with filter '{filter}' should succeed.");
             Assert.AreEqual(expectedCount, GetRecordsArray(ParseResultRoot(result)).GetArrayLength());
+        }
+
+        /// <summary>
+        /// A plus sign in the filter, here the offset of a DateTimeOffset literal, must not be
+        /// URL-decoded into a space.
+        /// </summary>
+        [TestMethod]
+        public async Task ReadRecords_FilterWithPlusSign_IsNotUrlDecoded()
+        {
+            CallToolResult result = await ExecuteReadAsync(
+                "SupportedType", select: "typeid", filter: "datetimeoffset_types gt 1999-01-08T00:00:00+13:00");
+
+            AssertSuccess(result, "ReadRecords with a plus sign in the filter should succeed.");
+            JsonElement records = GetRecordsArray(ParseResultRoot(result));
+            List<int> typeIds = records.EnumerateArray().Select(r => r.GetProperty("typeid").GetInt32()).OrderBy(i => i).ToList();
+            CollectionAssert.AreEqual(new List<int> { 1, 2, 4 }, typeIds);
         }
 
         /// <summary>

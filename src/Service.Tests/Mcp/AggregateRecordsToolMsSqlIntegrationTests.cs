@@ -49,18 +49,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// The filter argument is a plain OData expression rather than part of a URL,
-        /// so a percent sign must reach the database as written instead of being URL-decoded.
+        /// The filter argument is a plain OData expression rather than part of a URL, so characters
+        /// with a special meaning in URLs must reach the database as written.
         /// </summary>
-        [TestMethod]
-        public async Task Aggregate_FilterWithUrlSpecialCharacters_IsNotUrlDecoded()
+        [DataTestMethod]
+        [DataRow("Book", "title eq 'SOME%25CONN'", 0, DisplayName = "Percent-encoded value isn't decoded.")]
+        [DataRow("Book", "title eq 'SOME&CONN'", 0, DisplayName = "Ampersand doesn't truncate the filter.")]
+        [DataRow("SupportedType", "datetimeoffset_types gt 1999-01-08T00:00:00+13:00", 3, DisplayName = "Plus sign in an offset isn't turned into a space.")]
+        public async Task Aggregate_FilterWithUrlSpecialCharacters_IsNotUrlDecoded(string entity, string filter, int expectedCount)
         {
-            CallToolResult result = await ExecuteAggregateAsync(
-                "Book", "count", "*", filter: "title eq 'SOME%CONN'");
+            CallToolResult result = await ExecuteAggregateAsync(entity, "count", "*", filter: filter);
 
-            AssertSuccess(result, "COUNT with a percent sign in the filter should succeed.");
+            AssertSuccess(result, $"COUNT with filter '{filter}' should succeed.");
             JsonElement resultArray = ParseResultRoot(result).GetProperty("result");
-            Assert.AreEqual(1, resultArray[0].GetProperty("count").GetInt32());
+            Assert.AreEqual(expectedCount, resultArray[0].GetProperty("count").GetInt32());
         }
 
         /// <summary>

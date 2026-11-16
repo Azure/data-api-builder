@@ -4,3 +4,7 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
+[assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service")]
+[assembly: InternalsVisibleTo("Microsoft.DataApiBuilder.Core")]
+[assembly: InternalsVisibleTo("Microsoft.DataApiBuilder.Mcp")]
+[assembly: InternalsVisibleTo("Microsoft.DataApiBuilder")]

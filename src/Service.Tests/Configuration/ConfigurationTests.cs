@@ -743,8 +743,24 @@ type Moon {
         [TestInitialize]
         public void SetupAuthProviderEnvironmentVariables()
         {
+            // Other integration fixtures can leave a database environment selected. Reset
+            // before each test as well as after it, so late-config hosts start unconfigured.
+            TestHelper.UnsetAllDABEnvironmentVariables();
             TestHelper.SetAppServiceEnvironmentVariable();
             TestHelper.SetStaticWebAppsEnvironmentVariable();
+        }
+
+        [DataTestMethod]
+        [DataRow(RUNTIME_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT)]
+        [DataRow(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT)]
+        [DataRow(RUNTIME_ENV_CONNECTION_STRING, "Server=synthetic.invalid;Database=unused;")]
+        public void TestSetupDoesNotInheritDatabaseSelectionFromEarlierFixtures(string variable, string value)
+        {
+            Environment.SetEnvironmentVariable(variable, value);
+
+            SetupAuthProviderEnvironmentVariables();
+
+            Assert.IsNull(Environment.GetEnvironmentVariable(variable));
         }
 
         /// <summary>
@@ -6140,6 +6156,109 @@ type Planet @model(name:""PlanetAlias"") {
                     Assert.AreEqual(JsonValueKind.String, restItem.GetProperty("content").ValueKind);
                     Assert.AreEqual(restItem.GetProperty("content").GetString(), graphqlItem.GetProperty("content").GetString());
                 }
+            }
+        }
+
+        /// <summary>
+        /// A table with a geometry column, which schema discovery skips, is served through an autoentity and through
+        /// entities whose field permissions leave the column out.
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [DataTestMethod]
+        [DataRow("autoentity", DisplayName = "Autoentity")]
+        [DataRow("fields.exclude", DisplayName = "Entity whose permissions exclude the column")]
+        [DataRow("fields.include", DisplayName = "Entity whose permissions include only the other columns")]
+        public async Task TestTableWithUnsupportedColumnTypeIsServed(string entityKind)
+        {
+            // Arrange
+            const string ENTITY_NAME = "dbo_geometry_type_table";
+            EntityActionFields fields = entityKind switch
+            {
+                "fields.exclude" => new(Exclude: new() { "geom" }),
+                "fields.include" => new(Exclude: new(), Include: new() { "id", "name" }),
+                _ => null
+            };
+            EntityPermission[] permissions = new[]
+            {
+                new EntityPermission(AuthorizationResolver.ROLE_ANONYMOUS, new[] { new EntityAction(EntityActionOperation.Read, fields, new()) })
+            };
+
+            Dictionary<string, Entity> entityMap = new();
+            Dictionary<string, Autoentity> autoentityMap = new();
+            if (entityKind == "autoentity")
+            {
+                autoentityMap.Add("GeometryAutoEntity", new Autoentity(
+                    Patterns: new AutoentityPatterns(Include: new[] { "dbo.geometry_type_table" }, Exclude: null, Name: null),
+                    Template: new AutoentityTemplate(
+                        Rest: new EntityRestOptions(Enabled: true),
+                        GraphQL: new EntityGraphQLOptions(Singular: string.Empty, Plural: string.Empty, Enabled: true),
+                        Health: null,
+                        Cache: null),
+                    Permissions: permissions));
+            }
+            else
+            {
+                entityMap.Add(ENTITY_NAME, new Entity(
+                    Source: new("dbo.geometry_type_table", EntitySourceType.Table, null, null),
+                    Fields: null,
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Singular: string.Empty, Plural: string.Empty),
+                    Permissions: permissions,
+                    Relationships: null,
+                    Mappings: null));
+            }
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration = new(
+                Schema: "TestUnsupportedColumnTypeSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: false),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new Config.ObjectModel.AuthenticationOptions(
+                            Provider: nameof(EasyAuthType.StaticWebApps),
+                            Jwt: null
+                        )
+                    )
+                ),
+                Entities: new(entityMap),
+                Autoentities: autoentityMap.Count > 0 ? new RuntimeAutoentities(autoentityMap) : null
+            );
+
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Act
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, $"/api/{ENTITY_NAME}");
+                using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+
+                object graphqlPayload = new { query = $"{{ {ENTITY_NAME}s {{ items {{ id name }} }} }}" };
+                using HttpRequestMessage graphqlRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(graphqlPayload)
+                };
+                using HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
+
+                // Assert
+                const string EXPECTED_ROW = @"{""id"":1,""name"":""point""}";
+                string restResponseBody = await restResponse.Content.ReadAsStringAsync();
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, restResponseBody);
+                StringAssert.Contains(restResponseBody, EXPECTED_ROW);
+                Assert.IsFalse(restResponseBody.Contains(@"""geom"""), "The skipped column should not be returned.");
+
+                string graphqlResponseBody = await graphqlResponse.Content.ReadAsStringAsync();
+                Assert.AreEqual(HttpStatusCode.OK, graphqlResponse.StatusCode, graphqlResponseBody);
+                Assert.IsFalse(graphqlResponseBody.Contains("errors"), graphqlResponseBody);
+                StringAssert.Contains(graphqlResponseBody, EXPECTED_ROW);
             }
         }
 

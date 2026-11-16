@@ -957,7 +957,12 @@
           "role": "test_role_with_excluded_fields_on_mutation",
           "actions": [
             {
-              "action": "read"
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              }
             },
             {
               "action": "create",
@@ -968,12 +973,7 @@
               }
             },
             {
-              "action": "update",
-              "fields": {
-                "exclude": [
-                  "publisher_id"
-                ]
-              }
+              "action": "read"
             },
             {
               "action": "delete"
@@ -1726,7 +1726,12 @@
           "role": "test_role_with_excluded_fields_on_mutation",
           "actions": [
             {
-              "action": "read"
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "username"
+                ]
+              }
             },
             {
               "action": "create",
@@ -1737,12 +1742,7 @@
               }
             },
             {
-              "action": "update",
-              "fields": {
-                "exclude": [
-                  "username"
-                ]
-              }
+              "action": "read"
             },
             {
               "action": "delete"
@@ -2000,6 +2000,58 @@
         "type": {
           "singular": "Profile",
           "plural": "Profiles"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        }
+      ]
+    },
+    "XmlProfile": {
+      "source": {
+        "object": "xml_profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "XmlProfile",
+          "plural": "XmlProfiles"
         }
       },
       "rest": {
@@ -3185,6 +3237,36 @@
           "linking.target.fields": []
         }
       }
+    },
+    "EchoXml": {
+      "source": {
+        "object": "echo_xml",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "query",
+        "type": {
+          "singular": "EchoXml",
+          "plural": "EchoXml"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
     },
     "GetBooks": {
       "source": {

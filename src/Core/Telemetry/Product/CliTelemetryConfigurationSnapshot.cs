@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Core.Telemetry.Product
 {
@@ -235,7 +236,15 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                     Consume(ref _modelNodes);
                     Require(entity is not null && entity.Source is not null);
                     originalEntities.Add(name, entity);
-                    entityToDataSource.Add(name, original.GetDataSourceNameFromEntityName(name));
+                    try
+                    {
+                        entityToDataSource.Add(name, original.GetDataSourceNameFromEntityName(name));
+                    }
+                    catch (DataApiBuilderException)
+                    {
+                        // Source mapping is optional when effective caching is unavailable.
+                    }
+
                     entities.Add(name, new Entity(
                         new EntitySource(string.Empty, entity.Source.Type, null, null),
                         new EntityGraphQLOptions(string.Empty, string.Empty, entity.IsGraphQLEnabled), null,

@@ -263,8 +263,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 JsonDocument? queryResult = await queryEngine.ExecuteAsync(context);
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 IActionResult actionResult = queryResult is null
-                    ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), context, sqlMetadataProvider, runtimeConfig, httpContext, true)
-                    : SqlResponseHelpers.FormatFindResult(queryResult.RootElement.Clone(), context, sqlMetadataProvider, runtimeConfig, httpContext, true);
+                    ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), context, sqlMetadataProvider, runtimeConfig, httpContext, authResolver, true)
+                    : SqlResponseHelpers.FormatFindResult(queryResult.RootElement.Clone(), context, sqlMetadataProvider, runtimeConfig, httpContext, authResolver, true);
 
                 // Normalize response
                 string rawPayloadJson = McpResponseBuilder.ExtractResultJson(actionResult);
@@ -292,6 +292,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             catch (ArgumentException argEx)
             {
                 return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", argEx.Message, logger);
+            }
+            catch (DataApiBuilderException argEx) when (argEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed)
+            {
+                return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", argEx.Message, logger);
             }
             catch (DataApiBuilderException argEx)
             {

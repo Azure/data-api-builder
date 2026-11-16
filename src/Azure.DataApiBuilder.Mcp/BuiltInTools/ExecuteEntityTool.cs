@@ -241,6 +241,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     cancellationToken.ThrowIfCancellationRequested();
                     queryResult = await queryEngine.ExecuteAsync(context, dataSourceName).ConfigureAwait(false);
                 }
+                catch (DataApiBuilderException dabEx) when (dabEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.DatabaseInputError)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, nameof(DataApiBuilderException.SubStatusCodes.DatabaseInputError), dabEx.Message, logger);
+                }
                 catch (DataApiBuilderException dabEx)
                 {
                     // Handle specific DAB exceptions

@@ -46,10 +46,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public const string SINGLE_INPUT_ARGUEMENT_NAME = "item";
         public const string MULTIPLE_INPUT_ARGUEMENT_NAME = "items";
 
-        private static DataApiBuilderException _dabExceptionWithTransactionErrorMessage = new(message: TRANSACTION_EXCEPTION_ERROR_MSG,
-                                                                                            statusCode: HttpStatusCode.InternalServerError,
-                                                                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-
         /// <summary>
         /// Constructor
         /// </summary>
@@ -257,9 +253,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // derive from TransactionException. Hence, TransactionException acts as a catch-all.
             // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
             // a DataApiBuilderException is thrown
-            catch (TransactionException)
+            catch (TransactionException transactionException)
             {
-                throw _dabExceptionWithTransactionErrorMessage;
+                throw CreateTransactionFailedException(transactionException);
             }
 
             if (!isReadPermissionConfigured)
@@ -379,9 +375,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // derive from TransactionException. Hence, TransactionException acts as a catch-all.
             // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
             // a DataApiBuilderException is thrown
-            catch (TransactionException)
+            catch (TransactionException transactionException)
             {
-                throw _dabExceptionWithTransactionErrorMessage;
+                throw CreateTransactionFailedException(transactionException);
             }
 
             // A note on returning stored procedure results:
@@ -494,9 +490,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // derive from TransactionException. Hence, TransactionException acts as a catch-all.
                 // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
                 // a DataApiBuilderException is thrown
-                catch (TransactionException)
+                catch (TransactionException transactionException)
                 {
-                    throw _dabExceptionWithTransactionErrorMessage;
+                    throw CreateTransactionFailedException(transactionException);
                 }
 
                 // Records affected tells us that item was successfully deleted.
@@ -649,9 +645,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // derive from TransactionException. Hence, TransactionException acts as a catch-all.
                         // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
                         // a DataApiBuilderException is thrown
-                        catch (TransactionException)
+                        catch (TransactionException transactionException)
                         {
-                            throw _dabExceptionWithTransactionErrorMessage;
+                            throw CreateTransactionFailedException(transactionException);
                         }
 
                         Dictionary<string, object?> resultRow = upsertOperationResultSetRow.Columns;
@@ -767,9 +763,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // derive from TransactionException. Hence, TransactionException acts as a catch-all.
                         // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
                         // a DataApiBuilderException is thrown
-                        catch (TransactionException)
+                        catch (TransactionException transactionException)
                         {
-                            throw _dabExceptionWithTransactionErrorMessage;
+                            throw CreateTransactionFailedException(transactionException);
                         }
 
                         // When read permission is configured without a database policy, a subsequent select query will not be executed.
@@ -2435,6 +2431,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return string.Empty;
+        }
+
+        /// <summary>
+        /// Creates the exception thrown when a mutation's transaction fails. A new instance is created per failure and the
+        /// caught exception is kept as the inner exception, so the underlying database error (for example a commit-time
+        /// write conflict) stays available to logging and error classification.
+        /// </summary>
+        /// <param name="transactionException">Exception thrown by the transaction scope.</param>
+        /// <returns>DataApiBuilderException wrapping the transaction exception.</returns>
+        internal static DataApiBuilderException CreateTransactionFailedException(TransactionException transactionException)
+        {
+            return new DataApiBuilderException(
+                message: TRANSACTION_EXCEPTION_ERROR_MSG,
+                statusCode: HttpStatusCode.InternalServerError,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError,
+                innerException: transactionException);
         }
 
         /// <summary>

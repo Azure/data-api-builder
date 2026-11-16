@@ -7,6 +7,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -31,6 +32,14 @@ public record RuntimeConfig
     public virtual RuntimeEntities Entities { get; init; }
 
     public DataSourceFiles? DataSourceFiles { get; init; }
+
+    /// <summary>
+    /// Bounded, value-free input provenance captured only for opted-in synthetic product telemetry.
+    /// Preserved by record clones; never serialized or populated from customer configuration.
+    /// Recapture or clear it when replacing entity definitions programmatically.
+    /// </summary>
+    [JsonIgnore]
+    public TelemetryConfigurationPresence? TelemetryPresence { get; init; }
 
     /// <summary>
     /// Indicates whether this config was loaded as a child via another config's data-source-files.

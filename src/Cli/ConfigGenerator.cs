@@ -3072,7 +3072,12 @@ namespace Cli
         /// overrides > environmentConfig > defaultConfig
         /// Also preforms validation to check connection string is not null or empty.
         /// </summary>
-        public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        /// <param name="startEngine">Receives the engine args; defaults to launching the engine.</param>
+        public static bool TryStartEngineWithOptions(
+            StartOptions options,
+            FileSystemRuntimeConfigLoader loader,
+            IFileSystem fileSystem,
+            Func<string[], bool>? startEngine = null)
         {
             if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile, LogBuffer.Instance, options.ProductTelemetry))
             {
@@ -3247,11 +3252,13 @@ namespace Cli
             try
             {
                 Action? startupFailureObserved = options.ProductTelemetry is { } parent ? parent.ObserveEngineStartupFailure : null;
-                bool started = options.Dependencies.EngineLauncher is { } engineLauncher
-                    ? engineLauncher(engineArgs, launchContext, startupFailureObserved)
-                    : launchContext is null
-                        ? Azure.DataApiBuilder.Service.Program.StartEngine(engineArgs)
-                        : Azure.DataApiBuilder.Service.Program.StartEngine(engineArgs, launchContext, startupFailureObserved);
+                bool started = startEngine is not null
+                    ? startEngine(engineArgs)
+                    : options.Dependencies.EngineLauncher is { } engineLauncher
+                        ? engineLauncher(engineArgs, launchContext, startupFailureObserved)
+                        : launchContext is null
+                            ? Azure.DataApiBuilder.Service.Program.StartEngine(engineArgs)
+                            : Azure.DataApiBuilder.Service.Program.StartEngine(engineArgs, launchContext, startupFailureObserved);
                 if (!started)
                 {
                     options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ExecutionFailure, CliTelemetryFailureCategory.Initialization);

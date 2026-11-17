@@ -207,6 +207,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                             entityList.Add(entityInfo);
                         }
+                        catch (OperationCanceledException)
+                        {
+                            throw;
+                        }
                         catch (Exception ex)
                         {
                             logger?.LogWarning(ex, "Failed to build info for entity '{EntityName}'", entityName);

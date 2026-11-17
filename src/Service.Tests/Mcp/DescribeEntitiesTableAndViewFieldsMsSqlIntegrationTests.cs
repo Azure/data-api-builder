@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -75,6 +76,40 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertField(fields, name: "id", expectedDescription: string.Empty, expectedPrimaryKey: true, expectedDataType: "integer");
             AssertField(fields, name: "title", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "string");
             AssertField(fields, name: "publisher_id", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "integer");
+        }
+
+        /// <summary>
+        /// Table covering all SQL scalar families ('SupportedType' -> dbo.type_table, where config
+        /// aliases 'id' -> 'typeid' with primary-key: false) preserves the DB primary key on 'typeid'
+        /// and maps integer, floating/decimal, boolean, temporal, binary, and UUID columns accurately.
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_SupportedTypeTable_MapsScalarColumnDataTypesAndPreservesAliasedDbPrimaryKey()
+        {
+            JsonElement fields = await DescribeEntityFieldsAsync(
+                entityKey: "SupportedType",
+                expectedDisplayName: "SupportedType");
+
+            Assert.AreEqual(19, fields.GetArrayLength());
+            AssertField(fields, name: "typeid", expectedDescription: string.Empty, expectedPrimaryKey: true, expectedDataType: "integer");
+            AssertField(fields, name: "byte_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "integer");
+            AssertField(fields, name: "short_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "integer");
+            AssertField(fields, name: "int_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "integer");
+            AssertField(fields, name: "long_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "integer");
+            AssertField(fields, name: "single_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "number");
+            AssertField(fields, name: "float_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "number");
+            AssertField(fields, name: "decimal_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "number");
+            AssertField(fields, name: "boolean_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "boolean");
+            AssertField(fields, name: "string_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "string");
+            AssertField(fields, name: "nvarchar_string_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "string");
+            AssertField(fields, name: "date_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "string");
+            AssertField(fields, name: "datetime_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "string");
+            AssertField(fields, name: "datetime2_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "string");
+            AssertField(fields, name: "datetimeoffset_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "string");
+            AssertField(fields, name: "smalldatetime_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "string");
+            AssertField(fields, name: "time_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "string");
+            AssertField(fields, name: "bytearray_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "string");
+            AssertField(fields, name: "uuid_types", expectedDescription: string.Empty, expectedPrimaryKey: false, expectedDataType: "string");
         }
 
         /// <summary>
@@ -184,6 +219,87 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertField(fields, name: "bookId", expectedDescription: string.Empty, expectedPrimaryKey: true, expectedDataType: "integer");
             AssertField(fields, name: "title", expectedDescription: "Human-readable book title", expectedPrimaryKey: false, expectedDataType: "string");
         }
+
+        /// <summary>
+        /// Degraded fallback: when DB metadata is unavailable for a table/view entity (e.g., non-SQL
+        /// provider such as Cosmos DB where EntityToDatabaseObject is empty), config-declared fields
+        /// are projected while still enforcing role column-level authorization from a consistent
+        /// AuthorizationResolver initialized against that same provider.
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_WhenDatabaseMetadataUnavailable_FallsBackToConfigFields()
+        {
+            const string EntityName = "CosmosFallbackBook";
+
+            Entity fallbackEntity = new(
+                Source: new("books", EntitySourceType.Table, Parameters: null, KeyFields: null),
+                GraphQL: new(EntityName, EntityName),
+                Rest: new(Enabled: false),
+                Fields: new List<FieldMetadata>
+                {
+                    new() { Name = "id", PrimaryKey = true, Description = "Document identifier" },
+                    new() { Name = "title", Description = "Book title" },
+                    new() { Name = "internal_cost", Description = "Restricted cost" }
+                },
+                Permissions: new[]
+                {
+                    new EntityPermission(
+                        Role: AuthorizationResolver.ROLE_ANONYMOUS,
+                        Actions: new[]
+                        {
+                            new EntityAction(
+                                Action: EntityActionOperation.Read,
+                                Fields: new EntityActionFields(
+                                    Exclude: new HashSet<string> { "internal_cost" },
+                                    Include: null),
+                                Policy: null)
+                        })
+                },
+                Relationships: null,
+                Mappings: null,
+                Mcp: null);
+
+            RuntimeConfig fallbackConfig = _baseConfig with
+            {
+                DataSource = _baseConfig.DataSource with { DatabaseType = DatabaseType.CosmosDB_NoSQL },
+                Entities = new(new Dictionary<string, Entity> { [EntityName] = fallbackEntity })
+            };
+
+            RuntimeConfigProvider fallbackConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(fallbackConfig);
+
+            Mock<ISqlMetadataProvider> unpopulatedProvider = new();
+            unpopulatedProvider.Setup(x => x.EntityToDatabaseObject).Returns(new Dictionary<string, DatabaseObject>());
+            unpopulatedProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.CosmosDB_NoSQL);
+            unpopulatedProvider
+                .Setup(x => x.GetSchemaGraphQLFieldNamesForEntityName(EntityName))
+                .Returns(new List<string> { "id", "title", "internal_cost" });
+            string? exposedOut = null;
+            unpopulatedProvider
+                .Setup(x => x.TryGetExposedColumnName(EntityName, It.IsAny<string>(), out exposedOut))
+                .Callback(new TryGetExposedCallback((string _, string backing, out string? exposed) => exposed = backing))
+                .Returns(true);
+
+            Mock<IMetadataProviderFactory> unpopulatedFactory = new();
+            unpopulatedFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(unpopulatedProvider.Object);
+
+            AuthorizationResolver consistentAuthResolver = new(fallbackConfigProvider, unpopulatedFactory.Object);
+
+            IServiceProvider serviceProvider = BuildDescribeEntitiesServiceProvider(
+                fallbackConfigProvider,
+                unpopulatedFactory.Object,
+                consistentAuthResolver);
+
+            JsonElement fields = await DescribeEntityFieldsAsync(
+                entityKey: EntityName,
+                expectedDisplayName: EntityName,
+                serviceProvider: serviceProvider);
+
+            Assert.AreEqual(2, fields.GetArrayLength());
+            AssertField(fields, name: "id", expectedDescription: "Document identifier", expectedPrimaryKey: true, expectedDataType: null);
+            AssertField(fields, name: "title", expectedDescription: "Book title", expectedPrimaryKey: false, expectedDataType: null);
+        }
+
+        private delegate void TryGetExposedCallback(string entityName, string backingFieldName, out string? exposedName);
 
         private static Task<JsonElement> DescribeEntityFieldsAsync(string entityKey, string expectedDisplayName) =>
             DescribeEntityFieldsAsync(
@@ -311,7 +427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             string name,
             string expectedDescription,
             bool expectedPrimaryKey,
-            string expectedDataType)
+            string? expectedDataType)
         {
             JsonElement field = fields.EnumerateArray()
                 .Single(f => f.GetProperty("name").GetString() == name);
@@ -320,8 +436,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 $"description mismatch for field '{name}'.");
             Assert.AreEqual(expectedPrimaryKey, field.GetProperty("primaryKey").GetBoolean(),
                 $"primaryKey mismatch for field '{name}'.");
-            Assert.AreEqual(expectedDataType, field.GetProperty("dataType").GetString(),
-                $"dataType mismatch for field '{name}'.");
+
+            JsonElement dataTypeElement = field.GetProperty("dataType");
+            if (expectedDataType is null)
+            {
+                Assert.AreEqual(JsonValueKind.Null, dataTypeElement.ValueKind,
+                    $"dataType should be JSON null for field '{name}'.");
+            }
+            else
+            {
+                Assert.AreEqual(expectedDataType, dataTypeElement.GetString(),
+                    $"dataType mismatch for field '{name}'.");
+            }
         }
     }
 }

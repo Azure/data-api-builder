@@ -10,6 +10,7 @@ using System.Text;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -101,6 +102,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   httpContextAccessor,
                   handler)
         {
+            SqlClientAuthentication.RegisterProviders();
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
             _dataSourceUserDelegatedAuth = new Dictionary<string, UserDelegatedAuthOptions>();

@@ -288,6 +288,34 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreNotEqual(0d, (double)scalar!);
         }
 
+        /// <summary>
+        /// ORDER BY pagination must keep tiny fractions in the encoded cursor, not zero.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("1e-30", 1e-30, DisplayName = "positive tiny ORDER BY fraction")]
+        [DataRow("-1e-30", -1e-30, DisplayName = "negative tiny ORDER BY fraction")]
+        public void MakeCursorFromJsonElement_PreservesTinyOrderByFraction(string json, double expected)
+        {
+            using JsonDocument document = JsonDocument.Parse($"{{\"score\":{json},\"id\":1}}");
+
+            string cursor = SqlPaginationUtil.MakeCursorFromJsonElement(
+                document.RootElement,
+                new List<string> { "id" },
+                new List<OrderByColumn> { new("dbo", "books", "score", "b", OrderBy.ASC) },
+                CreateAuthorizationResolver(),
+                "reader",
+                entityName: "Book");
+            using JsonDocument cursorDocument = JsonDocument.Parse(SqlPaginationUtil.Base64Decode(cursor));
+
+            JsonElement scoreEntry = cursorDocument.RootElement.EnumerateArray()
+                .First(e => e.GetProperty("FieldName").GetString() == "score");
+            string fieldValueText = scoreEntry.GetProperty("FieldValue").GetRawText();
+
+            object parsed = InvokeParseParamAsSystemType(fieldValueText, typeof(double));
+            Assert.AreEqual(expected, (double)parsed);
+            Assert.AreNotEqual(0d, (double)parsed);
+        }
+
         [TestMethod]
         public void MakeCursorFromJsonElement_GroupByOmitsPrimaryKeys()
         {

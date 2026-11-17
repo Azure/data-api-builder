@@ -3,5 +3,5 @@
 **/obj
 **/out
 **/TestResults
-.env
-.env.*
+**/.env
+**/.env.*

@@ -3,8 +3,10 @@
 
 using System.Data.Common;
 using System.Text;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Microsoft.Data.SqlClient;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -30,6 +32,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return _builder.QuoteIdentifier(ident);
         }
 
+        protected override string Build(OrderByColumn column, bool printDirection = true)
+        {
+            if (string.IsNullOrEmpty(column.TableSchema) && string.IsNullOrEmpty(column.TableName) && string.IsNullOrEmpty(column.TableAlias))
+            {
+                return QuoteIdentifier(column.ColumnName) + (printDirection ? $" {column.Direction}" : string.Empty);
+            }
+
+            return base.Build(column, printDirection);
+        }
+
         /// <summary>
         /// Builds the sql query that will return the json result for DW.
         /// Sample: Get title of all books.
@@ -52,6 +64,44 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 return BuildWithStringAgg(structure);
             }
+        }
+
+        /// <inheritdoc />
+        public override string BuildAggregation(SqlQueryStructure structure, bool descending, int? offset = null, long? limit = null)
+        {
+            if (structure.GroupByMetadata.Fields.Count == 0 || (_enableNto1JoinOpt && HasToOneOrNoRelation(structure, false)))
+            {
+                return base.BuildAggregation(structure, descending, offset, limit);
+            }
+
+            // STRING_AGG wraps the grouped query. Order by its projected aggregate aliases
+            // inside that query, and preserve the same order during JSON serialization.
+            foreach (var aggregation in structure.GroupByMetadata.Aggregations)
+            {
+                structure.OrderByColumns.Add(new OrderByColumn(string.Empty, string.Empty,
+                    aggregation.Column.OperationAlias, direction: descending ? OrderBy.DESC : OrderBy.ASC));
+            }
+
+            string sql = Build(structure);
+            string suffix = $") AS {QuoteIdentifier(structure.SourceAlias)}";
+            if (!sql.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("The DWSQL grouped aggregate query does not end with the expected derived-table alias.");
+            }
+
+            if (limit.HasValue)
+            {
+                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit.Value);
+                ArgumentOutOfRangeException.ThrowIfNegative(offset ?? 0);
+                string offsetParameter = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
+                structure.Parameters.Add(offsetParameter, new DbConnectionParam(offset ?? 0));
+                string limitParameter = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
+                structure.Parameters.Add(limitParameter, new DbConnectionParam(limit.Value));
+                sql = sql.Insert(sql.Length - suffix.Length, $" OFFSET {offsetParameter} ROWS FETCH NEXT {limitParameter} ROWS ONLY");
+                sql = Regex.Replace(sql, @"SELECT TOP \d+", "SELECT");
+            }
+
+            return sql;
         }
 
         /// <summary>
@@ -288,7 +338,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return $"JSON_OBJECT({joinedColumns})";
         }
 
-        private static string GenerateColumnsAsJson(SqlQueryStructure structure, bool subQueryStructure = false)
+        private string GenerateColumnsAsJson(SqlQueryStructure structure, bool subQueryStructure = false)
         {
             string columns;
             StringBuilder stringAgg = new();
@@ -364,6 +414,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             columns = $"STRING_AGG(\'{{\'+{stringAgg}+\'}}\',', ')";
+            if (structure.GroupByMetadata.Fields.Any() && structure.OrderByColumns.Any())
+            {
+                string ordering = string.Join(", ", structure.OrderByColumns.Select(column =>
+                {
+                    string label = structure.Columns.FirstOrDefault(projected => projected.ColumnName == column.ColumnName)?.Label
+                        ?? column.ColumnName;
+                    return $"{QuoteIdentifier(label)} {column.Direction}";
+                }));
+                columns += $" WITHIN GROUP (ORDER BY {ordering})";
+            }
+
             if (structure.IsListQuery)
             {
                 // Array wrappers if we are trying to get a list of objects.

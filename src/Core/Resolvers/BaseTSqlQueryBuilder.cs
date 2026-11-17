@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Orders grouped aggregates and applies T-SQL offset pagination before JSON serialization.
         /// </summary>
-        public string BuildAggregation(SqlQueryStructure structure, bool descending, int? offset = null, long? limit = null)
+        public virtual string BuildAggregation(SqlQueryStructure structure, bool descending, int? offset = null, long? limit = null)
         {
             string sql = Build(structure);
             if (structure.GroupByMetadata.Fields.Count == 0)

@@ -106,9 +106,9 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
         }
     }
 
-    protected override async Task<DataTable> FillSchemaForTableAsync(string schemaName, string tableName, CancellationToken cancellationToken)
+    protected override async Task<DataTable> FillSchemaForTableAsync(string entityName, string schemaName, string tableName, CancellationToken cancellationToken)
     {
-        DataTable table = await base.FillSchemaForTableAsync(schemaName, tableName, cancellationToken);
+        DataTable table = await base.FillSchemaForTableAsync(entityName, schemaName, tableName, cancellationToken);
         if (table.PrimaryKey.Length == 0)
         {
             // The Oracle adapter can omit keys on BY DEFAULT ON NULL identities.

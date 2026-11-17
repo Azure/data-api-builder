@@ -686,6 +686,30 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     FROM all_tables AS o
                     JOIN sys.objects AS so
                         ON so.object_id = o.object_id
+                ),
+                tables_with_invalid_types AS
+                (
+                    SELECT c.object_id
+                    FROM sys.columns AS c
+                    JOIN sys.types AS ty
+                        ON c.user_type_id = ty.user_type_id
+                    WHERE ty.name IN (N'sql_variant', N'rowversion')
+                        -- Columns of CLR types such as geometry are skipped, which only fails when they are in the primary key.
+                        OR
+                        (
+                            ty.is_assembly_type = 1
+                            AND EXISTS
+                            (
+                                SELECT 1
+                                FROM sys.index_columns AS ic
+                                JOIN sys.indexes AS i
+                                    ON i.object_id = ic.object_id
+                                    AND i.index_id = ic.index_id
+                                WHERE ic.object_id = c.object_id
+                                    AND ic.column_id = c.column_id
+                                    AND i.is_primary_key = 1
+                            )
+                        )
                 )
                 SELECT
                     a.schema_name AS [schema],
@@ -698,22 +722,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 )
                     END AS entity_name,
                     CASE
-                        WHEN EXISTS
-                        (
-                            SELECT 1
-                            FROM sys.columns AS c
-                            JOIN sys.types AS ty
-                                ON c.user_type_id = ty.user_type_id
-                            WHERE c.object_id = a.object_id
-                                AND ty.name IN
-                                (
-                                    N'geography',
-                                    N'geometry',
-                                    N'hierarchyid',
-                                    N'sql_variant',
-                                    N'rowversion'
-                                )
-                        ) THEN 1
+                        WHEN a.object_id IN (SELECT object_id FROM tables_with_invalid_types) THEN 1
                         ELSE 0
                     END AS contains_invalid_types
                 FROM eligible_tables AS a
@@ -742,22 +751,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     AND
                     (
                         @exclude_invalid_types = 0
-                        OR NOT EXISTS
-                        (
-                            SELECT 1
-                            FROM sys.columns AS c
-                            JOIN sys.types AS ty
-                                ON c.user_type_id = ty.user_type_id
-                            WHERE c.object_id = a.object_id
-                                AND ty.name IN
-                                (
-                                    N'geography',
-                                    N'geometry',
-                                    N'hierarchyid',
-                                    N'sql_variant',
-                                    N'rowversion'
-                                )
-                        )
+                        OR a.object_id NOT IN (SELECT object_id FROM tables_with_invalid_types)
                     )
                 ORDER BY
                     a.schema_name,

@@ -225,7 +225,7 @@ public class OracleProviderTests
 
         System.Text.RegularExpressions.Match pagination = Regex.Match(sql, @"OFFSET (@param\d+) ROWS FETCH NEXT (@param\d+) ROWS ONLY");
         Assert.IsTrue(pagination.Success, sql);
-        StringAssert.Contains(sql, "ORDER BY count(");
+        StringAssert.Contains(sql, databaseType == DatabaseType.DWSQL ? "ORDER BY [count_id] DESC" : "ORDER BY count(");
         Assert.IsFalse(sql.Contains("SELECT TOP", StringComparison.Ordinal));
         Assert.AreEqual(originalParameterCount + 2, query.Parameters.Count);
         Assert.AreEqual(4, query.Parameters[pagination.Groups[1].Value].Value);

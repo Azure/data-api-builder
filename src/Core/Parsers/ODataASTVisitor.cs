@@ -34,6 +34,8 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <returns>String concatenation of (left op right).</returns>
         public override string Visit(BinaryOperatorNode nodeIn)
         {
+            ODataStringFunctionHelper.ThrowIfFunctionIsCompared(nodeIn);
+
             // In order traversal but add parens to maintain order of logical operations
             string left = nodeIn.Left.Accept(this);
             string right = nodeIn.Right.Accept(this);
@@ -71,13 +73,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <returns>String representing the Field name</returns>
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
-            _metadataProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? backingColumnName);
-            if (_operation is EntityActionOperation.Create)
-            {
-                _struct.FieldsReferencedInDbPolicyForCreateAction.Add(backingColumnName!);
-            }
-
-            return _metadataProvider.GetQueryBuilder().QuoteIdentifier(backingColumnName!);
+            return _metadataProvider.GetQueryBuilder().QuoteIdentifier(GetBackingColumn(nodeIn));
         }
 
         /// <summary>
@@ -107,6 +103,33 @@ namespace Azure.DataApiBuilder.Core.Parsers
         {
             // call accept on source to keep traversing AST.
             return nodeIn.Source.Accept(this);
+        }
+
+        /// <summary>
+        /// Represents visiting a SingleValueFunctionCallNode for the string functions
+        /// contains, startswith and endswith. These are translated to a LIKE predicate whose
+        /// pattern is a single parameter, with LIKE wildcards in the search value escaped.
+        /// </summary>
+        /// <param name="nodeIn">The node visited.</param>
+        /// <returns>String representing the LIKE predicate.</returns>
+        public override string Visit(SingleValueFunctionCallNode nodeIn)
+        {
+            (LikeMatch match, SingleValuePropertyAccessNode field, string value) = ODataStringFunctionHelper.GetFieldAndValue(nodeIn);
+            IQueryBuilder queryBuilder = _metadataProvider.GetQueryBuilder();
+            string backingColumnName = GetBackingColumn(field);
+            string param = _struct.MakeDbConnectionParam(SqlLikePattern.Create(match, value), backingColumnName, lengthOverride: true);
+            return $"({queryBuilder.BuildLikePredicate(queryBuilder.QuoteIdentifier(backingColumnName), param)})";
+        }
+
+        private string GetBackingColumn(SingleValuePropertyAccessNode nodeIn)
+        {
+            _metadataProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? backingColumnName);
+            if (_operation is EntityActionOperation.Create)
+            {
+                _struct.FieldsReferencedInDbPolicyForCreateAction.Add(backingColumnName!);
+            }
+
+            return backingColumnName!;
         }
 
         ///<summary>

@@ -77,5 +77,20 @@ namespace Azure.DataApiBuilder.Core.Parsers
         {
             return nodeIn.Source.Accept(this);
         }
+
+        /// <summary>
+        /// Represents visiting a SingleValueFunctionCallNode, such as contains.
+        /// Calls accept on each argument to keep traversing AST.
+        /// </summary>
+        /// <param name="nodeIn">The node visited.</param>
+        public override object? Visit(SingleValueFunctionCallNode nodeIn)
+        {
+            foreach (QueryNode parameter in nodeIn.Parameters)
+            {
+                parameter.Accept(this);
+            }
+
+            return null;
+        }
     }
 }

@@ -64,11 +64,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="predicate"></param>
         /// <returns></returns>
-        private static string AddEscapeToLikeClauses(string predicate)
+        internal static string AddEscapeToLikeClauses(string predicate)
         {
             const string escapeClause = $" ESCAPE '{MSSQL_ESCAPE_CHAR}'";
             // Regex to find LIKE clauses and append ESCAPE
-            return Regex.Replace(predicate, @"(LIKE\s+@[\w\d]+)", $"$1{escapeClause}", RegexOptions.IgnoreCase);
+            return Regex.Replace(predicate, @"(LIKE\s+@\w+)\b(?!\s+ESCAPE)", $"$1{escapeClause}", RegexOptions.IgnoreCase);
+        }
+
+        /// <inheritdoc />
+        public string BuildLikePredicate(string column, string pattern)
+        {
+            return $"{column} LIKE {pattern} ESCAPE '{MSSQL_ESCAPE_CHAR}'";
         }
 
         /// <inheritdoc />

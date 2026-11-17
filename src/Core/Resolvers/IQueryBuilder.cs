@@ -91,6 +91,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public string QuoteTableNameAsDBConnectionParam(string param);
 
+        /// <summary>
+        /// Builds a LIKE predicate for a pattern whose wildcards are escaped with a backslash.
+        /// </summary>
+        string BuildLikePredicate(string column, string pattern) => $"{column} LIKE {pattern}";
+
         public string BuildGetAutoentitiesQuery() => throw new NotSupportedException($"{GetType().Name} does not support Autoentities yet.");
     }
 }

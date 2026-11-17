@@ -7,7 +7,7 @@ ARG TARGETARCH
 WORKDIR /src
 COPY [".", "./"]
 RUN dotnet publish "./src/Service/Azure.DataApiBuilder.Service.csproj" \
-    -c Docker -o /out -a "$TARGETARCH" --self-contained false -p:UseAppHost=false
+    -c Docker -o /out -a "$TARGETARCH" --self-contained false
 
 # ---------------------------------------------------------------------------
 # Common runtime base.

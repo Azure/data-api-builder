@@ -4,6 +4,8 @@ The Dockerfile supports `linux/amd64` and `linux/arm64`. The SDK runs on the
 builder's native architecture and cross-compiles for the requested platform;
 the ASP.NET runtime base image is selected for that platform. Both the default
 `runtime` target and the opt-in `runtime-nonroot` target support these platforms.
+Both images include the native launcher at `/App/Azure.DataApiBuilder.Service`;
+the default entrypoint remains `dotnet Azure.DataApiBuilder.Service.dll`.
 
 ## Local build
 
@@ -64,4 +66,5 @@ docker buildx imagetools inspect mcr.microsoft.com/azure-databases/data-api-buil
 Both must list `linux/amd64` and `linux/arm64`. Provenance attestations may also
 appear as `unknown/unknown`; these do not replace the required platform images.
 The `Container build` workflow builds both variants on native x64 and ARM64
-runners and checks the application's runtime identifier and non-root log access.
+runners and checks the application's runtime identifier, native launcher, and
+non-root log access.

@@ -55,7 +55,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           load: true
           tags: dab:container-test
-      - name: Check runtime and application architecture
+      - name: Check runtime, application architecture, and native launcher
         env:
           ARCH: ${{ matrix.arch }}
           TARGET: ${{ matrix.target }}
@@ -65,6 +65,15 @@ jobs:
             test -s /App/dab-config.json
             grep -F "\"name\": \".NETCoreApp,Version=v10.0/linux-$1\"" \
               /App/Azure.DataApiBuilder.Service.deps.json
+            test -x /App/Azure.DataApiBuilder.Service
+            if launcher_output=$(ASPNETCORE_URLS=invalid /App/Azure.DataApiBuilder.Service 2>&1); then
+              echo "Expected the launcher to reject an invalid ASPNETCORE_URLS" >&2
+              exit 1
+            fi
+            if ! printf "%s\n" "$launcher_output" | grep -F "Invalid ASPNETCORE_URLS format"; then
+              printf "%s\n" "$launcher_output" >&2
+              exit 1
+            fi
             if [ "$2" = runtime-nonroot ]; then
               test "$(id -u)" = "$APP_UID"
               touch /App/logs/container-test

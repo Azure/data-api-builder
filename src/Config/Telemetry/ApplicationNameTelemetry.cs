@@ -622,6 +622,7 @@ public static class ApplicationNameTelemetry
         'D' => "DWSQL",
         'P' => "PostgreSQL",
         'M' => "MySQL",
+        'O' => "Oracle",
         'C' => "CosmosDB",
         NOT_APPLICABLE => "not applicable",
         _ => "unrecognized",

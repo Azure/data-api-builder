@@ -296,7 +296,8 @@ internal sealed class OracleTestFixture
     internal OracleQueryBuilder Builder { get; } = new();
     internal RuntimeConfigProvider Config { get; }
     internal OracleQueryExecutor Executor { get; }
-    internal HttpContextAccessor Http { get; } = new() { HttpContext = new DefaultHttpContext() };
+    // Keep fixture state local instead of changing HttpContextAccessor's shared ambient context.
+    internal IHttpContextAccessor Http { get; } = Mock.Of<IHttpContextAccessor>(accessor => accessor.HttpContext == new DefaultHttpContext());
     internal Mock<ISqlMetadataProvider> Metadata { get; } = new();
     internal Mock<IAuthorizationResolver> Authorization { get; } = new();
     internal GQLFilterParser Filter { get; }

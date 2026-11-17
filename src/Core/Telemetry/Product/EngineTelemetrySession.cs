@@ -645,6 +645,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             DatabaseType.DWSQL => EngineTelemetryProvider.DwSql,
             DatabaseType.PostgreSQL => EngineTelemetryProvider.PostgreSql,
             DatabaseType.MySQL => EngineTelemetryProvider.MySql,
+            DatabaseType.Oracle => EngineTelemetryProvider.Oracle,
             DatabaseType.CosmosDB_NoSQL => EngineTelemetryProvider.CosmosDb,
             _ => EngineTelemetryProvider.Unknown
         };

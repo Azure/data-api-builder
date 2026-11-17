@@ -33,6 +33,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         private const string CHILD_FILE = PRIVATE_VALUE + ".json";
 
         [TestMethod]
+        public void OracleConfigurationContextPreservesProviderAndUnsupportedCapabilities()
+        {
+            RuntimeConfig config = NewConfig(source: new(DatabaseType.Oracle, PRIVATE_VALUE));
+
+            var properties = Properties(CliTelemetryConfigurationSnapshot.Create(config));
+
+            Assert.AreEqual("oracle", properties["data_sources.types"]);
+            Assert.AreEqual("1", properties["data_sources.distinct_type_count"]);
+            foreach (string capability in new[] { "data_sources.obo", "data_sources.session_context" })
+            {
+                Assert.AreEqual("unsupported", properties[capability + ".configured"]);
+                Assert.AreEqual("unsupported", properties[capability + ".effective"]);
+            }
+
+            Assert.IsFalse(JsonSerializer.Serialize(properties).Contains(PRIVATE_VALUE, StringComparison.Ordinal));
+        }
+
+        [TestMethod]
         public void UnknownIsReusableAndHasTheWholeSchemaWithoutInventedDefaults()
         {
             CliTelemetryConfigurationSnapshot unknown = CliTelemetryConfigurationSnapshot.Unknown;

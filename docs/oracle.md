@@ -8,6 +8,12 @@ Oracle query connections use the shared retry policy (two retries with exponenti
 
 Query and metadata sessions identify DAB through Oracle's `MODULE` session attribute, using `DAB_APP_NAME_ENV` when set or the default DAB user agent. The name is limited to 48 UTF-8 bytes without splitting characters and is reapplied on each connection open.
 
+## Product telemetry
+
+When product telemetry is enabled for validation, Oracle configurations, operations, and database attempts are classified as `oracle`. Repeated Oracle sources count as one distinct provider; CLI configurations mixing Oracle with another known provider report `multiple`. Oracle's unsupported user-delegated authentication and SQL Server session-context options are reported as `unsupported` in configuration snapshots.
+
+The application-name token encoder and decoder recognise Oracle's `O` source code. Oracle sessions still use the `MODULE` application tag described above; they do not receive the longer configuration token. See the [telemetry field guide](telemetry.md) for collection gates and opt-out behavior.
+
 ## Binary columns
 
 `RAW` and `BLOB` columns use base64 strings in REST and GraphQL, including mutation responses and nested relationships. Input values must also be base64 strings. `RAW(16)` keys are exposed as the stored 16 bytes encoded in base64; they are not converted to formatted UUID strings.

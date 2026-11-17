@@ -4000,7 +4000,10 @@ namespace Cli
 
             try
             {
-                using SqlConnection connection = new(connectionString);
+                using SqlConnection connection = new(connectionString)
+                {
+                    RegisteredApplication = RegisteredApplication.DataApiBuilder
+                };
                 connection.Open();
 
                 foreach ((string filterName, Autoentity autoentity) in runtimeConfig.Autoentities.Autoentities)

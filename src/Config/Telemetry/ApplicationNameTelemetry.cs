@@ -417,7 +417,9 @@ public static class ApplicationNameTelemetry
                         SqlAuthenticationMethod.ActiveDirectoryDefault or SqlAuthenticationMethod.ActiveDirectoryWorkloadIdentity => MISSING,
                         SqlAuthenticationMethod.NotSpecified => sql.IntegratedSecurity
                             || !string.IsNullOrEmpty(sql.UserID) || !string.IsNullOrEmpty(sql.Password) ? '0' : MISSING,
+#pragma warning disable CS0618 // Classify legacy authentication without enabling it.
                         SqlAuthenticationMethod.SqlPassword or SqlAuthenticationMethod.ActiveDirectoryPassword
+#pragma warning restore CS0618
                             or SqlAuthenticationMethod.ActiveDirectoryIntegrated or SqlAuthenticationMethod.ActiveDirectoryInteractive
                             or SqlAuthenticationMethod.ActiveDirectoryServicePrincipal or SqlAuthenticationMethod.ActiveDirectoryDeviceCodeFlow => '0',
                         _ => MISSING,

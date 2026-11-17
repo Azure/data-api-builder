@@ -40,6 +40,44 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private const string TOTAL_DB_EXECUTION_TIME = "TotalDbExecutionTime";
 
         /// <summary>
+        /// SQL Server and DWSQL connections identify DAB before login without changing the connection string.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL)]
+        [DataRow(DatabaseType.DWSQL)]
+        public void CreateConnection_SetsRegisteredApplication(DatabaseType databaseType)
+        {
+            const string connectionString = "Server=localhost;Database=telemetry;Integrated Security=true;Application Name=custom;";
+            RuntimeConfig config = new(
+                Schema: "",
+                DataSource: new(databaseType, connectionString, new()),
+                Entities: new(new Dictionary<string, Entity>()));
+            using FileSystemRuntimeConfigLoader loader = new(new MockFileSystem()) { RuntimeConfig = config };
+            using RuntimeConfigProvider provider = new(loader);
+            Mock<DbExceptionParser> parser = new(provider);
+            MsSqlQueryExecutor executor = new(
+                provider, parser.Object, new Mock<ILogger<IQueryExecutor>>().Object, new HttpContextAccessor());
+
+            using SqlConnection connection = executor.CreateConnection(config.DefaultDataSourceName);
+
+            Assert.AreEqual(RegisteredApplication.DataApiBuilder, connection.RegisteredApplication);
+            Assert.AreEqual(ConnectionState.Closed, connection.State);
+            Assert.AreEqual(executor.ConnectionStringBuilders[config.DefaultDataSourceName].ConnectionString, connection.ConnectionString);
+        }
+
+        /// <summary>
+        /// Entra ID authentication remains available after upgrading SqlClient.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(SqlAuthenticationMethod.ActiveDirectoryDefault)]
+        [DataRow(SqlAuthenticationMethod.ActiveDirectoryManagedIdentity)]
+        [DataRow(SqlAuthenticationMethod.ActiveDirectoryServicePrincipal)]
+        public void SqlClient_RegistersAzureAuthenticationProvider(SqlAuthenticationMethod authenticationMethod)
+        {
+            Assert.IsNotNull(SqlAuthenticationProvider.GetProvider(authenticationMethod));
+        }
+
+        /// <summary>
         /// Validates managed identity token issued ONLY when connection string does not specify
         /// User, Password, and Authentication method.
         /// </summary>

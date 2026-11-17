@@ -21,6 +21,19 @@ dab_oss_2.0.0+XXSX|L1AC0M|110000M1M000MMMMMWMM|100?111001110?+
 
 It is opt-out (`DAB_TELEMETRY_APPNAME_OPT_OUT=1`), carries no secrets or identifiers, and is purely additive to the existing `Application Name` value.
 
+## SqlClient registered application identity
+
+SQL Server and DWSQL connections also set
+`SqlConnection.RegisteredApplication = RegisteredApplication.DataApiBuilder` before opening,
+including metadata discovery and CLI autoentity discovery. This requires SqlClient 7.1 or later;
+the Azure authentication extension remains included to preserve Entra ID authentication support.
+
+This fixed product identifier is independent of the application-name token and its opt-out.
+It contains no configuration or customer identifiers, is not part of the connection-pool key,
+and must not be used for authorization. SqlClient reports it during physical connection login;
+reused pooled connections retain the original identity, and background connections created for
+`Min Pool Size` report `Unknown`.
+
 ## Motivation
 
 DAB ships as an open-source container that customers run anywhere. We have very little visibility into how it is configured or which features are exercised. The connection's `Application Name` is a standard, low-cost signal that the database side already records, so encoding a small feature fingerprint there gives us aggregate usage insight with:

@@ -18,20 +18,68 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
 public class OracleMetadataValidationTests
 {
     [DataTestMethod]
-    [DataRow("LONG", "CLOB")]
-    [DataRow("LONG RAW", "BLOB")]
-    public void LegacyLongColumnsAreRejectedWithMigrationGuidance(string sqlType, string replacement)
+    [DataRow("LONG")]
+    [DataRow("LONG RAW")]
+    public void SkippedQuotedColumnCannotOverwriteSupportedColumnMetadata(string sqlType)
     {
         MetadataProbe metadata = CreateProvider();
         SourceDefinition source = new();
-        source.Columns.Add("PAYLOAD", new() { SystemType = sqlType == "LONG" ? typeof(string) : typeof(byte[]) });
+        source.Columns.Add("payload", new()
+        {
+            SystemType = typeof(decimal),
+            DatabaseTypeName = "NUMBER",
+            HasDefault = true,
+            DefaultValue = 7m
+        });
 
-        NotSupportedException error = Assert.ThrowsException<NotSupportedException>(() => metadata.Populate(source, Columns(sqlType)));
+        metadata.Populate(source, Columns(sqlType));
 
-        StringAssert.Contains(error.Message, "PAYLOAD");
-        StringAssert.Contains(error.Message, sqlType);
-        StringAssert.Contains(error.Message, replacement);
-        Assert.ThrowsException<NotSupportedException>(() => metadata.SqlToCLRType(sqlType));
+        Assert.AreEqual(1, source.Columns.Count);
+        Assert.AreEqual("NUMBER", source.Columns["payload"].DatabaseTypeName);
+        Assert.IsTrue(source.Columns["payload"].HasDefault);
+        Assert.AreEqual(7m, source.Columns["payload"].DefaultValue);
+    }
+
+    [DataTestMethod]
+    [DataRow("LONG")]
+    [DataRow("LONG RAW")]
+    [DataRow("BFILE")]
+    [DataRow("XMLTYPE")]
+    [DataRow("INTERVAL DAY(2) TO SECOND(6)")]
+    [DataRow("INTERVAL YEAR(2) TO MONTH")]
+    [DataRow("CUSTOM_OBJECT")]
+    public void UnsupportedOracleTypesAreExcludedFromSchemaProjection(string sqlType)
+    {
+        MetadataProbe metadata = CreateProvider();
+        SourceDefinition source = new();
+
+        // Once schema projection omits the field, catalog enrichment must not add it back.
+        metadata.Populate(source, Columns(sqlType));
+
+        Assert.IsFalse(OracleMetadataProvider.IsSupportedColumnType(sqlType));
+        Assert.AreEqual(0, source.Columns.Count);
+    }
+
+    [DataTestMethod]
+    [DataRow("NUMBER")]
+    [DataRow("FLOAT")]
+    [DataRow("BINARY_FLOAT")]
+    [DataRow("BINARY_DOUBLE")]
+    [DataRow("DATE")]
+    [DataRow("TIMESTAMP(6)")]
+    [DataRow("TIMESTAMP(9) WITH TIME ZONE")]
+    [DataRow("TIMESTAMP(6) WITH LOCAL TIME ZONE")]
+    [DataRow("CHAR")]
+    [DataRow("NCHAR")]
+    [DataRow("VARCHAR2")]
+    [DataRow("NVARCHAR2")]
+    [DataRow("CLOB")]
+    [DataRow("NCLOB")]
+    [DataRow("RAW")]
+    [DataRow("BLOB")]
+    public void SupportedOracleTypesRemainInSchemaProjection(string sqlType)
+    {
+        Assert.IsTrue(OracleMetadataProvider.IsSupportedColumnType(sqlType), sqlType);
     }
 
     [DataTestMethod]

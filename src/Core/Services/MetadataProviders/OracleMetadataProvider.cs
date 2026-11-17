@@ -3,6 +3,7 @@
 
 using System.Data;
 using System.Data.Common;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -35,6 +36,8 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
     /// <inheritdoc />
     protected override OracleConnection CreateConnection()
         => OracleQueryExecutor.ConfigureConnection(new OracleConnection());
+
+    protected override StringComparer SkippedColumnNameComparer => StringComparer.Ordinal;
 
     public override string GetDefaultSchemaName()
     {
@@ -108,13 +111,51 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
 
     protected override async Task<DataTable> FillSchemaForTableAsync(string entityName, string schemaName, string tableName, CancellationToken cancellationToken)
     {
-        DataTable table = await base.FillSchemaForTableAsync(entityName, schemaName, tableName, cancellationToken);
-        if (table.PrimaryKey.Length == 0)
+        using OracleConnection connection = CreateConnection();
+        connection.ConnectionString = ConnectionString;
+        await connection.OpenAsync(cancellationToken);
+        List<string> supportedColumns = new();
+        Dictionary<string, string> skippedColumns = new(SkippedColumnNameComparer);
+        using (OracleCommand catalog = connection.CreateCommand())
+        {
+            catalog.BindByName = true;
+            // Match SELECT * visibility: user-declared invisible columns have no COLUMN_ID.
+            catalog.CommandText = "SELECT COLUMN_NAME, DATA_TYPE FROM ALL_TAB_COLUMNS " +
+                "WHERE OWNER = :owner AND TABLE_NAME = :table_name AND COLUMN_ID IS NOT NULL ORDER BY COLUMN_ID";
+            catalog.Parameters.Add("owner", OracleDbType.Varchar2).Value = schemaName;
+            catalog.Parameters.Add("table_name", OracleDbType.Varchar2).Value = tableName;
+            using DbDataReader reader = await catalog.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                string name = reader.GetString(0);
+                string type = reader.GetString(1);
+                if (IsSupportedColumnType(type))
+                {
+                    supportedColumns.Add(SqlQueryBuilder.QuoteIdentifier(name));
+                }
+                else
+                {
+                    skippedColumns.Add(name, type);
+                }
+            }
+        }
+
+        if (supportedColumns.Count == 0 && skippedColumns.Count > 0)
+        {
+            // Do not send an empty projection to Oracle; report the shared initialization error.
+            RegisterSkippedColumns(entityName, schemaName, tableName, new DataTable(), skippedColumns, Array.Empty<string>());
+        }
+
+        string? schemaQuery = skippedColumns.Count == 0 ? null
+            : $"SELECT {string.Join(", ", supportedColumns)} FROM {GetTableNameWithSchemaPrefix(schemaName, tableName)}";
+        // The adapter opens its own connection. Release this slot first so Max Pool Size=1 works.
+        await connection.CloseAsync();
+        DataTable table = await base.FillSchemaForTableAsync(entityName, schemaName, tableName, cancellationToken, schemaQuery);
+        List<string> keyNames = new();
+        if (table.PrimaryKey.Length == 0 || skippedColumns.Count > 0)
         {
             // The Oracle adapter can omit keys on BY DEFAULT ON NULL identities.
             // Recover the actual key, in constraint order, from the catalog.
-            using OracleConnection connection = CreateConnection();
-            connection.ConnectionString = ConnectionString;
             await connection.OpenAsync(cancellationToken);
             using OracleCommand command = connection.CreateCommand();
             command.BindByName = true;
@@ -124,13 +165,27 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
             command.Parameters.Add("owner", OracleDbType.Varchar2).Value = schemaName;
             command.Parameters.Add("table_name", OracleDbType.Varchar2).Value = tableName;
             using DbDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
-            List<DataColumn> key = new();
             while (await reader.ReadAsync(cancellationToken))
             {
-                key.Add(table.Columns[reader.GetString(0)]!);
+                keyNames.Add(reader.GetString(0));
             }
 
-            table.PrimaryKey = key.ToArray();
+            // A partially projected composite key must never become a smaller, non-unique key.
+            HashSet<string> availableColumns = table.Columns.Cast<DataColumn>().Select(column => column.ColumnName).ToHashSet(StringComparer.Ordinal);
+            if (keyNames.Count > 0 && keyNames.All(availableColumns.Contains))
+            {
+                table.PrimaryKey = keyNames.Select(name => table.Columns[name]!).ToArray();
+            }
+            else if (keyNames.Count > 0)
+            {
+                table.PrimaryKey = Array.Empty<DataColumn>();
+            }
+        }
+
+        if (skippedColumns.Count > 0)
+        {
+            RegisterSkippedColumns(entityName, schemaName, tableName, table, skippedColumns,
+                keyNames.Where(skippedColumns.ContainsKey).ToArray());
         }
 
         return table;
@@ -138,23 +193,24 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
 
     protected override void PopulateColumnDefinitionWithHasDefaultAndDbType(SourceDefinition sourceDefinition, DataTable allColumnsInTable)
     {
-        base.PopulateColumnDefinitionWithHasDefaultAndDbType(sourceDefinition, allColumnsInTable);
+        // Shared source definitions use case-insensitive lookup. A skipped quoted "PAYLOAD"
+        // must not overwrite metadata for a supported quoted "payload" column.
+        using DataTable supportedColumns = allColumnsInTable.Clone();
         foreach (DataRow row in allColumnsInTable.Rows)
+        {
+            if (IsSupportedColumnType((string)row["DATA_TYPE"]))
+            {
+                supportedColumns.ImportRow(row);
+            }
+        }
+
+        base.PopulateColumnDefinitionWithHasDefaultAndDbType(sourceDefinition, supportedColumns);
+        foreach (DataRow row in supportedColumns.Rows)
         {
             if (sourceDefinition.Columns.TryGetValue((string)row["COLUMN_NAME"], out ColumnDefinition? column))
             {
                 string dataType = (string)row["DATA_TYPE"];
                 column.DatabaseTypeName = dataType;
-                if (dataType == "LONG RAW")
-                {
-                    throw new NotSupportedException($"Oracle binary column '{row["COLUMN_NAME"]}' (LONG RAW) is not supported. Migrate it to BLOB or expose supported text through a view.");
-                }
-
-                if (dataType == "LONG")
-                {
-                    throw new NotSupportedException($"Oracle column '{row["COLUMN_NAME"]}' (LONG) is not supported by JSON queries or mutation RETURNING clauses. Migrate it to CLOB or expose a supported column through a view.");
-                }
-
                 if (dataType is "RAW" or "BLOB")
                 {
                     // The standard unbounded-length marker distinguishes LOB binds from RAW binds.
@@ -176,7 +232,14 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
         string procedureName, StoredProcedureDefinition storedProcedureDefinition, CancellationToken cancellationToken) =>
         throw new NotSupportedException("Oracle stored procedure entities are not supported. Expose a table or view instead.");
 
-    public override Type SqlToCLRType(string sqlType) => sqlType.ToUpperInvariant() switch
+    internal static bool IsSupportedColumnType(string sqlType) => NormalizeColumnType(sqlType) is
+        "NUMBER" or "DECIMAL" or "NUMERIC" or "FLOAT" or "BINARY_FLOAT" or "BINARY_DOUBLE" or
+        "DATE" or "TIMESTAMP" or "TIMESTAMP WITH LOCAL TIME ZONE" or "TIMESTAMP WITH TIME ZONE" or
+        "RAW" or "BLOB" or "CHAR" or "NCHAR" or "VARCHAR2" or "NVARCHAR2" or "CLOB" or "NCLOB";
+
+    private static string NormalizeColumnType(string sqlType) => Regex.Replace(sqlType.ToUpperInvariant(), @"\(\d+\)", string.Empty);
+
+    public override Type SqlToCLRType(string sqlType) => NormalizeColumnType(sqlType) switch
     {
         "NUMBER" or "DECIMAL" or "NUMERIC" or "FLOAT" => typeof(decimal),
         "BINARY_FLOAT" => typeof(float),

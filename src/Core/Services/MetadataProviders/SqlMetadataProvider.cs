@@ -1925,6 +1925,17 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName,
             CancellationToken cancellationToken)
+            => await FillSchemaForTableAsync(entityName, schemaName, tableName, cancellationToken, schemaQuery: null);
+
+        /// <summary>
+        /// Discovers a table using a provider-selected projection when some native column types cannot be exposed.
+        /// </summary>
+        protected async Task<DataTable> FillSchemaForTableAsync(
+            string entityName,
+            string schemaName,
+            string tableName,
+            CancellationToken cancellationToken,
+            string? schemaQuery)
         {
             using ConnectionT conn = CreateConnection();
             // If connection string is set to empty string
@@ -1978,7 +1989,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(schemaName, tableName);
             selectCommand.CommandText
-                = $"SELECT * FROM {tableNameWithSchemaPrefix}";
+                = schemaQuery ?? $"SELECT * FROM {tableNameWithSchemaPrefix}";
             adapterForTable.SelectCommand = selectCommand;
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -2073,7 +2084,7 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             DataTable schemaTable = new(GetTableNameWithSchemaPrefix(schemaName, tableName));
-            Dictionary<string, string> unreadableColumns = new(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, string> unreadableColumns = new(SkippedColumnNameComparer);
 
             foreach (DataRow column in columns.Where(column => !IsSchemaFlagSet(column, SchemaTableOptionalColumn.IsHidden)))
             {
@@ -2086,15 +2097,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     unreadableColumns[columnName] = GetDatabaseTypeName(column);
                 }
-            }
-
-            if (schemaTable.Columns.Count == 0)
-            {
-                throw new DataApiBuilderException(
-                    message: $"Entity '{entityName}' ({schemaName}.{tableName}) cannot be exposed: every column has a data type "
-                        + $"that is not supported: {FormatColumns(unreadableColumns)}.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
             List<DataRow> keyRows = GetKeyAsDataAdapterWould(columns);
@@ -2116,7 +2118,42 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
+            RegisterSkippedColumns(entityName, schemaName, tableName, schemaTable, unreadableColumns, unreadableKeyColumns);
             EntitiesDataSet.Tables.Add(schemaTable);
+
+            return schemaTable;
+        }
+
+        /// <summary>
+        /// Comparer for native column identifiers recorded during schema discovery.
+        /// </summary>
+        protected virtual StringComparer SkippedColumnNameComparer => StringComparer.OrdinalIgnoreCase;
+
+        /// <summary>
+        /// Registers provider-unsupported columns for the same diagnostics and configuration-reference validation
+        /// used when a driver reports no CLR type. Call before exposing the discovered schema.
+        /// </summary>
+        protected void RegisterSkippedColumns(string entityName, string schemaName, string tableName, DataTable schemaTable,
+            IReadOnlyDictionary<string, string> unreadableColumns, IReadOnlyList<string> unreadableKeyColumns)
+        {
+            if (schemaTable.Columns.Count == 0)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Entity '{entityName}' ({schemaName}.{tableName}) cannot be exposed: every column has a data type "
+                        + $"that is not supported: {FormatColumns(unreadableColumns)}.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            // A provider may further restrict a schema already filtered by the driver's fallback.
+            if (_unreadableColumnsBySchemaTable.TryGetValue(schemaTable, out UnreadableColumns? previous))
+            {
+                unreadableColumns = previous.TypeNameByColumn.Concat(unreadableColumns)
+                    .GroupBy(column => column.Key, SkippedColumnNameComparer)
+                    .ToDictionary(group => group.Key, group => group.Last().Value, SkippedColumnNameComparer);
+                unreadableKeyColumns = previous.KeyColumns.Concat(unreadableKeyColumns).Distinct(SkippedColumnNameComparer).ToArray();
+            }
+
             _unreadableColumnsBySchemaTable[schemaTable] = new UnreadableColumns(unreadableColumns, unreadableKeyColumns);
 
             if (unreadableColumns.Count > 0)
@@ -2136,8 +2173,6 @@ namespace Azure.DataApiBuilder.Core.Services
                         FormatColumns(unreadableColumns));
                 }
             }
-
-            return schemaTable;
         }
 
         /// <summary>
@@ -2359,7 +2394,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Columns a schema read left out because the data provider reports no CLR type for them.
+        /// Columns a schema read left out because their native type cannot be exposed by the provider.
         /// </summary>
         /// <param name="TypeNameByColumn">Each skipped column with its database type name.</param>
         /// <param name="KeyColumns">Skipped columns that belong to the key the data adapter would have inferred.</param>

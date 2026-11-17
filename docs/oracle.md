@@ -22,7 +22,13 @@ RAW keys support point reads and cursor pagination. Binary-field filters retain 
 
 Read conversion uses statement-local functions and the Oracle `DBMS_LOB`, `UTL_ENCODE`, and `UTL_RAW` packages. The database user must be allowed to execute these packages; no stored function installation or `CREATE FUNCTION` privilege is required.
 
-`LONG RAW` and `LONG` remain unsupported and are rejected during metadata initialization. Migrate them to `BLOB` and `CLOB`, respectively, or expose supported types through a view.
+## Unsupported columns
+
+Schema discovery skips columns whose native Oracle type cannot be exposed, including `LONG`, `LONG RAW`, `BFILE`, `XMLTYPE`, interval types, and user-defined object types. The remaining supported columns are exposed through REST, GraphQL, and MCP; Oracle `INVISIBLE` columns remain hidden. Discovery logs a warning naming the skipped columns and types; hosted configurations log only the count.
+
+Initialization fails if every column is unsupported, or if a skipped column is explicitly referenced by a key, mapping, field declaration, permission include list, database policy, or relationship. Wildcard permissions and explicit exclusions can be used with tables containing skipped columns. A composite primary key is never inferred from only its supported parts.
+
+Skipped columns cannot be read or written through DAB. Database defaults, nullability, and constraints still apply when inserting rows without these columns. Migrate `LONG RAW` to `BLOB` and `LONG` to `CLOB` to expose their contents, or provide a view that converts unsupported values to supported types.
 
 ## CLOB and NCLOB fields
 

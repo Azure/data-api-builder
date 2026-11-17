@@ -513,15 +513,15 @@ public class OracleIntegrationTests : SqlTestBase
 
     [DataTestMethod]
     [DataRow("LONG RAW")]
-    public async Task BinaryColumnsAreRejectedDuringMetadataInitialization(string sqlType)
+    public async Task UnsupportedBinaryColumnsAreSkippedDuringMetadataInitialization(string sqlType)
     {
         await ExecuteSql($"DROP TABLE {_tableName} PURGE");
         await ExecuteSql($"CREATE TABLE {_tableName} (ID NUMBER PRIMARY KEY, PAYLOAD {sqlType})");
         OracleMetadataProvider metadata = CreateMetadataProvider();
-        NotSupportedException error = await Assert.ThrowsExceptionAsync<NotSupportedException>(() => metadata.InitializeAsync());
-        StringAssert.Contains(error.Message, "PAYLOAD");
-        StringAssert.Contains(error.Message, "binary");
-        StringAssert.Contains(error.Message, "view");
+        await metadata.InitializeAsync();
+        SourceDefinition definition = metadata.GetSourceDefinition(OracleTestFixture.ENTITY);
+        CollectionAssert.AreEqual(new[] { "ID" }, definition.Columns.Keys.ToArray());
+        CollectionAssert.AreEqual(new[] { "ID" }, definition.PrimaryKey.ToArray());
     }
 
     [DataTestMethod]

@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Core.Telemetry.Product
 {
@@ -229,11 +230,21 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
 
                 Dictionary<string, Entity> originalEntities = new(StringComparer.Ordinal);
                 Dictionary<string, Entity> entities = new(StringComparer.Ordinal);
+                Dictionary<string, string> entityToDataSource = new(StringComparer.Ordinal);
                 foreach ((string name, Entity entity) in original.Entities)
                 {
                     Consume(ref _modelNodes);
                     Require(entity is not null && entity.Source is not null);
                     originalEntities.Add(name, entity);
+                    try
+                    {
+                        entityToDataSource.Add(name, original.GetDataSourceNameFromEntityName(name));
+                    }
+                    catch (DataApiBuilderException)
+                    {
+                        // Source mapping is optional when effective caching is unavailable.
+                    }
+
                     entities.Add(name, new Entity(
                         new EntitySource(string.Empty, entity.Source.Type, null, null),
                         new EntityGraphQLOptions(string.Empty, string.Empty, entity.IsGraphQLEnabled), null,
@@ -256,7 +267,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 DataSourceFiles? files = original.DataSourceFiles is null ? null
                     : new(original.DataSourceFiles.SourceFiles is null ? null : children.Select(child => child.FileName).ToArray());
                 RuntimeConfig bounded = new(string.Empty, source!, original.Runtime!, boundedEntities, defaultName,
-                    sources, new Dictionary<string, string>(), files, original.AzureKeyVault, new RuntimeAutoentities(autoentities))
+                    sources, entityToDataSource, files, original.AzureKeyVault, new RuntimeAutoentities(autoentities))
                 {
                     TelemetryPresence = original.TelemetryPresence,
                     IsChildConfig = original.IsChildConfig

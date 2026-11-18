@@ -232,6 +232,31 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual("unknown", modelOnly["entities.any.graphql.configured"]);
         }
 
+        [DataTestMethod]
+        [TestCategory("Unit")]
+        [DataRow(false, true, true, "enabled", "disabled")]
+        [DataRow(true, false, true, "enabled", "enabled")]
+        [DataRow(true, true, true, "disabled", "disabled")]
+        [DataRow(false, false, false, "disabled", "disabled")]
+        public void CacheEffectiveState_UsesEachEntityDataSource(
+            bool rootSessionContext, bool childSessionContext, bool cacheEnabled, string runtimeState, string entityState)
+        {
+            DataSource root = new(DatabaseType.MSSQL, SECRET, new() { ["set-session-context"] = rootSessionContext });
+            DataSource child = new(DatabaseType.MSSQL, SECRET, new() { ["set-session-context"] = childSessionContext });
+            RuntimeConfig config = new(
+                SECRET, root,
+                EmptyRuntime() with { Cache = new RuntimeCacheOptions(cacheEnabled) { Level2 = new(true) } },
+                new RuntimeEntities(new Dictionary<string, Entity> { [SECRET] = NewEntity() with { Cache = new(true) } }),
+                "root", new() { ["root"] = root, ["child"] = child }, new() { [SECRET] = "child" });
+
+            ImmutableDictionary<string, string> snapshot = EngineTelemetrySnapshotFactory.Create(config);
+
+            AssertPair(snapshot, "runtime.cache", cacheEnabled ? "enabled" : "disabled", runtimeState);
+            AssertPair(snapshot, "runtime.cache.l2", "enabled", runtimeState);
+            AssertPair(snapshot, "entities.any.cache", "enabled", entityState);
+            AssertSchema(snapshot);
+        }
+
         [TestMethod]
         public void SessionContextAndRuntimeCacheGateEntityOverridesAndLevelTwo()
         {

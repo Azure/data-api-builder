@@ -677,14 +677,25 @@ public record RuntimeConfig
     }
 
     /// <summary>
-    /// Whether the caching service should be used for a given operation. This is determined by
-    /// - whether caching is enabled globally
-    /// - whether the datasource is SQL and session context is disabled.
+    /// Whether response caching is allowed for the default data source.
     /// </summary>
     /// <returns>Whether cache operations should proceed.</returns>
     public virtual bool CanUseCache()
     {
-        bool setSessionContextEnabled = DataSource?.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
+        return DataSource is not null && CanUseCache(DefaultDataSourceName);
+    }
+
+    /// <summary>
+    /// Whether response caching is allowed for the queried data source.
+    /// Session-context queries must reach the database so row-level security runs for each caller.
+    /// </summary>
+    /// <param name="dataSourceName">Name of the data source being queried.</param>
+    /// <returns>Whether cache reads and writes are allowed.</returns>
+    public virtual bool CanUseCache(string dataSourceName)
+    {
+        DataSource dataSource = GetDataSourceFromDataSourceName(dataSourceName);
+        bool setSessionContextEnabled = dataSource.DatabaseType is DatabaseType.MSSQL or DatabaseType.DWSQL
+            && dataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext is true;
         return IsCachingEnabled && !setSessionContextEnabled;
     }
 

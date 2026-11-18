@@ -789,7 +789,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         {
             string name = Guid.NewGuid().ToString("N");
             source ??= new(DatabaseType.MSSQL, PRIVATE_VALUE);
-            return new(string.Empty, source, runtime!, RawEntities(entities ?? new()), name, new() { [name] = source }, new());
+            Dictionary<string, Entity> configuredEntities = entities ?? new();
+            Dictionary<string, string> entityToDataSource = configuredEntities.Keys.ToDictionary(entityName => entityName, _ => name);
+            return new(string.Empty, source, runtime!, RawEntities(configuredEntities), name, new() { [name] = source }, entityToDataSource);
         }
 
         private static RuntimeConfig WithPresence(string json)
@@ -810,6 +812,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         {
             Dictionary<string, DataSource> sources = root.GetDataSourceNamesToDataSourcesIterator().ToDictionary(pair => pair.Key, pair => pair.Value);
             Dictionary<string, Entity> entities = root.Entities.ToDictionary(pair => pair.Key, pair => pair.Value);
+            Dictionary<string, string> entityToDataSource = root.Entities.ToDictionary(
+                pair => pair.Key, pair => root.GetDataSourceNameFromEntityName(pair.Key));
             foreach ((_, RuntimeConfig child) in children)
             {
                 foreach ((string name, DataSource source) in child.GetDataSourceNamesToDataSourcesIterator())
@@ -819,11 +823,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
                 foreach ((string name, Entity entity) in child.Entities)
                 {
-                    entities.TryAdd(name, entity);
+                    if (entities.TryAdd(name, entity))
+                    {
+                        entityToDataSource.Add(name, child.GetDataSourceNameFromEntityName(name));
+                    }
                 }
             }
 
-            RuntimeConfig merged = new(string.Empty, root.DataSource!, root.Runtime!, RawEntities(entities), root.DefaultDataSourceName, sources, new(),
+            RuntimeConfig merged = new(string.Empty, root.DataSource!, root.Runtime!, RawEntities(entities), root.DefaultDataSourceName, sources, entityToDataSource,
                 AzureKeyVault: root.AzureKeyVault, Autoentities: root.Autoentities)
             { TelemetryPresence = root.TelemetryPresence };
             merged = merged with { DataSourceFiles = new(children.Select(child => child.FileName).ToArray()) };
@@ -840,7 +847,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 sources.Add(root.DefaultDataSourceName, root.DataSource);
             }
 
-            RuntimeConfig normalized = new(string.Empty, root.DataSource!, root.Runtime!, root.Entities, root.DefaultDataSourceName, sources, new(),
+            Dictionary<string, string> entityToDataSource = root.Entities.ToDictionary(
+                pair => pair.Key, pair => root.GetDataSourceNameFromEntityName(pair.Key));
+            RuntimeConfig normalized = new(string.Empty, root.DataSource!, root.Runtime!, root.Entities, root.DefaultDataSourceName, sources, entityToDataSource,
                 root.DataSourceFiles, root.AzureKeyVault, root.Autoentities)
             { TelemetryPresence = root.TelemetryPresence };
             normalized.ChildConfigs.AddRange(root.ChildConfigs);

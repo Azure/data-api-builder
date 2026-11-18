@@ -142,6 +142,12 @@ Configuration events contain `dab_snapshot_schema=configuration-v1`, `dab_config
 
 Where applicable, `.configured` and `.effective` are separate. States are `enabled`, `disabled`, `missing`, `unsupported`, `unknown` and `not_applicable`. Original-input presence is captured as fixed-size, value-free metadata only during loads authorized by an enabled engine session, including nested source files. Ambient test mode alone does not enable capture in a CLI or disabled embedded host. Lost provenance is not reconstructed by serializing defaults. No customer entity/role names or values are retained in that metadata. Unsupported capabilities remain unsupported even when there are zero entities.
 
+Cache `.effective` states account for source-specific eligibility. Runtime cache
+is effective when at least one loaded data source permits response caching; entity
+cache is effective only when caching is enabled for that entity and its own data
+source permits caching. An MSSQL or DWSQL source with `set-session-context` enabled
+does not permit response-cache reads or writes.
+
 ## Events and usage
 
 Events are `dab/engine.process_started`, `ready`, `startup_failed`, `configuration_changed`, `configuration_change_failed`, `first_request_served`, `first_successful_request`, `heartbeat`, `usage_summary` and `stopped`, all under the `dab/engine.` prefix.

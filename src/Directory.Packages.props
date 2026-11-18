@@ -48,15 +48,16 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
     <!--When updating Microsoft.Data.SqlClient, update license URL in scripts/notice-generation.ps1-->
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.5" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.2" />
+    <PackageVersion Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.1.2" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.ApplicationInsights" Version="2.22.0" />
-    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.1.2" />
-    <PackageVersion Include="Microsoft.IdentityModel.OpenIdConnect" Version="8.1.2" />
-    <PackageVersion Include="Microsoft.IdentityModel.Protocols" Version="8.1.2" />
-    <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.1.2" />
-    <PackageVersion Include="Microsoft.IdentityModel.Validators" Version="8.1.2" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.17.0" />
+    <PackageVersion Include="Microsoft.IdentityModel.OpenIdConnect" Version="8.17.0" />
+    <PackageVersion Include="Microsoft.IdentityModel.Protocols" Version="8.17.0" />
+    <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.17.0" />
+    <PackageVersion Include="Microsoft.IdentityModel.Validators" Version="8.17.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageVersion Include="Microsoft.OData.Edm" Version="7.20.0" />
     <PackageVersion Include="Microsoft.OData.Core" Version="7.20.0" />
@@ -80,7 +81,7 @@
         <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="6.5.0" />
         <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
         <PackageVersion Include="System.Drawing.Common" Version="8.0.3" />
-        <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.1.2" />
+        <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
         <PackageVersion Include="System.IO.Abstractions" Version="21.0.2" />
         <PackageVersion Include="System.IO.Abstractions.TestingHelpers" Version="21.0.2" />
         <!-- Pinned to override the vulnerable Pkcs 9.0.11/9.0.4 pulled in transitively by Microsoft.Data.SqlClient

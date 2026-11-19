@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -137,6 +138,31 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 new object?[] { new ISelectionNode[] { fragment }, null });
         }
 
+        /// <summary>
+        /// Selections after an inline fragment must still be processed. Using return after
+        /// expanding the fragment exits the foreach and drops trailing fields.
+        /// </summary>
+        [TestMethod]
+        public void AddGraphQLFields_ContinuesAfterInlineFragment()
+        {
+            SqlQueryStructure structure = CreateStructureForColumnSelection();
+            InlineFragmentNode fragment = new(
+                location: null,
+                typeCondition: new NamedTypeNode("book"),
+                directives: System.Array.Empty<DirectiveNode>(),
+                selectionSet: new SelectionSetNode(new ISelectionNode[] { new FieldNode("id") }));
+
+            GetPrivateMethod("AddGraphQLFields").Invoke(
+                structure,
+                new object?[]
+                {
+                    new ISelectionNode[] { fragment, new FieldNode("title") },
+                    null
+                });
+
+            CollectionAssert.AreEquivalent(new[] { "id", "title" }, structure.Columns.Select(c => c.Label).ToList());
+        }
+
         [TestMethod]
         public void AddGraphQLFields_UnsupportedSelectionThrows()
         {
@@ -261,9 +287,30 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             return structure;
         }
 
-        private static void SetAutoProperty<T>(SqlQueryStructure structure, string propertyName, T value)
+        private static SqlQueryStructure CreateStructureForColumnSelection()
         {
-            typeof(SqlQueryStructure).GetProperty(propertyName)!.DeclaringType!
+            SqlQueryStructure structure = CreateStructure();
+            Mock<ISqlMetadataProvider> metadata = new();
+            metadata
+                .Setup(m => m.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out It.Ref<string?>.IsAny))
+                .Returns((string _, string field, out string? backing) =>
+                {
+                    backing = field;
+                    return true;
+                });
+
+            SetAutoProperty(structure, "MetadataProvider", metadata.Object, typeof(BaseQueryStructure));
+            SetAutoProperty(structure, "DatabaseObject", new DatabaseTable("public", "books"), typeof(BaseQueryStructure));
+            SetAutoProperty(structure, "Columns", new List<LabelledColumn>(), typeof(BaseQueryStructure));
+            structure.EntityName = "book";
+            structure.SourceAlias = "table0";
+            return structure;
+        }
+
+        private static void SetAutoProperty<T>(SqlQueryStructure structure, string propertyName, T value, Type? declaringType = null)
+        {
+            Type lookupType = declaringType ?? typeof(SqlQueryStructure);
+            lookupType.GetProperty(propertyName)!.DeclaringType!
                 .GetField($"<{propertyName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!
                 .SetValue(structure, value);
         }

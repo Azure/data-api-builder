@@ -126,7 +126,7 @@ namespace Cli.Commands
         [Option("parameters.name", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter names for stored procedure.")]
         public IEnumerable<string>? ParametersNameCollection { get; }
 
-        [Option("parameters.description", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter descriptions for stored procedure.")]
+        [Option("parameters.description", Required = false, HelpText = "List of parameter descriptions for stored procedure. Provide one value per parameter. Descriptions may contain commas.")]
         public IEnumerable<string>? ParametersDescriptionCollection { get; }
 
         [Option("parameters.required", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter required flags (true/false) for stored procedure.")]
@@ -141,7 +141,7 @@ namespace Cli.Commands
         [Option("fields.alias", Required = false, Separator = ',', HelpText = "Alias for the field.")]
         public IEnumerable<string>? FieldsAliasCollection { get; }
 
-        [Option("fields.description", Required = false, Separator = ',', HelpText = "Description for the field.")]
+        [Option("fields.description", Required = false, HelpText = "Description for the field. Descriptions may contain commas.")]
         public IEnumerable<string>? FieldsDescriptionCollection { get; }
 
         [Option("fields.primary-key", Required = false, Separator = ',', HelpText = "Set this field as a primary key.")]

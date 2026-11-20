@@ -126,24 +126,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 executeQueryResult = await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue);
             }
 
-            // Resolve relationships for the single entity result
-            if (executeQueryResult != null)
+            if (executeQueryResult is not null)
             {
-                // Check if this is a paginated result (connection type)
-                if (structure.IsPaginated && executeQueryResult[QueryBuilder.PAGINATION_FIELD_NAME] is JArray itemsArray)
-                {
-                    // Resolve relationships for items in the pagination result
-                    List<JObject> itemsList = itemsArray.Cast<JObject>().ToList();
-                    await ResolveRelationshipsAsync(context, itemsList, structure.EntityName, metadataStoreProvider);
-                    // Items are modified in place, no need to update the array
-                }
-                else
-                {
-                    // Single entity result
-                    List<JObject> resultsList = new() { executeQueryResult };
-                    await ResolveRelationshipsAsync(context, resultsList, structure.EntityName, metadataStoreProvider);
-                    executeQueryResult = resultsList[0];
-                }
+                // Rows are mutated in place. A paginated (connection) result carries its rows under "items".
+                List<JObject> rows = structure.IsPaginated && executeQueryResult[QueryBuilder.PAGINATION_FIELD_NAME] is JArray items
+                    ? items.OfType<JObject>().ToList()
+                    : [executeQueryResult];
+                await ResolveRelationshipsAsync(context, rows, structure.EntityName, metadataStoreProvider);
             }
 
             JsonDocument response = executeQueryResult != null ? JsonDocument.Parse(executeQueryResult.ToString()) : null;
@@ -261,34 +250,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            // Resolve relationships (cross-container queries)
+            // Relationships are resolved on the JObjects before they are converted to JsonDocuments.
             await ResolveRelationshipsAsync(context, resultsAsList, structure.EntityName, metadataStoreProvider);
 
-            // Convert JObject list to JsonDocument list
-            // Serialize the entire array at once to properly preserve nested type information
-            JArray jArray = new(resultsAsList);
-            using (MemoryStream ms = new())
-            using (StreamWriter writer = new(ms, System.Text.Encoding.UTF8, 1024, leaveOpen: true))
-            using (Newtonsoft.Json.JsonTextWriter jsonWriter = new(writer))
-            {
-                jArray.WriteTo(jsonWriter);
-                jsonWriter.Flush();
-                writer.Flush();
-                ms.Position = 0;
-                
-                // Deserialize as array of JsonDocuments
-                JsonDocument arrayDoc = JsonDocument.Parse(ms);
-                List<JsonDocument> jsonDocumentList = new();
-                foreach (JsonElement element in arrayDoc.RootElement.EnumerateArray())
-                {
-                    // Clone each element as its own JsonDocument
-                    jsonDocumentList.Add(JsonDocument.Parse(element.GetRawText()));
-                }
-
-                arrayDoc.Dispose();
-                
-                return new Tuple<IEnumerable<JsonDocument>, IMetadata>(jsonDocumentList, null);
-            }
+            List<JsonDocument> documents = resultsAsList.Select(item => JsonDocument.Parse(item.ToString())).ToList();
+            return new Tuple<IEnumerable<JsonDocument>, IMetadata>(documents, null);
         }
 
         /// <inheritdoc />
@@ -708,21 +674,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             ISqlMetadataProvider targetMetadataProvider = _metadataProviderFactory.GetMetadataProvider(targetDataSourceName);
 
-            HashSet<string> sourceValues = CollectSourceFieldValues(results, relationship, entityName, metadataProvider);
+            string? sourceField = relationship.SourceFields?.FirstOrDefault();
+            string? targetField = relationship.TargetFields?.FirstOrDefault();
+            if (string.IsNullOrEmpty(sourceField) || string.IsNullOrEmpty(targetField))
+            {
+                return;
+            }
+
+            string exposedSourceField = GetExposedFieldName(metadataProvider, entityName, sourceField);
+            string exposedTargetField = GetExposedFieldName(targetMetadataProvider, targetEntityName, targetField);
+
+            HashSet<string> sourceValues = results
+                .Select(result => result.GetValue(exposedSourceField)?.ToString())
+                .OfType<string>()
+                .ToHashSet();
             if (sourceValues.Count == 0)
             {
                 return;
-            }
-
-            string? targetField = relationship.TargetFields?.FirstOrDefault();
-            if (string.IsNullOrEmpty(targetField))
-            {
-                return;
-            }
-
-            if (!targetMetadataProvider.TryGetExposedColumnName(targetEntityName, targetField, out string? exposedTargetField))
-            {
-                exposedTargetField = targetField;
             }
 
             Container container = targetClient
@@ -734,7 +702,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Dictionary<string, List<JObject>> relatedEntitiesByKey =
                 await ExecuteAndGroupByFieldAsync(container, queryDef, exposedTargetField);
 
-            AssignRelatedEntities(results, relationship, fieldName, entityName, metadataProvider, relatedEntitiesByKey);
+            AssignRelatedEntities(results, relationship.Cardinality, fieldName, exposedSourceField, relatedEntitiesByKey);
 
             // Recurse into the related rows to resolve their own relationships.
             // JObject is a reference type, so these mutations are reflected in the already-assigned fields.
@@ -784,37 +752,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Collects the distinct values of the relationship's (first) source field across the given rows,
-        /// using the exposed (GraphQL) name of the backing column.
+        /// Returns the exposed (GraphQL) name of a backing column, or the column name itself when it is not mapped.
         /// </summary>
-        private static HashSet<string> CollectSourceFieldValues(
-            List<JObject> results,
-            EntityRelationship relationship,
-            string entityName,
-            ISqlMetadataProvider metadataProvider)
-        {
-            HashSet<string> values = new();
-            string? sourceField = relationship.SourceFields?.FirstOrDefault();
-            if (string.IsNullOrEmpty(sourceField))
-            {
-                return values;
-            }
-
-            if (!metadataProvider.TryGetExposedColumnName(entityName, sourceField, out string? exposedSourceField))
-            {
-                exposedSourceField = sourceField;
-            }
-
-            foreach (JObject result in results)
-            {
-                if (result.TryGetValue(exposedSourceField, out JToken? sourceValue) && sourceValue is not null)
-                {
-                    values.Add(sourceValue.ToString());
-                }
-            }
-
-            return values;
-        }
+        private static string GetExposedFieldName(ISqlMetadataProvider metadataProvider, string entityName, string backingField)
+            => metadataProvider.TryGetExposedColumnName(entityName, backingField, out string? exposed) && exposed is not null
+                ? exposed
+                : backingField;
 
         /// <summary>
         /// Builds the Cosmos query that fetches the related rows: a parameterized IN clause over the
@@ -853,10 +796,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         continue;
                     }
 
-                    if (!targetMetadataProvider.TryGetExposedColumnName(targetEntityName, filterField.Name.Value, out string? exposedFieldName))
-                    {
-                        exposedFieldName = filterField.Name.Value;
-                    }
+                    string exposedFieldName = GetExposedFieldName(targetMetadataProvider, targetEntityName, filterField.Name.Value);
 
                     foreach (ObjectFieldNode operatorField in operatorObject.Fields)
                     {
@@ -896,13 +836,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 FeedResponse<JObject> page = await iterator.ReadNextAsync();
                 foreach (JObject item in page)
                 {
-                    if (item.TryGetValue(exposedTargetField, out JToken? targetValue) && targetValue is not null)
+                    if (item.GetValue(exposedTargetField)?.ToString() is string key)
                     {
-                        string key = targetValue.ToString();
                         if (!grouped.TryGetValue(key, out List<JObject>? bucket))
                         {
-                            bucket = new();
-                            grouped[key] = bucket;
+                            grouped[key] = bucket = new();
                         }
 
                         bucket.Add(item);
@@ -919,23 +857,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private static void AssignRelatedEntities(
             List<JObject> results,
-            EntityRelationship relationship,
+            Cardinality cardinality,
             string fieldName,
-            string entityName,
-            ISqlMetadataProvider metadataProvider,
+            string exposedSourceField,
             Dictionary<string, List<JObject>> relatedEntitiesByKey)
         {
-            string? sourceField = relationship.SourceFields?.FirstOrDefault();
-            if (string.IsNullOrEmpty(sourceField))
-            {
-                return;
-            }
-
-            if (!metadataProvider.TryGetExposedColumnName(entityName, sourceField, out string? exposedSourceField))
-            {
-                exposedSourceField = sourceField;
-            }
-
             foreach (JObject result in results)
             {
                 if (!result.TryGetValue(exposedSourceField, out JToken? sourceValue) || sourceValue is null)
@@ -945,7 +871,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 relatedEntitiesByKey.TryGetValue(sourceValue.ToString(), out List<JObject>? relatedEntities);
 
-                if (relationship.Cardinality == Cardinality.One)
+                if (cardinality == Cardinality.One)
                 {
                     result[fieldName] = relatedEntities is { Count: > 0 } ? relatedEntities[0] : null;
                 }

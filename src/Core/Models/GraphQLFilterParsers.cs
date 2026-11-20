@@ -191,11 +191,14 @@ public class GQLFilterParser
                 // the representative database table and the relationship field will not have an authorization
                 // rule entry. Authorization is handled by permissions defined for the relationship's
                 // target entity.
-                bool relationshipField = true;
-                if (!string.IsNullOrWhiteSpace(resolvedBackingColumnName))
+                // The @relationship directive is checked first because CosmosDB's metadata provider reports
+                // every field as a backing column, which would otherwise make relationship fields grafted
+                // onto the schema from the runtime config look like columns of the source entity.
+                bool relationshipField = RelationshipDirectiveType.GetTarget(filterArgumentObject.Fields[name]) is not null
+                    || string.IsNullOrWhiteSpace(resolvedBackingColumnName);
+                if (!relationshipField)
                 {
-                    backingColumnName = resolvedBackingColumnName;
-                    relationshipField = false;
+                    backingColumnName = resolvedBackingColumnName!;
                 }
 
                 // Only perform field (column) authorization when the field is not a relationship field.

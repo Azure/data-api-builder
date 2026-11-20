@@ -177,6 +177,12 @@ public record UserDelegatedAuthOptions(
     /// <summary>
     /// Environment variable name for the API App Registration client ID, required for either OBO credential method.
     /// This is not the client ID of the Managed Identity used for federation.
+    /// When set, DAB also passes this ID to SqlClient's ActiveDirectoryAuthenticationProvider
+    /// and registers it process-wide for all supported authentication methods, including metadata
+    /// and CLI autoentities connections. Blank values leave SqlClient's existing providers unchanged.
+    /// Public-client authentication flows require the corresponding Entra app registration configuration.
+    /// This does not change DefaultAzureCredential or override the identities selected by
+    /// managed identity, service principal, or workload identity authentication.
     /// Uses DAB-specific prefix to avoid conflict with AZURE_CLIENT_ID which is
     /// interpreted by DefaultAzureCredential/ManagedIdentityCredential as a
     /// User-Assigned Managed Identity ID.

@@ -191,11 +191,14 @@ public class GQLFilterParser
                 // the representative database table and the relationship field will not have an authorization
                 // rule entry. Authorization is handled by permissions defined for the relationship's
                 // target entity.
-                bool relationshipField = true;
-                if (!string.IsNullOrWhiteSpace(resolvedBackingColumnName))
+                // The @relationship directive is checked first because CosmosDB's metadata provider reports
+                // every field as a backing column, which would otherwise make relationship fields grafted
+                // onto the schema from the runtime config look like columns of the source entity.
+                bool relationshipField = RelationshipDirectiveType.GetTarget(filterArgumentObject.Fields[name]) is not null
+                    || string.IsNullOrWhiteSpace(resolvedBackingColumnName);
+                if (!relationshipField)
                 {
-                    backingColumnName = resolvedBackingColumnName;
-                    relationshipField = false;
+                    backingColumnName = resolvedBackingColumnName!;
                 }
 
                 // Only perform field (column) authorization when the field is not a relationship field.
@@ -780,6 +783,34 @@ public static class FieldFilterParser
                     bool isNull = (bool)value;
                     op = isNull ? PredicateOperation.IS : PredicateOperation.IS_NOT;
                     value = GQLFilterParser.NullStringValue;
+                    break;
+                case "some" or "none" or "all":
+                    if (value is not List<ObjectFieldNode> elementFields || elementFields.Count == 0)
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Bad syntax: '{name}' list filter requires at least one nested filter field.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+
+                    op = name switch
+                    {
+                        "some" => PredicateOperation.ARRAY_SOME,
+                        "none" => PredicateOperation.ARRAY_NONE,
+                        _ => PredicateOperation.ARRAY_ALL
+                    };
+
+                    // The nested filter applies to each element of the list.
+                    Predicate elementPredicate = Parse(ctx, argumentObject.Fields[name], column, elementFields, processLiterals, false);
+                    predicates.Push(new PredicateOperand(new Predicate(
+                        new PredicateOperand(column),
+                        op,
+                        new PredicateOperand(elementPredicate))));
+                    continue;
+                case "any":
+                    processLiteral = false;
+                    op = PredicateOperation.ARRAY_ANY;
+                    value = (bool)value ? "true" : "false";
                     break;
                 default:
                     throw new NotSupportedException($"Operation {name} on int type not supported.");

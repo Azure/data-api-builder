@@ -30,7 +30,37 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.ThrowsException<ArgumentNullException>(() => builder.BuildPredicate(null));
             Assert.ThrowsException<ArgumentException>(() => builder.BuildOperation(PredicateOperation.None));
-            Assert.ThrowsException<ArgumentException>(() => builder.BuildOperation(PredicateOperation.IN));
+            // List quantifiers are rendered by Build(Predicate) only; they have no standalone operator token.
+            Assert.ThrowsException<ArgumentException>(() => builder.BuildOperation(PredicateOperation.ARRAY_SOME));
+            Assert.AreEqual("IN", builder.BuildOperation(PredicateOperation.IN));
+        }
+
+        [DataTestMethod]
+        [DataRow(PredicateOperation.ARRAY_SOME, "EXISTS(SELECT VALUE 1 FROM element_c_tags IN c.tags WHERE element_c_tags = @param0)")]
+        [DataRow(PredicateOperation.ARRAY_NONE, "NOT EXISTS(SELECT VALUE 1 FROM element_c_tags IN c.tags WHERE element_c_tags = @param0)")]
+        [DataRow(PredicateOperation.ARRAY_ALL, "NOT EXISTS(SELECT VALUE 1 FROM element_c_tags IN c.tags WHERE NOT (element_c_tags = @param0))")]
+        public void BuildPredicate_ListQuantifierAppliesElementFilter(PredicateOperation op, string expected)
+        {
+            TestCosmosQueryBuilder builder = new();
+            Column tags = new(tableSchema: string.Empty, tableName: "c", columnName: "tags");
+            Predicate elementFilter = new(new PredicateOperand(tags), PredicateOperation.Equal, new PredicateOperand("@param0"));
+
+            string actual = builder.BuildPredicate(new Predicate(new PredicateOperand(tags), op, new PredicateOperand(elementFilter)));
+
+            Assert.AreEqual(expected, actual.Trim());
+        }
+
+        [DataTestMethod]
+        [DataRow("true", "ARRAY_LENGTH(c.tags) > 0")]
+        [DataRow("false", "(NOT IS_DEFINED(c.tags) OR ARRAY_LENGTH(c.tags) = 0)")]
+        public void BuildPredicate_ListAnyChecksLength(string any, string expected)
+        {
+            TestCosmosQueryBuilder builder = new();
+            Column tags = new(tableSchema: string.Empty, tableName: "c", columnName: "tags");
+
+            string actual = builder.BuildPredicate(new Predicate(new PredicateOperand(tags), PredicateOperation.ARRAY_ANY, new PredicateOperand(any)));
+
+            Assert.AreEqual(expected, actual.Trim());
         }
 
         [TestMethod]

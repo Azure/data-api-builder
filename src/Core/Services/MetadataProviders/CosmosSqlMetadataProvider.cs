@@ -55,18 +55,22 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public List<Exception> SqlMetadataExceptions { get; private set; } = new();
 
-        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, RuntimeConfigValidator runtimeConfigValidator, IFileSystem fileSystem)
+        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, RuntimeConfigValidator runtimeConfigValidator, IFileSystem fileSystem, string? dataSourceName = null)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             _fileSystem = fileSystem;
+
             // Many classes have references to the RuntimeConfig, therefore to guarantee
             // that the Runtime Entities are not mutated by another class we make a copy of them
             // to store internally.
             _runtimeConfigEntities = new RuntimeEntities(runtimeConfig.Entities.Entities);
             _isDevelopmentMode = runtimeConfig.IsDevelopmentMode();
-            _databaseType = runtimeConfig.DataSource!.DatabaseType;
 
-            CosmosDbNoSQLDataSourceOptions? cosmosDb = runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
+            // With multiple data sources, read the options of this provider's data source rather than the default one.
+            DataSource dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName ?? runtimeConfig.DefaultDataSourceName);
+            _databaseType = dataSource.DatabaseType;
+
+            CosmosDbNoSQLDataSourceOptions? cosmosDb = dataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
 
             if (cosmosDb is null)
             {

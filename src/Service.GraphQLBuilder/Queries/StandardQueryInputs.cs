@@ -52,6 +52,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         private static readonly NameNode _in = new("in");
         private static readonly StringValueNode _inDescription = new("In");
 
+        // List filter operations
+        private static readonly NameNode _some = new("some");
+        private static readonly StringValueNode _someDescription = new("At least one element matches the filter");
+        private static readonly NameNode _none = new("none");
+        private static readonly StringValueNode _noneDescription = new("No elements match the filter");
+        private static readonly NameNode _all = new("all");
+        private static readonly StringValueNode _allDescription = new("All elements match the filter");
+        private static readonly NameNode _any = new("any");
+        private static readonly StringValueNode _anyDescription = new("List is not empty");
+
         private static InputObjectTypeDefinitionNode IdInputType() =>
             CreateSimpleEqualsFilter("IdFilterInput", "Input type for adding ID filters", _id);
 
@@ -164,6 +174,35 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             );
 
         /// <summary>
+        /// Creates the list filter for a scalar list field, e.g. <c>[String]</c> => <c>StringListFilterInput</c>.
+        /// </summary>
+        private static InputObjectTypeDefinitionNode CreateListFilter(string scalarTypeName, InputObjectTypeDefinitionNode elementFilter)
+        {
+            string elementFilterName = elementFilter.Name.Value;
+            string name = elementFilterName.Replace("FilterInput", "ListFilterInput");
+            NamedTypeNode elementFilterType = new(elementFilterName);
+            NamedTypeNode elementScalarType = new(scalarTypeName);
+            return new(
+                location: null,
+                new NameNode(name),
+                new StringValueNode($"Input type for adding list of {scalarTypeName} filters"),
+                [],
+                [
+                    // Element-aware quantifiers: take a filter on the element type.
+                    new(null, _some, _someDescription, elementFilterType, null, []),
+                    new(null, _none, _noneDescription, elementFilterType, null, []),
+                    new(null, _all, _allDescription, elementFilterType, null, []),
+                    // Whole-list operators that are well defined for any element scalar type.
+                    new(null, _any, _anyDescription, _boolean, null, []),
+                    new(null, _isNull, _isNullDescription, _boolean, null, []),
+                    // contains/notContains map to ARRAY_CONTAINS over the element value.
+                    new(null, _contains, _containsDescription, elementScalarType, null, []),
+                    new(null, _notContains, _notContainsDescription, elementScalarType, null, [])
+                ]
+            );
+        }
+
+        /// <summary>
         /// Gets a filter input object type by the corresponding scalar type name.
         /// </summary>
         /// <param name="scalarTypeName">
@@ -174,6 +213,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         /// </returns>
         public static InputObjectTypeDefinitionNode GetFilterTypeByScalar(string scalarTypeName)
             => _instance._inputMap[scalarTypeName];
+
+        /// <summary>
+        /// Gets a list filter input object type by the corresponding scalar type name.
+        /// </summary>
+        /// <param name="scalarTypeName">
+        /// The scalar type name (of the list element).
+        /// </param>
+        /// <returns>
+        /// The list filter input object type.
+        /// </returns>
+        public static InputObjectTypeDefinitionNode GetListFilterTypeByScalar(string scalarTypeName)
+            => _instance._listInputMap[scalarTypeName];
 
         /// <summary>
         /// Specifies if the given type name is a standard filter input object type.
@@ -189,6 +240,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
         private static readonly StandardQueryInputs _instance = new();
         private readonly Dictionary<string, InputObjectTypeDefinitionNode> _inputMap = [];
+        private readonly Dictionary<string, InputObjectTypeDefinitionNode> _listInputMap = [];
         private readonly HashSet<string> _standardQueryInputNames = [];
 
         private StandardQueryInputs()
@@ -211,6 +263,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             // lookup by the field's GraphQL type name resolves correctly.
             AddInputType(BYTEARRAY_TYPE, Base64StringInputType());
             AddInputType(ScalarNames.LocalTime, LocalTimeInputType());
+
+            // Every scalar filter except Base64String (which only supports isNull) gets a list counterpart.
+            foreach ((string scalarTypeName, InputObjectTypeDefinitionNode elementFilter) in _inputMap)
+            {
+                if (scalarTypeName != BYTEARRAY_TYPE)
+                {
+                    InputObjectTypeDefinitionNode listFilter = CreateListFilter(scalarTypeName, elementFilter);
+                    _listInputMap.Add(scalarTypeName, listFilter);
+                    _standardQueryInputNames.Add(listFilter.Name.Value);
+                }
+            }
 
             void AddInputType(string inputTypeName, InputObjectTypeDefinitionNode inputType)
             {

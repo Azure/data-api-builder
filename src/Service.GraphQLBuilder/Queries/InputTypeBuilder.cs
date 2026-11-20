@@ -23,6 +23,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         )
         {
             List<InputValueDefinitionNode> inputFields = GenerateFilterInputFieldsForBuiltInFields(node, inputTypes);
+
+            // Only create Filter input type if there are actual filterable fields
+            // Types with only nested objects shouldn't have Filter inputs (just "and"/"or" would be circular/useless)
+            if (inputFields.Count == 0)
+            {
+                return;
+            }
+
             string filterInputName = GenerateObjectInputFilterName(node);
             GenerateFilterInputTypeFromInputFields(inputTypes, inputFields, filterInputName, $"Filter input for {node.Name} GraphQL type");
         }
@@ -30,10 +38,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         internal static void GenerateOrderByInputTypeForObjectType(ObjectTypeDefinitionNode node, IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
             List<InputValueDefinitionNode> inputFields = GenerateOrderByInputFieldsForBuiltInFields(node);
+
+            // Only create OrderBy input type if there are actual orderable fields (scalars)
+            // Types with only nested objects (like Accents, Palette) shouldn't have OrderBy inputs
+            if (inputFields.Count == 0)
+            {
+                return;
+            }
+
             string orderByInputName = GenerateObjectInputOrderByName(node);
 
             // OrderBy does not include "and" and "or" input types so we add only the orderByInputName here.
-            inputTypes.Add(
+            // TryAdd: the same type can be visited once per data source.
+            inputTypes.TryAdd(
                 orderByInputName,
                 new(
                     location: null,
@@ -99,7 +116,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     defaultValue: null,
                     new List<DirectiveNode>()));
 
-            inputTypes.Add(
+            // TryAdd: the same type can be visited once per data source.
+            inputTypes.TryAdd(
                 inputTypeName,
                 new(
                     location: null,
@@ -132,12 +150,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 string fieldTypeName = field.Type.NamedType().Name.Value;
                 if (IsBuiltInType(field.Type))
                 {
-                    if (!inputTypes.ContainsKey(fieldTypeName))
+                    // Scalar lists (e.g. Cosmos tags: [String]) get a list filter (some/none/all/any/contains).
+                    bool isListType = field.Type.IsListType();
+                    string inputTypeKey = isListType ? $"{fieldTypeName}List" : fieldTypeName;
+                    if (!inputTypes.TryGetValue(inputTypeKey, out InputObjectTypeDefinitionNode? inputType))
                     {
-                        inputTypes.Add(fieldTypeName, StandardQueryInputs.GetFilterTypeByScalar(fieldTypeName));
+                        inputType = isListType
+                            ? StandardQueryInputs.GetListFilterTypeByScalar(fieldTypeName)
+                            : StandardQueryInputs.GetFilterTypeByScalar(fieldTypeName);
+                        inputTypes.Add(inputTypeKey, inputType);
                     }
-
-                    InputObjectTypeDefinitionNode inputType = inputTypes[fieldTypeName];
 
                     inputFields.Add(
                         new(

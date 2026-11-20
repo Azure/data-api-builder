@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Core.Parsers;
+using HotChocolate.Language;
+using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
@@ -75,6 +77,35 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual(expectedValue, result,
                 $"Expected '{expectedValue}' but got '{result}' for parameter '{parameterName}' in query '{queryString}'");
+        }
+
+        /// <summary>
+        /// Tests that an expression that didn't arrive through a URL survives the URL decoding
+        /// done by the OData parser, so its string literals keep the value the caller wrote.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("G+1", DisplayName = "Plus sign isn't turned into a space")]
+        [DataRow("50%", DisplayName = "Percent sign isn't treated as an escape sequence")]
+        [DataRow("G%2B1", DisplayName = "Percent-encoded text isn't decoded")]
+        [DataRow("A&B", DisplayName = "Ampersand doesn't end the query option")]
+        [DataRow("A#B", DisplayName = "Number sign doesn't start a URL fragment")]
+        [DataRow("A=B;C", DisplayName = "Query string delimiters are preserved")]
+        public void BuildQueryStringFromExpression_PreservesStringLiteral(string literal)
+        {
+            ODataParser parser = new();
+            parser.BuildModel(Utf8GraphQLParser.Parse(
+                """
+                type Planet @model(name: "Planet") {
+                    id: ID
+                    name: String
+                }
+                """));
+
+            string queryString = RequestParser.BuildQueryStringFromExpression(RequestParser.FILTER_URL, $"name eq '{literal}'");
+            FilterClause filterClause = parser.GetFilterClause(queryString, resourcePath: "Planet");
+
+            BinaryOperatorNode comparison = (BinaryOperatorNode)filterClause.Expression;
+            Assert.AreEqual(literal, ((ConstantNode)comparison.Right).Value);
         }
     }
 }

@@ -125,7 +125,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     new(value,
                         dbType: GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName),
                         sqlDbType: GetUnderlyingSourceDefinition().GetSqlDbTypeForParam(paramName),
-                        length: lengthOverride ? -1 : GetUnderlyingSourceDefinition().GetLengthForParam(paramName)));
+                        length: lengthOverride ? -1 : GetUnderlyingSourceDefinition().GetLengthForParam(paramName))
+                    {
+                        DatabaseTypeName = GetUnderlyingSourceDefinition().Columns.TryGetValue(paramName, out ColumnDefinition? definition)
+                            ? definition.DatabaseTypeName : null
+                    });
             }
             else
             {

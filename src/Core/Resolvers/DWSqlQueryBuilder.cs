@@ -3,8 +3,10 @@
 
 using System.Data.Common;
 using System.Text;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Microsoft.Data.SqlClient;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -52,7 +54,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="structure">Sql query structure to build query on</param>
         /// <returns>Generated sql queries based on the SqlQueryStructure</returns>
-        public string Build(SqlQueryStructure structure)
+        public override string Build(SqlQueryStructure structure)
         {
             if (this._enableNto1JoinOpt && HasToOneOrNoRelation(structure, false))
             {
@@ -62,6 +64,44 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 return BuildWithStringAgg(structure);
             }
+        }
+
+        /// <inheritdoc />
+        public override string BuildAggregation(SqlQueryStructure structure, bool descending, int? offset = null, long? limit = null)
+        {
+            if (structure.GroupByMetadata.Fields.Count == 0 || (_enableNto1JoinOpt && HasToOneOrNoRelation(structure, false)))
+            {
+                return base.BuildAggregation(structure, descending, offset, limit);
+            }
+
+            // STRING_AGG wraps the grouped query. Order by its projected aggregate aliases
+            // inside that query, and preserve the same order during JSON serialization.
+            foreach (var aggregation in structure.GroupByMetadata.Aggregations)
+            {
+                structure.OrderByColumns.Add(new OrderByColumn(string.Empty, string.Empty,
+                    aggregation.Column.OperationAlias, direction: descending ? OrderBy.DESC : OrderBy.ASC));
+            }
+
+            string sql = Build(structure);
+            string suffix = $") AS {QuoteIdentifier(structure.SourceAlias)}";
+            if (!sql.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("The DWSQL grouped aggregate query does not end with the expected derived-table alias.");
+            }
+
+            if (limit.HasValue)
+            {
+                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit.Value);
+                ArgumentOutOfRangeException.ThrowIfNegative(offset ?? 0);
+                string offsetParameter = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
+                structure.Parameters.Add(offsetParameter, new DbConnectionParam(offset ?? 0));
+                string limitParameter = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
+                structure.Parameters.Add(limitParameter, new DbConnectionParam(limit.Value));
+                sql = sql.Insert(sql.Length - suffix.Length, $" OFFSET {offsetParameter} ROWS FETCH NEXT {limitParameter} ROWS ONLY");
+                sql = Regex.Replace(sql, @"SELECT TOP \d+", "SELECT");
+            }
+
+            return sql;
         }
 
         /// <summary>

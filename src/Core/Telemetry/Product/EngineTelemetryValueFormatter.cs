@@ -48,6 +48,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             EngineTelemetryProvider.DwSql => "dw_sql",
             EngineTelemetryProvider.PostgreSql => "postgre_sql",
             EngineTelemetryProvider.MySql => "my_sql",
+            EngineTelemetryProvider.Oracle => "oracle",
             EngineTelemetryProvider.CosmosDb => "cosmos_db",
             EngineTelemetryObject.Table => "table",
             EngineTelemetryObject.View => "view",

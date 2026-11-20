@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -95,6 +96,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string route = SqlResponseHelpers.ConstructPrimaryKeyRoute(context, row, BuildProvider().Object);
 
             Assert.AreEqual("id/1", route);
+        }
+
+        [DataTestMethod]
+        [DataRow("00112233445566778899AABBCCDDEEFF", "id/ABEiM0RVZneImaq7zN3u%2Fw%3D%3D")]
+        [DataRow("FBFF", "id/%2B%2F8%3D")]
+        public void ConstructPrimaryKeyRoute_BinaryKey_ReturnsEscapedBase64(string hex, string expected)
+        {
+            FindRequestContext context = new(ENTITY_NAME, BuildTableDbo(), isList: false);
+            Dictionary<string, object?> row = new() { ["id"] = Convert.FromHexString(hex) };
+
+            string route = SqlResponseHelpers.ConstructPrimaryKeyRoute(context, row, BuildProvider().Object);
+
+            Assert.AreEqual(expected, route);
         }
 
         [TestMethod]

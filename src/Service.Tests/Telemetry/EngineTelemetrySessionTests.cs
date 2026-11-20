@@ -774,6 +774,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [DataRow(DatabaseType.DWSQL, EntitySourceType.View, "dw_sql", "view", "read")]
         [DataRow(DatabaseType.PostgreSQL, EntitySourceType.Table, "postgre_sql", "table", "read")]
         [DataRow(DatabaseType.MySQL, EntitySourceType.View, "my_sql", "view", "read")]
+        [DataRow(DatabaseType.Oracle, EntitySourceType.Table, "oracle", "table", "read")]
+        [DataRow(DatabaseType.Oracle, EntitySourceType.View, "oracle", "view", "read")]
         [DataRow(DatabaseType.CosmosDB_NoSQL, EntitySourceType.Table, "cosmos_db", "document", "read")]
         [DataRow(DatabaseType.MSSQL, EntitySourceType.StoredProcedure, "ms_sql", "stored_procedure", "execute")]
         public async Task OperationDimensionsUseCapturedProviderAndSourceType(DatabaseType database, EntitySourceType sourceType,
@@ -796,6 +798,31 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual(objectType, summary.Properties["object_type"]);
             Assert.AreEqual(operationName, summary.Properties["operation"]);
             AssertOutcomes(summary, success: 1);
+            AssertNoPrivateValues(records);
+        }
+
+        [DataTestMethod]
+        [DataRow(DatabaseType.Oracle, "oracle")]
+        [DataRow(DatabaseType.MSSQL, "ms_sql")]
+        [DataRow((DatabaseType)12345, "unknown")]
+        public async Task DatabaseAttemptsRetainProviderAndOutcomes(DatabaseType database, string provider)
+        {
+            CapturingExporter exporter = new();
+            using EngineTelemetrySession session = CreateSession(exporter, new());
+            AcceptAndReady(session, CreateConfig(database));
+            using EngineTelemetryRequestScope request = session.BeginRequest(EngineTelemetryApi.Rest, EngineTelemetryTransport.Http, EngineTelemetryRole.Anonymous);
+            foreach (EngineTelemetryOutcome outcome in new[] { EngineTelemetryOutcome.Failure, EngineTelemetryOutcome.Success, EngineTelemetryOutcome.Canceled })
+            {
+                using EngineTelemetryMeasurementScope? attempt = session.BeginDatabaseAttempt(database);
+                Assert.IsNotNull(attempt);
+                attempt.Complete(outcome);
+            }
+
+            request.Complete(EngineTelemetryOutcome.Success, 200);
+            EngineTelemetryEvent[] records = await DrainAsync(session, exporter);
+            EngineTelemetryEvent summary = Summary(records, "database_attempt");
+            Assert.AreEqual(provider, summary.Properties["provider"]);
+            AssertOutcomes(summary, success: 1, failure: 1, canceled: 1);
             AssertNoPrivateValues(records);
         }
 

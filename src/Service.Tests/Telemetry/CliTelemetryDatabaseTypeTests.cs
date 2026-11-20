@@ -51,6 +51,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [DataRow((int)CliTelemetryDatabaseType.CosmosDbNoSql, "cosmosdb_nosql")]
         [DataRow((int)CliTelemetryDatabaseType.CosmosDbPostgreSql, "cosmosdb_postgresql")]
         [DataRow((int)CliTelemetryDatabaseType.Multiple, "multiple")]
+        [DataRow((int)CliTelemetryDatabaseType.Oracle, "oracle")]
         [DataRow(-1, "unknown")]
         [DataRow(int.MinValue, "unknown")]
         [DataRow(int.MaxValue, "unknown")]
@@ -68,6 +69,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [DataRow(DatabaseType.MySQL, (int)CliTelemetryDatabaseType.MySql)]
         [DataRow(DatabaseType.CosmosDB_NoSQL, (int)CliTelemetryDatabaseType.CosmosDbNoSql)]
         [DataRow(DatabaseType.CosmosDB_PostgreSQL, (int)CliTelemetryDatabaseType.CosmosDbPostgreSql)]
+        [DataRow(DatabaseType.Oracle, (int)CliTelemetryDatabaseType.Oracle)]
         public void ActualTypedProvidersAreProjectedWithoutInspectingValues(DatabaseType provider, int expected)
         {
             RuntimeConfig config = CreateConfig(provider);
@@ -124,6 +126,46 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 (CHILD_FILE, CreateConfig(DatabaseType.PostgreSQL)),
                 (PRIVATE_VALUE + "_second.json", CreateConfig(mixed ? DatabaseType.MySQL : DatabaseType.PostgreSQL)));
             Assert.AreEqual((CliTelemetryDatabaseType)expected, CliTelemetryDatabaseTypeFormatter.FromConfiguration(config));
+        }
+
+        [DataTestMethod]
+        [DataRow(DatabaseType.Oracle, false, "oracle")]
+        [DataRow(DatabaseType.Oracle, true, "oracle")]
+        [DataRow(DatabaseType.MSSQL, false, "multiple")]
+        [DataRow(DatabaseType.MSSQL, true, "multiple")]
+        [DataRow((DatabaseType)(-1), false, "unknown")]
+        [DataRow((DatabaseType)(-1), true, "unknown")]
+        public void OracleLoadedSourcesPreserveProviderClassificationRegardlessOfOrder(DatabaseType otherProvider, bool reverse, string expected)
+        {
+            RuntimeConfig config = Merge(CreateSource(reverse ? otherProvider : DatabaseType.Oracle),
+                (CHILD_FILE, CreateConfig(reverse ? DatabaseType.Oracle : otherProvider)));
+
+            CliTelemetryDatabaseType provider = CliTelemetryDatabaseTypeFormatter.FromConfiguration(config);
+
+            Assert.AreEqual(expected, CliTelemetryDatabaseTypeFormatter.Wire(provider));
+        }
+
+        [TestMethod]
+        public async Task OracleCommandAndLaunchEventsPreserveProviderWithoutPrivateValues()
+        {
+            RecordingFactory factory = new();
+            using CliTelemetrySession cli = CreateSession(factory, installation: new(_installationId, "newly_saved"));
+            CliTelemetryDatabaseType provider = CliTelemetryDatabaseTypeFormatter.FromConfiguration(CreateConfig(DatabaseType.Oracle));
+            cli.ObserveDatabaseType(ROOT, provider);
+            Assert.IsNotNull(cli.BeginEngineLaunch(ROOT, CliTelemetryLaunchSource.StartWeb, provider));
+
+            Complete(cli);
+            await cli.StopAsync().WaitAsync(_timeout);
+
+            Assert.AreEqual(3, factory.Records.Count);
+            Assert.AreEqual("unknown", factory.Records.Single(record => record.Name == FIRST_RUN).Properties["database_type"],
+                "First-run is emitted before a configuration is observed.");
+            foreach (string eventName in new[] { COMMAND, LAUNCH })
+            {
+                Assert.AreEqual("oracle", factory.Records.Single(record => record.Name == eventName).Properties["database_type"]);
+            }
+
+            AssertPrivateValuesAbsent(factory.Records);
         }
 
         [TestMethod]
@@ -592,6 +634,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [DataRow((int)CliTelemetryDatabaseType.CosmosDbNoSql, "cosmosdb_nosql")]
         [DataRow((int)CliTelemetryDatabaseType.CosmosDbPostgreSql, "cosmosdb_postgresql")]
         [DataRow((int)CliTelemetryDatabaseType.Multiple, "multiple")]
+        [DataRow((int)CliTelemetryDatabaseType.Oracle, "oracle")]
         [DataRow(-1, "unknown")]
         [DataRow(int.MinValue, "unknown")]
         [DataRow(int.MaxValue, "unknown")]

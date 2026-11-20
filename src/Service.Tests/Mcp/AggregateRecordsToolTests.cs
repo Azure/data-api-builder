@@ -28,6 +28,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ModelContextProtocol.Protocol;
 using Moq;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.Sql.SchemaConverter;
 
 namespace Azure.DataApiBuilder.Service.Tests.Mcp
 {
@@ -320,10 +321,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [DataTestMethod]
-        [DataRow("SELECT TOP 10 value FOR JSON PATH", true, "desc", false, "SELECT value ORDER BY SUM([table0].[price]) DESC OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY FOR JSON PATH", DisplayName = "Paging removes TOP and inserts descending OFFSET/FETCH before FOR JSON")]
-        [DataRow("SELECT value FOR JSON PATH", false, "asc", true, "SELECT value ORDER BY SUM(DISTINCT [table0].[price]) ASC FOR JSON PATH", DisplayName = "Distinct ascending order is inserted before FOR JSON")]
-        [DataRow("SELECT value", false, "desc", false, "SELECT value ORDER BY SUM([table0].[price]) DESC", DisplayName = "Descending order is appended when no JSON suffix exists")]
-        public void ApplyOrderByAndPagination_RewritesSql(
+        [DataRow("SELECT TOP 10 value FOR JSON PATH", true, "desc", false, "SELECT value ORDER BY sum([table0].[price]) DESC OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY FOR JSON PATH", DisplayName = "Paging removes TOP and inserts descending OFFSET/FETCH before FOR JSON")]
+        [DataRow("SELECT value FOR JSON PATH", false, "asc", true, "SELECT value ORDER BY sum(DISTINCT ([table0].[price])) ASC FOR JSON PATH", DisplayName = "Distinct ascending order is inserted before FOR JSON")]
+        [DataRow("SELECT value", false, "desc", false, "SELECT value ORDER BY sum([table0].[price]) DESC", DisplayName = "Descending order is appended when no JSON suffix exists")]
+        public void TSqlBuildAggregationOrdersAndPaginatesBeforeJson(
             string sql,
             bool paginate,
             string orderby,
@@ -331,23 +332,33 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             string expected)
         {
             SqlQueryStructure structure = CreateUninitializedQueryStructure();
-            Mock<IQueryBuilder> builder = new();
-            builder.Setup(x => x.QuoteIdentifier(It.IsAny<string>()))
-                .Returns((string value) => $"[{value}]");
-            AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(
-                function: "sum",
-                field: "price",
-                distinct: distinct,
-                orderby: orderby,
-                first: paginate ? 9 : null,
-                after: paginate ? Convert.ToBase64String(Encoding.UTF8.GetBytes("4")) : null,
-                groupby: new() { "category" });
+            Mock<MsSqlQueryBuilder> builder = new() { CallBase = true };
+            builder.Setup(x => x.Build(structure)).Returns(sql);
+            structure.GroupByMetadata.Fields.Add("category", new("dbo", "books", "category", "table0"));
+            structure.GroupByMetadata.Aggregations.Add(new(new("dbo", "books", "price", AggregationType.sum, "sum_price", distinct, "table0")));
 
-            string result = InvokePrivate<string>(
-                "ApplyOrderByAndPagination", sql, args, structure, builder.Object, "price", "sum_price");
+            string result = ((IQueryBuilder)builder.Object).BuildAggregation(
+                structure, descending: orderby == "desc", offset: paginate ? 4 : null, limit: paginate ? 10L : null);
 
             Assert.AreEqual(expected, result);
             Assert.AreEqual(paginate ? 2 : 0, structure.Parameters.Count);
+            if (paginate)
+            {
+                Assert.AreEqual(4, structure.Parameters["@param0"].Value);
+                Assert.AreEqual(10L, structure.Parameters["@param1"].Value);
+            }
+        }
+
+        [TestMethod]
+        public void TSqlBuildAggregationWithoutGroupsPreservesQuery()
+        {
+            SqlQueryStructure structure = CreateUninitializedQueryStructure();
+            const string sql = "SELECT count([table0].[id]) AS [count] FROM [books] FOR JSON PATH";
+            Mock<MsSqlQueryBuilder> builder = new() { CallBase = true };
+            builder.Setup(x => x.Build(structure)).Returns(sql);
+
+            Assert.AreEqual(sql, ((IQueryBuilder)builder.Object).BuildAggregation(structure, descending: true));
+            Assert.AreEqual(0, structure.Parameters.Count);
         }
 
         public static IEnumerable<object[]> DwSqlOrderingCases =>
@@ -361,7 +372,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         [DataTestMethod]
         [DynamicData(nameof(DwSqlOrderingCases), DynamicDataSourceType.Property)]
-        public void ApplyOrderByAndPagination_DwSqlOrdersInsideGroupedQuery(
+        public void BuildAggregation_DwSqlOrdersInsideGroupedQuery(
             string function, string field, bool useJsonFunctions, bool paginate, bool distinct, string direction, bool having)
         {
             var (structure, view, metadata) = CreateGroupedViewStructure();
@@ -378,11 +389,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 args, structure, view, "book_price", alias, "Book", metadata.Object);
             DwSqlQueryBuilder builder = new(enableNto1JoinOpt: useJsonFunctions);
 
-            string sql = InvokePrivate<string>("ApplyOrderByAndPagination",
-                builder.Build(structure), args, structure, builder, "book_price", alias);
+            string sql = ((IQueryBuilder)builder).BuildAggregation(structure,
+                descending: direction == "desc", offset: paginate ? 4 : null, limit: paginate ? 10L : null);
 
             string order = useJsonFunctions
-                ? $"{function.ToUpperInvariant()}({(distinct ? "DISTINCT " : string.Empty)}[table0].[book_price])"
+                ? $"{function}({(distinct ? "DISTINCT (" : string.Empty)}[table0].[book_price]{(distinct ? ")" : string.Empty)})"
                 : $"[{alias}]";
             int havingParameterCount = having ? 1 : 0;
             string offsetParameter = $"@param{havingParameterCount}";
@@ -405,7 +416,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             if (paginate)
             {
                 Assert.AreEqual(4, structure.Parameters[offsetParameter].Value);
-                Assert.AreEqual(10, structure.Parameters[limitParameter].Value);
+                Assert.AreEqual(10L, structure.Parameters[limitParameter].Value);
             }
 
             if (useJsonFunctions)
@@ -423,24 +434,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataRow("SELECT value", true)]
         [DataRow("SELECT value) AS [table0] trailing", false)]
         [DataRow("SELECT value) AS [table0] trailing", true)]
-        public void ApplyOrderByAndPagination_UnexpectedDwSqlSuffix_Throws(string rebuiltSql, bool paginate)
+        public void BuildAggregation_UnexpectedDwSqlSuffix_Throws(string rebuiltSql, bool paginate)
         {
             SqlQueryStructure structure = CreateUninitializedQueryStructure();
+            structure.GroupByMetadata.Fields.Add("category", new("dbo", "books", "category", "table0"));
+            structure.GroupByMetadata.Aggregations.Add(new(new("dbo", "books", "price", AggregationType.sum, "sum_price", false, "table0")));
             Mock<DwSqlQueryBuilder> dwSqlBuilder = new(false) { CallBase = true };
             Mock<IQueryBuilder> builder = dwSqlBuilder.As<IQueryBuilder>();
             builder.Setup(x => x.Build(structure)).Returns(rebuiltSql);
-            AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(first: paginate ? 9 : null);
+            InvalidOperationException exception = Assert.ThrowsException<InvalidOperationException>(() =>
+                builder.Object.BuildAggregation(structure, descending: true, limit: paginate ? 10L : null));
 
-            TargetInvocationException exception = Assert.ThrowsException<TargetInvocationException>(() =>
-                InvokePrivate<string>("ApplyOrderByAndPagination",
-                    "SELECT value) AS [table0]", args, structure, builder.Object, "book_price", "sum_price"));
-
-            Assert.IsInstanceOfType<InvalidOperationException>(exception.InnerException);
-            StringAssert.Contains(exception.InnerException!.Message, "expected derived-table alias");
+            StringAssert.Contains(exception.Message, "expected derived-table alias");
         }
 
         [TestMethod]
-        public void ApplyOrderByAndPagination_DwSqlUsesSuppliedProjectionAlias()
+        public void BuildAggregation_DwSqlUsesSuppliedProjectionAlias()
         {
             var (structure, view, metadata) = CreateGroupedViewStructure();
             AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(groupby: new() { "category" });
@@ -449,8 +458,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 args, structure, view, "book_price", ALIAS, "Book", metadata.Object);
             DwSqlQueryBuilder builder = new();
 
-            string sql = InvokePrivate<string>("ApplyOrderByAndPagination",
-                builder.Build(structure), args, structure, builder, "book_price", ALIAS);
+            string sql = ((IQueryBuilder)builder).BuildAggregation(structure, descending: true);
 
             StringAssert.Contains(sql, $" AS [{ALIAS}]");
             StringAssert.Contains(sql, $"WITHIN GROUP (ORDER BY [{ALIAS}] DESC)");
@@ -542,15 +550,41 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataRow("{\"entity\":\"Book\",\"function\":\"sum\",\"field\":\"\"}", "InvalidArguments", DisplayName = "Empty non-count field is invalid")]
         [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"field\":\"id\",\"distinct\":\"yes\"}", "InvalidArguments", DisplayName = "Distinct must be Boolean")]
         [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":0}", "InvalidArguments", DisplayName = "Page size must be positive")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":2147483648}", "InvalidArguments", DisplayName = "Page size beyond Int32 is rejected")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":1.5}", "InvalidArguments", DisplayName = "Fractional page size is rejected")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":\"2\"}", "InvalidArguments", DisplayName = "String page size is rejected")]
         [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":1}", "InvalidArguments", DisplayName = "Page size requires group-by")]
         [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"after\":\"MA==\"}", "InvalidArguments", DisplayName = "Cursor requires page size")]
         [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"after\":\"MA==\"}", "InvalidArguments", DisplayName = "Grouped cursor still requires page size")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"first\":null,\"after\":\"MA==\"}", "InvalidArguments", DisplayName = "Null page size cannot enable cursor pagination")]
         [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"having\":{\"in\":[]}}", "InvalidArguments", DisplayName = "Having in-list cannot be empty")]
         public async Task AggregateRecords_AdditionalArgumentEdges_ReturnExpectedError(string json, string expectedError)
         {
             CallToolResult result = await ExecuteToolAsync(CreateDefaultServiceProvider(), json);
 
             AssertErrorResult(result, expectedError);
+        }
+
+        [DataTestMethod]
+        [DataRow(false, false)]
+        [DataRow(false, true)]
+        [DataRow(true, false)]
+        [DataRow(true, true)]
+        public void AggregateRecords_NullOrOmittedFirst_DisablesPagination(bool explicitNull, bool grouped)
+        {
+            string firstProperty = explicitNull ? ",\"first\":null" : string.Empty;
+            string groupbyProperty = grouped ? ",\"groupby\":[\"title\"]" : string.Empty;
+            using JsonDocument arguments = JsonDocument.Parse(
+                $"{{\"entity\":\"Book\",\"function\":\"count\"{firstProperty}{groupbyProperty}}}");
+            object?[] parameters = { arguments, CreateConfig(), "aggregate_records", null, null };
+
+            CallToolResult? error = InvokePrivateWithMutableArguments<CallToolResult?>(
+                "TryParseAndValidateArguments", parameters);
+
+            Assert.IsNull(error);
+            AggregateRecordsTool.AggregateArguments parsed = (AggregateRecordsTool.AggregateArguments)parameters[3]!;
+            Assert.IsNull(parsed.First, "An omitted or null page size must leave pagination disabled.");
+            Assert.AreEqual(grouped ? 1 : 0, parsed.Groupby.Count);
         }
 
         [TestMethod]

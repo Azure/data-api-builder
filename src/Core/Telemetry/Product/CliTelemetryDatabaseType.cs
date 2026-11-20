@@ -15,7 +15,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         MySql,
         CosmosDbNoSql,
         CosmosDbPostgreSql,
-        Multiple
+        Multiple,
+        Oracle
     }
 
     /// <summary>
@@ -82,7 +83,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         {
             CliTelemetryDatabaseType.MsSql or CliTelemetryDatabaseType.DwSql or CliTelemetryDatabaseType.PostgreSql
                 or CliTelemetryDatabaseType.MySql or CliTelemetryDatabaseType.CosmosDbNoSql
-                or CliTelemetryDatabaseType.CosmosDbPostgreSql or CliTelemetryDatabaseType.Multiple => value,
+                or CliTelemetryDatabaseType.CosmosDbPostgreSql or CliTelemetryDatabaseType.Multiple
+                or CliTelemetryDatabaseType.Oracle => value,
             _ => CliTelemetryDatabaseType.Unknown
         };
 
@@ -95,6 +97,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             CliTelemetryDatabaseType.CosmosDbNoSql => "cosmosdb_nosql",
             CliTelemetryDatabaseType.CosmosDbPostgreSql => "cosmosdb_postgresql",
             CliTelemetryDatabaseType.Multiple => "multiple",
+            CliTelemetryDatabaseType.Oracle => "oracle",
             _ => "unknown"
         };
 
@@ -171,6 +174,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 DatabaseType.MySQL => CliTelemetryDatabaseType.MySql,
                 DatabaseType.CosmosDB_NoSQL => CliTelemetryDatabaseType.CosmosDbNoSql,
                 DatabaseType.CosmosDB_PostgreSQL => CliTelemetryDatabaseType.CosmosDbPostgreSql,
+                DatabaseType.Oracle => CliTelemetryDatabaseType.Oracle,
                 _ => CliTelemetryDatabaseType.Unknown
             };
             if (provider == CliTelemetryDatabaseType.Unknown)

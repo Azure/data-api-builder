@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
 
     internal enum EngineTelemetryOperation { Unknown, Read, Write, Execute }
 
-    internal enum EngineTelemetryProvider { Unknown, MsSql, DwSql, PostgreSql, MySql, CosmosDb }
+    internal enum EngineTelemetryProvider { Unknown, MsSql, DwSql, PostgreSql, MySql, CosmosDb, Oracle }
 
     internal enum EngineTelemetryObject { Unknown, Table, View, StoredProcedure, Document }
 

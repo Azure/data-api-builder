@@ -88,7 +88,7 @@ Identifies *what kind of connection* this is. Only `Source` is knowable when a p
 | 3 | Source | the database engine of this data source (see table) |
 | 4 | Role | always `X` (per-request: anonymous / authenticated / custom) |
 
-**Source map:** `MSSQL -> S`, `DWSQL -> D`, `PostgreSQL -> P`, `MySQL -> M`, `Cosmos -> C`, and `X` when there is no live data source (for example the CLI, which has no open connection).
+**Source map:** `MSSQL -> S`, `DWSQL -> D`, `PostgreSQL -> P`, `MySQL -> M`, `Oracle -> O`, `Cosmos -> C`, and `X` when there is no live data source (for example the CLI, which has no open connection).
 
 ### General section (6 characters)
 

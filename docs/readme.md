@@ -1,6 +1,8 @@
 # Documentation
 
-All documentation has now been moved [here](https://learn.microsoft.com/azure/data-api-builder/)
+Published product documentation is available on [Microsoft Learn](https://learn.microsoft.com/azure/data-api-builder/).
+
+Repository documentation for the Oracle provider is available in [Oracle provider behavior and limitations](oracle.md).
 
 The process for updating Data API builder documentation on Learn is available [here](https://learn.microsoft.com/contribute/)
 

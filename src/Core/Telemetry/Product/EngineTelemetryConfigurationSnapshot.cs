@@ -24,11 +24,12 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         private const string UNSUPPORTED = "unsupported";
         private const string UNKNOWN = "unknown";
         private const string NOT_APPLICABLE = "not_applicable";
+        private const int UNKNOWN_DATABASE_TYPE = 7;
 
         // Order is schema-defined, never derived from customer names, enum numeric values, or
         // dictionary enumeration order. Even combinations of these labels have bounded size.
         private static readonly ImmutableArray<string> _databaseTypes =
-            ["mssql", "dwsql", "postgresql", "mysql", "cosmosdb_nosql", "cosmosdb_postgresql", UNKNOWN];
+            ["mssql", "dwsql", "postgresql", "mysql", "cosmosdb_nosql", "cosmosdb_postgresql", "oracle", UNKNOWN];
 
         public static ImmutableDictionary<string, string> Create(RuntimeConfig config)
             => Create(config, explicitConfiguration: null);
@@ -205,7 +206,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                     DatabaseType.MySQL => 3,
                     DatabaseType.CosmosDB_NoSQL => 4,
                     DatabaseType.CosmosDB_PostgreSQL => 5,
-                    _ => 6
+                    DatabaseType.Oracle => 6,
+                    _ => UNKNOWN_DATABASE_TYPE
                 };
                 typeMask |= 1 << type;
                 Input sourceInput = string.Equals(name, config.DefaultDataSourceName, StringComparison.Ordinal)
@@ -220,7 +222,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 }
                 else
                 {
-                    string unsupported = type == 6 ? UNKNOWN : UNSUPPORTED;
+                    string unsupported = type == UNKNOWN_DATABASE_TYPE ? UNKNOWN : UNSUPPORTED;
                     oboConfigured = Any(oboConfigured, unsupported);
                     oboEffective = Any(oboEffective, unsupported);
                 }
@@ -238,7 +240,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 }
                 else
                 {
-                    string unsupported = type == 6 ? UNKNOWN : UNSUPPORTED;
+                    string unsupported = type == UNKNOWN_DATABASE_TYPE ? UNKNOWN : UNSUPPORTED;
                     sessionConfigured = Any(sessionConfigured, unsupported);
                     sessionEffective = Any(sessionEffective, unsupported);
                 }
@@ -249,7 +251,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             result.Add("scale.data_source_count", CountBucket(count));
             result.Add("data_sources.types", typeMask == 0 ? "none" : string.Join(",", _databaseTypes.Where((_, index) => (typeMask & (1 << index)) != 0)));
             int distinctTypes = _databaseTypes.Where((_, index) => (typeMask & (1 << index)) != 0).Count();
-            result.Add("data_sources.distinct_type_count", (typeMask & (1 << 6)) != 0 ? UNKNOWN : distinctTypes switch
+            result.Add("data_sources.distinct_type_count", (typeMask & (1 << UNKNOWN_DATABASE_TYPE)) != 0 ? UNKNOWN : distinctTypes switch
             {
                 0 => "0",
                 1 => "1",
@@ -258,6 +260,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 4 => "4",
                 5 => "5",
                 6 => "6",
+                7 => "7",
                 _ => UNKNOWN
             });
         }

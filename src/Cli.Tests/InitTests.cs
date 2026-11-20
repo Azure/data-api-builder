@@ -56,6 +56,31 @@ namespace Cli.Tests
             return ExecuteVerifyTest(options);
         }
 
+        [TestMethod]
+        public void OracleDatabasePreservesConnectionStringAndNeedsNoSqlServerOptions()
+        {
+            const string connectionString = "User Id=APP;Password=test;Data Source=localhost:1521/ORCLPDB1";
+            InitOptions options = new(
+                databaseType: DatabaseType.Oracle,
+                connectionString: connectionString,
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: false,
+                hostMode: HostMode.Development,
+                corsOrigin: null,
+                authenticationProvider: "Unauthenticated",
+                config: TEST_RUNTIME_CONFIG_FILE);
+
+            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? config));
+            Assert.IsNotNull(config);
+            DataSource dataSource = config!.DataSource!;
+            Assert.AreEqual(DatabaseType.Oracle, dataSource.DatabaseType);
+            Assert.AreEqual(connectionString, dataSource.ConnectionString);
+            Assert.IsFalse(dataSource.Options?.ContainsKey("set-session-context") ?? false);
+            Assert.IsTrue(config.SqlDataSourceUsed);
+        }
+
         /// <summary>
         /// Test the simple init config for cosmosdb_postgresql database.
         /// </summary>

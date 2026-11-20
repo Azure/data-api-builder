@@ -1330,7 +1330,8 @@ public class EndToEndTests
         });
 
         Assert.IsTrue(reachedEngineStart, "The CLI should have reached the engine-start step.");
-        Assert.AreEqual(expectedIsCliOverriding, engineArgs!.Contains("--log-level"), $"Unexpected engine args: {string.Join(' ', engineArgs)}");
+        Assert.IsNotNull(engineArgs);
+        Assert.AreEqual(expectedIsCliOverriding, engineArgs.Contains("--log-level"), $"Unexpected engine args: {string.Join(' ', engineArgs)}");
 
         // The CLI tracks a config-driven level separately; it must not also be reported as a CLI override.
         Assert.AreEqual(!expectedIsCliOverriding, Utils.IsConfigOverriding, "Config-driven log level tracking is incorrect.");

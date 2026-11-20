@@ -39,6 +39,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             DatabaseType.MySQL,
             DatabaseType.DWSQL,
             DatabaseType.PostgreSQL,
+            DatabaseType.Oracle,
             DatabaseType.CosmosDB_PostgreSQL
         };
 

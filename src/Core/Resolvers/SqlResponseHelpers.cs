@@ -276,7 +276,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // This code block is reached after the successful execution of database update/insert operations.
                 // So, it is a safe assumption that a non-null value will be present in the result set for a primary key.
-                newPrimaryKeyRoute.Append(dbOperationResultSetRow[pkExposedName]!.ToString());
+                object primaryKeyValue = dbOperationResultSetRow[pkExposedName]!;
+                newPrimaryKeyRoute.Append(primaryKeyValue is byte[] bytes
+                    ? Uri.EscapeDataString(Convert.ToBase64String(bytes))
+                    : primaryKeyValue.ToString());
                 newPrimaryKeyRoute.Append("/");
             }
 

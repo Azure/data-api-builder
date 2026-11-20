@@ -29,6 +29,7 @@ public class Column
     /// Name of the column
     /// </summary>
     public string ColumnName { get; set; }
+    public string? DatabaseTypeName { get; set; }
 
     public Column(string tableSchema, string tableName, string columnName, string? tableAlias = null)
     {

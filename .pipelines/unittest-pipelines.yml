@@ -21,6 +21,12 @@ pr:
     - '*.md'
     - templates/**
 
+parameters:
+- name: oracleCoveragePipelineId
+  displayName: Oracle pipeline definition ID for rolling coverage (optional)
+  type: string
+  default: ''
+
 variables:
 - template: templates/variables.yml
 
@@ -116,6 +122,20 @@ jobs:
       patterns: 'coverage-*/**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/cosmos'
 
+  # Set the parameter's default after registering oracle-pipelines.yml in Azure
+  # DevOps. Until then, Oracle still publishes coverage in its own pipeline.
+  - ${{ if ne(parameters.oracleCoveragePipelineId, '') }}:
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download Oracle coverage (latest)'
+      continueOnError: true
+      inputs:
+        source: 'specific'
+        project: '$(System.TeamProject)'
+        pipeline: '${{ parameters.oracleCoveragePipelineId }}'
+        runVersion: 'latest'
+        patterns: 'coverage-*/**/*.cobertura.xml'
+        path: '$(Pipeline.Workspace)/db/oracle'
+
   # Union-merge every downloaded cobertura and emit ONE combined Cobertura.xml
   # (test projects excluded). Dependency-free - no ReportGenerator extension.
   - task: PowerShell@2
@@ -123,7 +143,10 @@ jobs:
     continueOnError: true
     inputs:
       filePath: 'scripts/merge-coverage.ps1'
-      arguments: '-Path "$(Pipeline.Workspace)" -OutFile "$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml" -ExpectedSources unit,mssql,pg,mysql,dwsql,cosmos'
+      ${{ if ne(parameters.oracleCoveragePipelineId, '') }}:
+        arguments: '-Path "$(Pipeline.Workspace)" -OutFile "$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml" -ExpectedSources unit,mssql,pg,mysql,dwsql,cosmos,oracle'
+      ${{ else }}:
+        arguments: '-Path "$(Pipeline.Workspace)" -OutFile "$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml" -ExpectedSources unit,mssql,pg,mysql,dwsql,cosmos'
       pwsh: true
 
   - task: PublishCodeCoverageResults@2

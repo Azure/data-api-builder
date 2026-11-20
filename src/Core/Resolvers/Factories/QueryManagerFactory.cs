@@ -89,6 +89,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                         exceptionParser = new PostgreSqlDbExceptionParser(_runtimeConfigProvider);
                         queryExecutor = new PostgreSqlQueryExecutor(_runtimeConfigProvider, exceptionParser, _logger, _contextAccessor, _handler);
                         break;
+                    case DatabaseType.Oracle:
+                        queryBuilder = new OracleQueryBuilder();
+                        exceptionParser = new OracleDbExceptionParser(_runtimeConfigProvider);
+                        queryExecutor = new OracleQueryExecutor(_runtimeConfigProvider, exceptionParser, _logger, _contextAccessor, _handler);
+                        break;
                     case DatabaseType.DWSQL:
                         queryBuilder = new DwSqlQueryBuilder(enableNto1JoinOpt: _runtimeConfigProvider.GetConfig().EnableDwNto1JoinOpt);
                         exceptionParser = new MsSqlDbExceptionParser(_runtimeConfigProvider);

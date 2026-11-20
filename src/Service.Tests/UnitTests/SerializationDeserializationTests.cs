@@ -28,6 +28,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private SourceDefinition _sourceDefinition;
         private JsonSerializerOptions _options;
 
+        [DataTestMethod]
+        [DataRow(null)]
+        [DataRow("CLOB")]
+        [DataRow("NCLOB")]
+        public void ColumnDefinitionSerializationRetainsNativeType(string? nativeType)
+        {
+            InitializeObjects();
+            _columnDefinition.DatabaseTypeName = nativeType;
+            string json = JsonSerializer.Serialize(_databaseTable, _options);
+            DatabaseTable result = JsonSerializer.Deserialize<DatabaseTable>(json, _options)!;
+            ColumnDefinition column = result.TableDefinition.Columns["FirstName"];
+            Assert.AreEqual(nativeType, column.DatabaseTypeName);
+            Assert.AreEqual(typeof(string), column.SystemType);
+        }
+
         /// <summary>
         /// Validates serialization and deserilization of DatabaseTable object
         /// This test first creates a DatabaseTable object, serializes and deserializes it using our converters
@@ -526,7 +541,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             // test number of properties/fields defined in Column Definition
             int fields = typeof(ColumnDefinition).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
-            Assert.AreEqual(fields, 11);
+            Assert.AreEqual(12, fields);
 
             // test values
             expectedColumnDefinition.Equals(deserializedColumnDefinition);

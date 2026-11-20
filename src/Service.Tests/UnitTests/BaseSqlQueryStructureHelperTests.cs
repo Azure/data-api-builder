@@ -21,6 +21,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     {
         [DataTestMethod]
         [DataRow("text", typeof(string), "text")]
+        [DataRow("literal%2Fvalue", typeof(string), "literal%2Fvalue")]
         [DataRow("255", typeof(byte), (byte)255)]
         [DataRow("-12", typeof(short), (short)-12)]
         [DataRow("123", typeof(int), 123)]
@@ -49,6 +50,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(2.5d, InvokeParse("2.5", typeof(double)));
             Assert.AreEqual(3.75m, InvokeParse("3.75", typeof(decimal)));
             Assert.AreEqual(new TimeOnly(12, 34, 56), InvokeParse("12:34:56", typeof(TimeOnly)));
+        }
+
+        [DataTestMethod]
+        [DataRow("+/8=")]
+        [DataRow("%2B%2F8%3D")]
+        [DataRow("%2b%2f8%3d")]
+        public void ParseParamAsSystemType_DecodesUrlEscapedBinaryKeys(string value)
+        {
+            CollectionAssert.AreEqual(new byte[] { 251, 255 }, (byte[])InvokeParse(value, typeof(byte[])));
+        }
+
+        [DataTestMethod]
+        [DataRow("not base64!")]
+        [DataRow("%252F%252Fw%253D")]
+        public void ParseParamAsSystemType_RejectsMalformedOrDoubleEncodedBinaryKeys(string value)
+        {
+            TargetInvocationException exception = Assert.ThrowsException<TargetInvocationException>(() => InvokeParse(value, typeof(byte[])));
+            Assert.IsInstanceOfType(exception.InnerException, typeof(FormatException));
         }
 
         [TestMethod]

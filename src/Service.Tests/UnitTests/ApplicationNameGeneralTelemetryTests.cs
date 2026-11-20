@@ -513,7 +513,9 @@ public class ApplicationNameGeneralTelemetryTests
         config = config with { DataSource = updated };
         using FileSystemRuntimeConfigLoader loader = new(new MockFileSystem()) { RuntimeConfig = config };
         using RuntimeConfigProvider provider = new(loader);
-        HttpContextAccessor accessor = new();
+        Mock<IHttpContextAccessor> accessorMock = new();
+        accessorMock.SetupProperty(accessor => accessor.HttpContext);
+        IHttpContextAccessor accessor = accessorMock.Object;
         Mock<DbExceptionParser> parser = new(provider);
         MsSqlQueryExecutor executor = new(provider, parser.Object, NullLogger<IQueryExecutor>.Instance, accessor);
 

@@ -458,7 +458,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 "String" => param,
                 "Byte" => byte.Parse(param),
-                "Byte[]" => Convert.FromBase64String(param),
+                // ASP.NET preserves encoded slashes in route values. Decode binary keys
+                // once before base64 parsing; ordinary string parameters remain unchanged.
+                "Byte[]" => Convert.FromBase64String(Uri.UnescapeDataString(param)),
                 "Int16" => short.Parse(param),
                 "Int32" => int.Parse(param),
                 "Int64" => long.Parse(param),

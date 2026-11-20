@@ -732,7 +732,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     case DatabaseType.CosmosDB_NoSQL:
                         cosmosDataSourceNames.Add(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName));
                         break;
-                    case DatabaseType.MSSQL or DatabaseType.MySQL or DatabaseType.PostgreSQL or DatabaseType.DWSQL:
+                    case DatabaseType.MSSQL or DatabaseType.MySQL or DatabaseType.PostgreSQL or DatabaseType.DWSQL or DatabaseType.Oracle:
                         sqlEntities.TryAdd(entityName, entity);
                         break;
                     default:

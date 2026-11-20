@@ -550,12 +550,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 ["c"] = new(DatabaseType.DWSQL, SECRET),
                 ["d"] = new(DatabaseType.CosmosDB_NoSQL, SECRET),
                 ["e"] = new(DatabaseType.PostgreSQL, SECRET),
-                ["f"] = new(DatabaseType.MSSQL, SECRET)
+                ["f"] = new(DatabaseType.MSSQL, SECRET),
+                ["g"] = new(DatabaseType.Oracle, SECRET)
             };
             RuntimeConfig config = MultipleSources(sources);
             ImmutableDictionary<string, string> snapshot = EngineTelemetrySnapshotFactory.Create(config);
-            Assert.AreEqual("mssql,dwsql,postgresql,mysql,cosmosdb_nosql,cosmosdb_postgresql", snapshot["data_sources.types"]);
-            Assert.AreEqual("6", snapshot["data_sources.distinct_type_count"]);
+            Assert.AreEqual("mssql,dwsql,postgresql,mysql,cosmosdb_nosql,cosmosdb_postgresql,oracle", snapshot["data_sources.types"]);
+            Assert.AreEqual("7", snapshot["data_sources.distinct_type_count"]);
             Assert.AreEqual("2-10", snapshot["scale.data_source_count"]);
 
             sources.Add(SECRET, new DataSource((DatabaseType)12345, SECRET));
@@ -564,6 +565,29 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual(snapshot["data_sources.types"] + ",unknown", unknown["data_sources.types"]);
             Assert.AreEqual("unknown", unknown["data_sources.distinct_type_count"]);
             AssertSchema(unknown);
+        }
+
+        [DataTestMethod]
+        [DataRow(DatabaseType.Oracle, "oracle", "1", "unsupported")]
+        [DataRow(DatabaseType.PostgreSQL, "postgresql,oracle", "2", "unsupported")]
+        [DataRow((DatabaseType)12345, "oracle,unknown", "unknown", "unknown")]
+        public void OracleSourcesHaveKnownTypeAndUnsupportedCapabilities(DatabaseType otherProvider,
+            string types, string distinctCount, string capability)
+        {
+            RuntimeConfig config = MultipleSources(new()
+            {
+                ["root"] = new(DatabaseType.Oracle, SECRET),
+                ["other"] = new(otherProvider, SECRET)
+            });
+
+            ImmutableDictionary<string, string> snapshot = EngineTelemetrySnapshotFactory.Create(config);
+
+            Assert.AreEqual(types, snapshot["data_sources.types"]);
+            Assert.AreEqual(distinctCount, snapshot["data_sources.distinct_type_count"]);
+            Assert.AreEqual("2-10", snapshot["scale.data_source_count"]);
+            AssertPair(snapshot, "data_sources.obo", capability, capability);
+            AssertPair(snapshot, "data_sources.session_context", capability, capability);
+            AssertSchema(snapshot);
         }
 
         [TestMethod]
@@ -875,7 +899,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             {
                 "enabled", "disabled", "missing", "unknown", "unsupported", "not_applicable", "configuration-v1",
                 "production", "development", "unauthenticated", "simulator", "app_service", "static_web_apps", "entra_id", "jwt",
-                "0", "1", "2", "3", "4", "5", "6", "2-10", "11-50", "51-100", "101-500", "501+",
+                "0", "1", "2", "3", "4", "5", "6", "7", "2-10", "11-50", "51-100", "101-500", "501+",
                 "1-10", "11-100", "101-1000", "1001-10000", "10001-100000", "100001+",
                 "1-1048576", "1048577-16777216", "16777217-67108864", "67108865-268435456", "268435457+",
                 "1-5", "6-30", "31-60", "61-300", "301-3600", "3601+"
@@ -894,7 +918,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             string types = snapshot["data_sources.types"];
             if (types != "none")
             {
-                string[] ordered = ["mssql", "dwsql", "postgresql", "mysql", "cosmosdb_nosql", "cosmosdb_postgresql", "unknown"];
+                string[] ordered = ["mssql", "dwsql", "postgresql", "mysql", "cosmosdb_nosql", "cosmosdb_postgresql", "oracle", "unknown"];
                 string[] actual = types.Split(',');
                 CollectionAssert.AreEqual(ordered.Where(type => actual.Contains(type, StringComparer.Ordinal)).ToArray(), actual);
             }

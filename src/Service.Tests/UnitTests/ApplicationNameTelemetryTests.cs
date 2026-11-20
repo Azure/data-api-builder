@@ -63,6 +63,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(DatabaseType.DWSQL, 'D')]
         [DataRow(DatabaseType.PostgreSQL, 'P')]
         [DataRow(DatabaseType.MySQL, 'M')]
+        [DataRow(DatabaseType.Oracle, 'O')]
         [DataRow(DatabaseType.CosmosDB_NoSQL, 'C')]
         public void EncodeTelemetryString_EncodesSource(DatabaseType dbType, char expectedSource)
         {
@@ -441,6 +442,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("ZPMZ", "Protocol: Z (unrecognized)", "Object: P (Persisted Document)", "Source: M (MySQL)", "Role: Z (unrecognized)")]
         [DataRow("XXXZ", "Protocol: X (not applicable)", "Object: X (not applicable)", "Source: X (not applicable)", "Role: Z (unrecognized)")]
         [DataRow("ZZCZ", "Protocol: Z (unrecognized)", "Object: Z (unrecognized)", "Source: C (CosmosDB)", "Role: Z (unrecognized)")]
+        [DataRow("XXOX", "Protocol: X (not applicable)", "Object: X (not applicable)", "Source: O (Oracle)", "Role: X (not applicable)")]
         public void Decode_ContextAlphabet_DescribesEveryValue(
             string context,
             string expectedProtocol,
@@ -495,6 +497,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Source(DatabaseType.CosmosDB_PostgreSQL));
 
             Assert.AreEqual('C', Sections(telemetry).context[2]);
+        }
+
+        /// <summary>Verifies that Oracle's source code is recognised by both the encoder and decoder.</summary>
+        [TestMethod]
+        public void OracleSourceRoundTripsThroughApplicationNameTelemetry()
+        {
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.Oracle));
+
+            string decoded = string.Join("\n", ApplicationNameTelemetry.Decode(telemetry));
+
+            StringAssert.Contains(decoded, "Source: O (Oracle)");
         }
 
         /// <summary>Verifies the friendly response when no supported telemetry marker is present.</summary>

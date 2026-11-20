@@ -11,6 +11,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Npgsql;
+using Oracle.ManagedDataAccess.Client;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
@@ -22,6 +23,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             switch (dbType)
             {
+                case DatabaseType.Oracle:
+                    return "SELECT 1 FROM DUAL";
                 case DatabaseType.MySQL:
                     return "SELECT 1";
                 case DatabaseType.PostgreSQL:
@@ -43,6 +46,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             switch (dbType)
             {
+                case DatabaseType.Oracle:
+                    return OracleClientFactory.Instance;
                 case DatabaseType.PostgreSQL:
                     return NpgsqlFactory.Instance;
                 case DatabaseType.MSSQL:
@@ -101,6 +106,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 switch (dbType)
                 {
+                    case DatabaseType.Oracle:
+                        return new OracleConnectionStringBuilder(connectionString).ToString();
                     case DatabaseType.PostgreSQL:
                         return new NpgsqlConnectionStringBuilder(connectionString).ToString();
                     case DatabaseType.MySQL:

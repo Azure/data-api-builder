@@ -313,7 +313,9 @@ public class GQLFilterParser
                            tableName: sourceName,
                            tableAlias: sourceAlias,
                            processLiterals: queryStructure.MakeDbConnectionParam,
-                           isListType: isListType)));
+                           isListType: isListType,
+                           escapeBracketWildcards: metadataProvider.GetDatabaseType() != DatabaseType.Oracle,
+                           databaseTypeName: sourceDefinition.Columns.TryGetValue(backingColumnName, out ColumnDefinition? definition) ? definition.DatabaseTypeName : null)));
                 }
             }
         }
@@ -549,6 +551,7 @@ public class GQLFilterParser
     /// <param name="tableAlias">The alias of the table underlying the *FilterInput being processed</param>
     /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
     /// <param name="isListType">Flag to give a hint about the node type. It is only applicable for CosmosDB</param>
+    /// <param name="escapeBracketWildcards">Whether brackets need escaping in LIKE patterns. Oracle treats brackets as ordinary characters.</param>
     private static Predicate ParseScalarType(
         IMiddlewareContext ctx,
         IInputValueDefinition argumentSchema,
@@ -558,11 +561,13 @@ public class GQLFilterParser
         string tableName,
         string tableAlias,
         Func<object, string?, bool, string> processLiterals,
-        bool isListType = false)
+        bool isListType = false,
+        bool escapeBracketWildcards = true,
+        string? databaseTypeName = null)
     {
-        Column column = new(schemaName, tableName, columnName: fieldName, tableAlias);
+        Column column = new(schemaName, tableName, columnName: fieldName, tableAlias) { DatabaseTypeName = databaseTypeName };
 
-        return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals, isListType);
+        return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals, isListType, escapeBracketWildcards);
     }
 
     /// <summary>
@@ -682,13 +687,15 @@ public static class FieldFilterParser
     /// <param name="fields">The subfields of the scalar field</param>
     /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
     /// <param name="isListType">Flag which gives a hint about the node type in the given schema. only for CosmosDB it can be of list type. Refer <a href=https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/query/array-contains>here</a>.</param>
+    /// <param name="escapeBracketWildcards">Whether brackets need escaping in LIKE patterns. Defaults to the existing behavior for other providers.</param>
     public static Predicate Parse(
         IMiddlewareContext ctx,
         IInputValueDefinition argumentSchema,
         Column column,
         List<ObjectFieldNode> fields,
         Func<object, string?, bool, string> processLiterals,
-        bool isListType = false)
+        bool isListType = false,
+        bool escapeBracketWildcards = true)
     {
         List<PredicateOperand> predicates = new();
 
@@ -747,7 +754,7 @@ public static class FieldFilterParser
                     else
                     {
                         op = PredicateOperation.LIKE;
-                        value = $"%{EscapeLikeString((string)value)}%";
+                        value = $"%{EscapeLikeString((string)value, escapeBracketWildcards)}%";
                         lengthOverride = true;
                     }
 
@@ -760,19 +767,19 @@ public static class FieldFilterParser
                     else
                     {
                         op = PredicateOperation.NOT_LIKE;
-                        value = $"%{EscapeLikeString((string)value)}%";
+                        value = $"%{EscapeLikeString((string)value, escapeBracketWildcards)}%";
                         lengthOverride = true;
                     }
 
                     break;
                 case "startsWith":
                     op = PredicateOperation.LIKE;
-                    value = $"{EscapeLikeString((string)value)}%";
+                    value = $"{EscapeLikeString((string)value, escapeBracketWildcards)}%";
                     lengthOverride = true;
                     break;
                 case "endsWith":
                     op = PredicateOperation.LIKE;
-                    value = $"%{EscapeLikeString((string)value)}";
+                    value = $"%{EscapeLikeString((string)value, escapeBracketWildcards)}";
                     lengthOverride = true;
                     break;
                 case "isNull":
@@ -872,12 +879,17 @@ public static class FieldFilterParser
         return new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName, lengthOverride)}" : value.ToString());
     }
 
-    private static string EscapeLikeString(string input)
+    private static string EscapeLikeString(string input, bool escapeBracketWildcards)
     {
         input = input.Replace(@"\", @"\\");
         input = input.Replace(@"%", @"\%");
-        input = input.Replace(@"[", @"\[");
-        input = input.Replace(@"]", @"\]");
+        // Oracle permits escaping only %, _ and the escape character itself.
+        if (escapeBracketWildcards)
+        {
+            input = input.Replace(@"[", @"\[");
+            input = input.Replace(@"]", @"\]");
+        }
+
         input = input.Replace(@"_", @"\_");
         return input;
     }

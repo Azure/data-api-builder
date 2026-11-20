@@ -7,6 +7,7 @@ using System.Reflection;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -147,7 +148,64 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             metadata.Setup(x => x.GetSourceDefinition("Author")).Returns(relatedTable.TableDefinition);
 
             Assert.ThrowsException<DataApiBuilderException>(() =>
-                structure.AddJoinPredicatesForRelatedEntity("Author", "table1", structure));
+                structure.AddJoinPredicatesForRelatedEntity("author", "Author", "table1", structure));
+        }
+
+        /// <summary>
+        /// When an entity has multiple relationships to the same target entity, the join
+        /// of a relationship must only use the foreign key definitions of that relationship.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("author", "author_id", DisplayName = "First relationship to the target entity uses its own fields")]
+        [DataRow("editor", "editor_id", DisplayName = "Second relationship to the target entity uses its own fields")]
+        public void AddJoinPredicatesForRelationship_MultipleRelationshipsToSameTarget_UsesRequestedRelationship(
+            string relationshipName,
+            string expectedSourceColumn)
+        {
+            (TestSqlQueryStructure structure, Mock<ISqlMetadataProvider> metadata) = CreateStructure(EntitySourceType.Table, false);
+            RegisterRelatedEntity(structure, metadata, new SourceDefinition());
+            AddForeignKeyDefinitions(
+                structure.DatabaseObject.SourceDefinition,
+                sourceEntityName: "Book",
+                targetEntityName: "Author",
+                CreateForeignKeyDefinition(structure, "Book", "author", "author_id"),
+                CreateForeignKeyDefinition(structure, "Book", "editor", "editor_id"));
+            structure.SourceAlias = "table0";
+            TestSqlQueryStructure subQuery = new(metadata.Object);
+
+            structure.AddJoinPredicatesForRelationship(
+                new EntityRelationshipKey("Book", relationshipName), "Author", "table1", subQuery);
+
+            Assert.AreEqual(1, subQuery.Predicates.Count);
+            Column sourceColumn = subQuery.Predicates[0].Left!.AsColumn()!;
+            Column targetColumn = subQuery.Predicates[0].Right.AsColumn()!;
+            Assert.AreEqual("table0", sourceColumn.TableAlias);
+            Assert.AreEqual(expectedSourceColumn, sourceColumn.ColumnName);
+            Assert.AreEqual("table1", targetColumn.TableAlias);
+            Assert.AreEqual("id", targetColumn.ColumnName);
+        }
+
+        /// <summary>
+        /// When the source entity has no foreign key definitions for the target entity, those of the target
+        /// entity are used. They carry the name of the target's relationship, so they can't be matched by name.
+        /// </summary>
+        [TestMethod]
+        public void AddJoinPredicatesForRelatedEntity_ForeignKeysDefinedOnTargetEntity_AreUsed()
+        {
+            (TestSqlQueryStructure structure, Mock<ISqlMetadataProvider> metadata) = CreateStructure(EntitySourceType.Table, false);
+            SourceDefinition relatedDefinition = new();
+            RegisterRelatedEntity(structure, metadata, relatedDefinition);
+            AddForeignKeyDefinitions(
+                relatedDefinition,
+                sourceEntityName: "Author",
+                targetEntityName: "Book",
+                CreateForeignKeyDefinition(structure, "Author", "books", "author_id"));
+            TestSqlQueryStructure subQuery = new(metadata.Object);
+
+            structure.AddJoinPredicatesForRelatedEntity("author", "Author", "table1", subQuery);
+
+            Assert.AreEqual(1, subQuery.Predicates.Count);
+            Assert.AreEqual("author_id", subQuery.Predicates[0].Left!.AsColumn()!.ColumnName);
         }
 
         [TestMethod]
@@ -219,6 +277,52 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             metadata.Setup(x => x.GetSourceDefinition("Book")).Returns(databaseObject.SourceDefinition);
 
             return (new TestSqlQueryStructure(metadata.Object), metadata);
+        }
+
+        private static void RegisterRelatedEntity(
+            TestSqlQueryStructure structure,
+            Mock<ISqlMetadataProvider> metadata,
+            SourceDefinition relatedDefinition)
+        {
+            metadata.SetupGet(x => x.EntityToDatabaseObject).Returns(new Dictionary<string, DatabaseObject>
+            {
+                ["Book"] = structure.DatabaseObject,
+                ["Author"] = new DatabaseTable("dbo", "authors") { TableDefinition = relatedDefinition }
+            });
+            metadata.Setup(x => x.GetSourceDefinition("Author")).Returns(relatedDefinition);
+        }
+
+        private static void AddForeignKeyDefinitions(
+            SourceDefinition sourceDefinition,
+            string sourceEntityName,
+            string targetEntityName,
+            params ForeignKeyDefinition[] foreignKeyDefinitions)
+        {
+            RelationshipMetadata relationshipMetadata = new();
+            relationshipMetadata.TargetEntityToFkDefinitionMap[targetEntityName] = new(foreignKeyDefinitions);
+            sourceDefinition.SourceEntityRelationshipMap[sourceEntityName] = relationshipMetadata;
+        }
+
+        /// <summary>
+        /// Creates the definition of a foreign key from a column of the books table to the id column of the authors table.
+        /// </summary>
+        private static ForeignKeyDefinition CreateForeignKeyDefinition(
+            TestSqlQueryStructure structure,
+            string sourceEntityName,
+            string relationshipName,
+            string referencingColumn)
+        {
+            return new ForeignKeyDefinition
+            {
+                SourceEntityName = sourceEntityName,
+                RelationshipName = relationshipName,
+                Pair = new RelationShipPair(
+                    relationshipName,
+                    (DatabaseTable)structure.DatabaseObject,
+                    new DatabaseTable("dbo", "authors")),
+                ReferencingColumns = new List<string> { referencingColumn },
+                ReferencedColumns = new List<string> { "id" }
+            };
         }
 
         private sealed class TestSqlQueryStructure : BaseSqlQueryStructure

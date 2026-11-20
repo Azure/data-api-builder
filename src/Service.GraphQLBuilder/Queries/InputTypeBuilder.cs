@@ -49,20 +49,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             string orderByInputName = GenerateObjectInputOrderByName(node);
 
             // OrderBy does not include "and" and "or" input types so we add only the orderByInputName here.
-            // Check if the input type already exists to avoid duplicate key errors when using multiple data sources
-            if (!inputTypes.ContainsKey(orderByInputName))
-            {
-                inputTypes.Add(
-                    orderByInputName,
-                    new(
-                        location: null,
-                        new NameNode(orderByInputName),
-                        new StringValueNode($"Order by input for {node.Name} GraphQL type"),
-                        new List<DirectiveNode>(),
-                        inputFields
-                        )
-                    );
-            }
+            // TryAdd: the same type can be visited once per data source.
+            inputTypes.TryAdd(
+                orderByInputName,
+                new(
+                    location: null,
+                    new NameNode(orderByInputName),
+                    new StringValueNode($"Order by input for {node.Name} GraphQL type"),
+                    new List<DirectiveNode>(),
+                    inputFields
+                    )
+                );
         }
 
         private static List<InputValueDefinitionNode> GenerateOrderByInputFieldsForBuiltInFields(ObjectTypeDefinitionNode node)
@@ -119,20 +116,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     defaultValue: null,
                     new List<DirectiveNode>()));
 
-            // Check if the input type already exists to avoid duplicate key errors when using multiple data sources
-            if (!inputTypes.ContainsKey(inputTypeName))
-            {
-                inputTypes.Add(
-                    inputTypeName,
-                    new(
-                        location: null,
-                        new NameNode(inputTypeName),
-                        new StringValueNode(inputTypeDescription),
-                        new List<DirectiveNode>(),
-                        inputFields
-                    )
-                );
-            }
+            // TryAdd: the same type can be visited once per data source.
+            inputTypes.TryAdd(
+                inputTypeName,
+                new(
+                    location: null,
+                    new NameNode(inputTypeName),
+                    new StringValueNode(inputTypeDescription),
+                    new List<DirectiveNode>(),
+                    inputFields
+                )
+            );
         }
 
         private static List<InputValueDefinitionNode> GenerateFilterInputFieldsForBuiltInFields(
@@ -154,31 +148,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 }
 
                 string fieldTypeName = field.Type.NamedType().Name.Value;
-                bool isListType = field.Type.IsListType();
-
                 if (IsBuiltInType(field.Type))
                 {
-                    InputObjectTypeDefinitionNode inputType;
-                    string inputTypeName;
-
-                    if (isListType)
+                    // Scalar lists (e.g. Cosmos tags: [String]) get a list filter (some/none/all/any/contains).
+                    bool isListType = field.Type.IsListType();
+                    string inputTypeKey = isListType ? $"{fieldTypeName}List" : fieldTypeName;
+                    if (!inputTypes.TryGetValue(inputTypeKey, out InputObjectTypeDefinitionNode? inputType))
                     {
-                        inputTypeName = $"{fieldTypeName}List";
-                        if (!inputTypes.ContainsKey(inputTypeName))
-                        {
-                            inputTypes.Add(inputTypeName, StandardQueryInputs.GetListFilterTypeByScalar(fieldTypeName));
-                        }
-
-                        inputType = inputTypes[inputTypeName];
-                    }
-                    else
-                    {
-                        if (!inputTypes.ContainsKey(fieldTypeName))
-                        {
-                            inputTypes.Add(fieldTypeName, StandardQueryInputs.GetFilterTypeByScalar(fieldTypeName));
-                        }
-
-                        inputType = inputTypes[fieldTypeName];
+                        inputType = isListType
+                            ? StandardQueryInputs.GetListFilterTypeByScalar(fieldTypeName)
+                            : StandardQueryInputs.GetFilterTypeByScalar(fieldTypeName);
+                        inputTypes.Add(inputTypeKey, inputType);
                     }
 
                     inputFields.Add(

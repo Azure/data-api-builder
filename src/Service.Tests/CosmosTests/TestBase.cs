@@ -162,7 +162,7 @@ type PlanetAgain @model {
         Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
         RuntimeConfigValidator validator = new(provider, fileSystem, loggerValidator.Object);
 
-        ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, validator, fileSystem, provider.GetConfig().DefaultDataSourceName);
+        ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, validator, fileSystem);
         Mock<IMetadataProviderFactory> metadataProviderFactory = new();
         metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(cosmosSqlMetadataProvider);
 
@@ -184,7 +184,26 @@ type PlanetAgain @model {
     [TestCleanup]
     public void CleanupAfterEachTest()
     {
-        TestHelper.UnsetAllDABEnvironmentVariables();
+        try
+        {
+            _client.Dispose();
+            DisposeApplicationFactory(_application);
+        }
+        finally
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+    }
+
+    protected static void DisposeApplicationFactory(WebApplicationFactory<Startup> application)
+    {
+        CosmosClientProvider cosmosClientProvider = application.Services.GetService<CosmosClientProvider>();
+        foreach (CosmosClient? cosmosClient in cosmosClientProvider.Clients.Values)
+        {
+            cosmosClient?.Dispose();
+        }
+
+        application.Dispose();
     }
 
     /// <summary>

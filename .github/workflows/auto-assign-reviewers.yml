@@ -36,7 +36,7 @@ jobs:
         with:
           script: |
             // ── Configuration ──
-            const REVIEWERS = ["souvikghosh04", "Aniruddh25", "aaronburtle", "anushakolan", "RubenCerna2079"];
+            const REVIEWERS = ["souvikghosh04", "Aniruddh25", "aaronburtle", "gmohit21", "RubenCerna2079"];
             const REQUIRED_REVIEWERS = 2;
             const STALE_DAYS = 90;
             const DRY_RUN = context.eventName === "workflow_dispatch"

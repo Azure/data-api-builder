@@ -876,6 +876,23 @@
           ]
         },
         {
+          "role": "claim_policy_tester",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [],
+                "include": [
+                  "*"
+                ]
+              },
+              "policy": {
+                "database": "@item.title eq @claims.userId"
+              }
+            }
+          ]
+        },
+        {
           "role": "test_role_with_noread",
           "actions": [
             {
@@ -930,6 +947,33 @@
             },
             {
               "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_excluded_fields_on_mutation",
+          "actions": [
+            {
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              }
+            },
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              }
+            },
+            {
+              "action": "read"
             },
             {
               "action": "delete"
@@ -1677,6 +1721,33 @@
               "action": "update"
             }
           ]
+        },
+        {
+          "role": "test_role_with_excluded_fields_on_mutation",
+          "actions": [
+            {
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "username"
+                ]
+              }
+            },
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "username"
+                ]
+              }
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
       ],
       "relationships": {
@@ -1760,6 +1831,285 @@
         "type": {
           "singular": "SupportedType",
           "plural": "SupportedTypes"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        }
+      ]
+    },
+    "VectorOwner": {
+      "source": {
+        "object": "vector_owners",
+        "type": "table"
+      },
+      "fields": [],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "VectorOwner",
+          "plural": "VectorOwners"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            { "action": "create" },
+            { "action": "read" },
+            { "action": "delete" },
+            { "action": "update" }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            { "action": "create" },
+            { "action": "read" },
+            { "action": "delete" },
+            { "action": "update" }
+          ]
+        }
+      ],
+      "relationships": {
+        "vectors": {
+          "cardinality": "many",
+          "target.entity": "VectorType",
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "owner_id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "VectorType": {
+      "source": {
+        "object": "vector_type_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "VectorType",
+          "plural": "VectorTypes"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "owner": {
+          "cardinality": "one",
+          "target.entity": "VectorOwner",
+          "source.fields": [
+            "owner_id"
+          ],
+          "target.fields": [
+            "id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "GeometryType": {
+      "source": {
+        "object": "geometry_type_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "GeometryType",
+          "plural": "GeometryTypes"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        }
+      ]
+    },
+    "TemporalGeometryType": {
+      "source": {
+        "object": "temporal_geometry_type_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "TemporalGeometryType",
+          "plural": "TemporalGeometryTypes"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        }
+      ]
+    },
+    "Profile": {
+      "source": {
+        "object": "profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Profile",
+          "plural": "Profiles"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        }
+      ]
+    },
+    "XmlProfile": {
+      "source": {
+        "object": "xml_profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "XmlProfile",
+          "plural": "XmlProfiles"
         }
       },
       "rest": {
@@ -2945,6 +3295,36 @@
           "linking.target.fields": []
         }
       }
+    },
+    "EchoXml": {
+      "source": {
+        "object": "echo_xml",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "query",
+        "type": {
+          "singular": "EchoXml",
+          "plural": "EchoXml"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
     },
     "GetBooks": {
       "source": {

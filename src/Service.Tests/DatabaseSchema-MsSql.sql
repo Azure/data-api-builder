@@ -1,6 +1,8 @@
 -- Copyright (c) Microsoft Corporation.
 -- Licensed under the MIT License.
 
+SET QUOTED_IDENTIFIER ON;
+
 BEGIN TRANSACTION
 DROP SECURITY POLICY IF EXISTS revenuesSecPolicy;
 DROP FUNCTION IF EXISTS revenuesPredicate;
@@ -9,7 +11,14 @@ DROP VIEW IF EXISTS books_view_with_mapping;
 DROP VIEW IF EXISTS stocks_view_selected;
 DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP VIEW IF EXISTS books_publishers_view_composite_insertable;
+DROP VIEW IF EXISTS geometry_only_view;
+DROP VIEW IF EXISTS geometry_all_view;
+DROP VIEW IF EXISTS hierarchyid_composite_view;
+DROP VIEW IF EXISTS unique_without_pk_view;
+DROP VIEW IF EXISTS join_geometry_view;
+DROP VIEW IF EXISTS self_join_geometry_view;
 DROP PROCEDURE IF EXISTS get_books;
+DROP PROCEDURE IF EXISTS echo_xml;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
 DROP PROCEDURE IF EXISTS insert_book;
@@ -40,6 +49,24 @@ DROP TABLE IF EXISTS stocks;
 DROP TABLE IF EXISTS comics;
 DROP TABLE IF EXISTS brokers;
 DROP TABLE IF EXISTS type_table;
+DROP TABLE IF EXISTS vector_type_table;
+DROP TABLE IF EXISTS vector_owners;
+DROP TABLE IF EXISTS geometry_type_table;
+DROP TABLE IF EXISTS hierarchyid_pk_table;
+DROP TABLE IF EXISTS hierarchyid_composite_pk_table;
+DROP TABLE IF EXISTS hierarchyid_unique_table;
+DROP TABLE IF EXISTS unique_key_geometry_table;
+DROP TABLE IF EXISTS decimal_identity_geometry_table;
+DROP TABLE IF EXISTS pk_and_unique_geometry_table;
+DROP TABLE IF EXISTS geometry_linking_table;
+-- System versioning has to be released before the temporal table can be dropped.
+IF OBJECT_ID('dbo.temporal_geometry_type_table', 'U') IS NOT NULL
+    AND OBJECTPROPERTY(OBJECT_ID('dbo.temporal_geometry_type_table'), 'TableTemporalType') = 2
+    ALTER TABLE temporal_geometry_type_table SET (SYSTEM_VERSIONING = OFF);
+DROP TABLE IF EXISTS temporal_geometry_type_table;
+DROP TABLE IF EXISTS temporal_geometry_type_table_history;
+DROP TABLE IF EXISTS profiles;
+DROP TABLE IF EXISTS xml_profiles;
 DROP TABLE IF EXISTS trees;
 DROP TABLE IF EXISTS fungi;
 DROP TABLE IF EXISTS empty_table;
@@ -63,6 +90,8 @@ DROP TABLE IF EXISTS date_only_table;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS user_profiles;
 DROP TABLE IF EXISTS default_books;
+DROP TABLE IF EXISTS [order items];
+DROP TABLE IF EXISTS [extra     order     items];
 DROP SCHEMA IF EXISTS [foo];
 DROP SCHEMA IF EXISTS [bar];
 COMMIT;
@@ -232,6 +261,100 @@ CREATE TABLE type_table(
     uuid_types uniqueidentifier DEFAULT newid()
 );
 
+CREATE TABLE vector_owners(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(100) NOT NULL
+);
+
+CREATE TABLE vector_type_table(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    owner_id int NULL,
+    vector_data vector(3),
+    vector_data_max vector(1998),
+    CONSTRAINT FK_vector_type_table_owner FOREIGN KEY (owner_id) REFERENCES vector_owners(id) ON DELETE CASCADE
+);
+
+CREATE TABLE geometry_type_table(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(100) NOT NULL,
+    geom geometry NULL
+);
+
+-- The period columns are HIDDEN, so SELECT * doesn't return them and they must stay out of the exposed columns.
+CREATE TABLE temporal_geometry_type_table(
+    id int NOT NULL PRIMARY KEY,
+    name varchar(100) NOT NULL,
+    geom geometry NULL,
+    valid_from datetime2 GENERATED ALWAYS AS ROW START HIDDEN NOT NULL,
+    valid_to datetime2 GENERATED ALWAYS AS ROW END HIDDEN NOT NULL,
+    PERIOD FOR SYSTEM_TIME (valid_from, valid_to)
+)
+WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo.temporal_geometry_type_table_history));
+
+-- The primary key has an unsupported type, so the object needs source.key-fields to be exposed.
+CREATE TABLE hierarchyid_pk_table(
+    node hierarchyid NOT NULL PRIMARY KEY,
+    name varchar(100) NOT NULL
+);
+
+-- Same, with the unsupported column as one member of a composite key.
+CREATE TABLE hierarchyid_composite_pk_table(
+    tenant_id int NOT NULL,
+    node hierarchyid NOT NULL,
+    name varchar(100) NOT NULL,
+    CONSTRAINT PK_hierarchyid_composite_pk_table PRIMARY KEY (tenant_id, node)
+);
+
+-- No primary key, and the only unique key has an unsupported type, so the object needs source.key-fields.
+CREATE TABLE hierarchyid_unique_table(
+    id int NOT NULL,
+    node hierarchyid NOT NULL,
+    name varchar(100) NOT NULL,
+    CONSTRAINT UQ_hierarchyid_unique_table_node UNIQUE (node)
+);
+
+-- No primary key, but a unique key over a supported non-null column, which is inferred as the key.
+CREATE TABLE unique_key_geometry_table(
+    code varchar(20) NOT NULL,
+    name varchar(100) NOT NULL,
+    geom geometry NULL,
+    CONSTRAINT UQ_unique_key_geometry_table_code UNIQUE (code)
+);
+
+-- A primary key and a separate unique key, for a view that selects only the unique one.
+CREATE TABLE pk_and_unique_geometry_table(
+    id int IDENTITY(1, 1) NOT NULL PRIMARY KEY,
+    code varchar(20) NOT NULL,
+    name varchar(100) NOT NULL,
+    geom geometry NULL,
+    CONSTRAINT UQ_pk_and_unique_geometry_table_code UNIQUE (code)
+);
+
+-- A decimal identity column, whose type and identity must survive skipping the geometry column.
+CREATE TABLE decimal_identity_geometry_table(
+    id decimal(18, 0) IDENTITY(1, 1) NOT NULL PRIMARY KEY,
+    name varchar(100) NOT NULL,
+    geom geometry NULL
+);
+
+-- A linking table with an unsupported column, for relationships that go through it.
+CREATE TABLE geometry_linking_table(
+    geometry_id int NOT NULL,
+    code varchar(20) NOT NULL,
+    geom geometry NULL,
+    CONSTRAINT PK_geometry_linking_table PRIMARY KEY (geometry_id, code)
+);
+
+CREATE TABLE profiles(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    metadata json NULL
+);
+
+CREATE TABLE xml_profiles(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    content xml NULL
+);
+
 CREATE TABLE trees (
     treeId int PRIMARY KEY,
     species varchar(max),
@@ -309,37 +432,34 @@ CREATE TABLE GQLmappings (
     column3 varchar(max)
 )
 
-CREATE TABLE bookmarks
-(
+CREATE TABLE bookmarks (
 	id int IDENTITY(1,1) PRIMARY KEY,
 	bkname nvarchar(1000) NOT NULL
 )
 
-CREATE TABLE mappedbookmarks
-(
+CREATE TABLE mappedbookmarks (
 	id int IDENTITY(1,1) PRIMARY KEY,
 	bkname nvarchar(50) NOT NULL
 )
 
-create Table fte_data(
-id int IDENTITY(5001,1),
-u_id int DEFAULT 2,
-name varchar(50),
-position varchar(20),
-salary int default 20,
-PRIMARY KEY(id, u_id)
+create Table fte_data (
+    id int IDENTITY(5001,1),
+    u_id int DEFAULT 2,
+    name varchar(50),
+    position varchar(20),
+    salary int default 20,
+    PRIMARY KEY(id, u_id)
 );
 
-create Table intern_data(
-id int,
-months int default 2 NOT NULL,
-name varchar(50),
-salary int default 15,
-PRIMARY KEY(id, months)
+create Table intern_data (
+    id int,
+    months int default 2 NOT NULL,
+    name varchar(50),
+    salary int default 15,
+    PRIMARY KEY(id, months)
 );
 
-create table books_sold
-(
+create table books_sold (
     id int PRIMARY KEY not null,
     book_name varchar(50),
     row_version rowversion,
@@ -348,8 +468,7 @@ create table books_sold
     last_sold_on_date as last_sold_on,
 )
 
-CREATE TABLE default_with_function_table
-(
+CREATE TABLE default_with_function_table (
     id INT PRIMARY KEY IDENTITY(5001,1),
     user_value INT,
     [current_date] DATETIME DEFAULT GETDATE() NOT NULL,
@@ -392,6 +511,16 @@ CREATE TABLE user_profiles (
 CREATE TABLE default_books(
     id int IDENTITY(5001, 1) PRIMARY KEY,
     title NVARCHAR(100)
+);
+
+CREATE TABLE [order items](
+    id INT PRIMARY KEY,
+    productname VARCHAR(100)
+);
+
+CREATE TABLE [extra     order     items](
+    id INT PRIMARY KEY,
+    productname VARCHAR(100)
 );
 
 ALTER TABLE books
@@ -489,8 +618,8 @@ WITH cteN(Number) AS
   CROSS JOIN sys.all_columns AS s2
 )
 INSERT INTO bookmarks ([id], [bkname])
-SELECT 
-[Number], 
+SELECT
+[Number],
 'Test Item #' + format([Number], '00000')
 FROM cteN WHERE [Number] <= @UpperBound;
 SET IDENTITY_INSERT bookmarks OFF
@@ -503,8 +632,8 @@ WITH cteN(Number) AS
   CROSS JOIN sys.all_columns AS s2
 )
 INSERT INTO mappedbookmarks ([id], [bkname])
-SELECT 
-[Number], 
+SELECT
+[Number],
 'Test Item #' + format([Number], '00000')
 FROM cteN WHERE [Number] <= @UpperBound;
 
@@ -608,6 +737,80 @@ VALUES
 INSERT INTO type_table(id, uuid_types) values(10, 'D1D021A8-47B4-4AE4-B718-98E89C41A161');
 SET IDENTITY_INSERT type_table OFF
 
+SET IDENTITY_INSERT vector_type_table ON
+INSERT INTO vector_type_table(id, vector_data)
+VALUES
+    (1, '[0.5, 0.25, 0.75]'),
+    (2, '[1.5, -2.5, 3.5]'),
+    (3, NULL),
+    (4, '[1.0, 2.0, 3.0]'),
+    (5, '[4.0, 5.0, 6.0]'),
+    (6, '[7.0, 8.0, 9.0]');
+
+INSERT INTO vector_type_table(id, vector_data_max)
+VALUES (7, CAST('[' + (
+    SELECT STRING_AGG(CAST(value AS NVARCHAR(MAX)), ',') WITHIN GROUP (ORDER BY value)
+    FROM GENERATE_SERIES(1, 1998)
+) + ']' AS vector(1998)));
+SET IDENTITY_INSERT vector_type_table OFF
+
+SET IDENTITY_INSERT geometry_type_table ON
+INSERT INTO geometry_type_table(id, name, geom)
+VALUES
+    (1, 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    (2, 'null geometry', NULL);
+SET IDENTITY_INSERT geometry_type_table OFF
+
+INSERT INTO temporal_geometry_type_table(id, name, geom)
+VALUES
+    (1, 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    (2, 'null geometry', NULL);
+
+INSERT INTO hierarchyid_pk_table(node, name)
+VALUES (hierarchyid::Parse('/1/'), 'root');
+
+INSERT INTO hierarchyid_composite_pk_table(tenant_id, node, name)
+VALUES (1, hierarchyid::Parse('/1/'), 'root');
+
+INSERT INTO hierarchyid_unique_table(id, node, name)
+VALUES (1, hierarchyid::Parse('/1/'), 'root');
+
+INSERT INTO unique_key_geometry_table(code, name, geom)
+VALUES
+    ('CAR-001', 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    ('CAR-002', 'null geometry', NULL);
+
+INSERT INTO pk_and_unique_geometry_table(code, name, geom)
+VALUES
+    ('CAR-101', 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    ('CAR-102', 'null geometry', NULL);
+
+INSERT INTO decimal_identity_geometry_table(name, geom)
+VALUES
+    ('point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    ('null geometry', NULL);
+
+SET IDENTITY_INSERT profiles ON
+INSERT INTO profiles(id, metadata)
+VALUES
+    (1, N'{"role":"admin","tier":3}'),
+    (2, N'{"tags":["a","b","c"]}'),
+    (3, N'{"nested":{"key":{"deep":true}}}'),
+    (4, N'{"unicode":"éü😀"}'),
+    (5, NULL);
+SET IDENTITY_INSERT profiles OFF
+
+-- XML values deliberately contain double-quoted attributes so tests can verify the
+-- quotes round-trip as valid XML (the JSON wire-escaping is removed on parse).
+SET IDENTITY_INSERT xml_profiles ON
+INSERT INTO xml_profiles(id, content)
+VALUES
+    (1, N'<order id="100"><item>Book</item><qty>2</qty></order>'),
+    (2, N'<config><setting enabled="true" name="cache"/></config>'),
+    (3, N'<note><to>User</to><from>Admin</from></note>'),
+    (4, NULL);
+SET IDENTITY_INSERT xml_profiles OFF
+
 SET IDENTITY_INSERT sales ON
 INSERT INTO sales(id, item_name, subtotal, tax) VALUES (1, 'Watch', 249.00, 20.59), (2, 'Montior', 120.50, 11.12);
 SET IDENTITY_INSERT sales OFF
@@ -696,6 +899,17 @@ EXEC('CREATE VIEW books_publishers_view_composite_insertable as SELECT
       books.id, books.title, publishers.name, books.publisher_id
       FROM dbo.books,dbo.publishers
       where publishers.id = books.publisher_id');
+EXEC('CREATE VIEW geometry_only_view AS SELECT geom FROM dbo.geometry_type_table');
+-- A view's key is inferred from the underlying table.
+EXEC('CREATE VIEW geometry_all_view AS SELECT id, name, geom FROM dbo.geometry_type_table');
+-- One member of the underlying composite key has an unsupported type, and the other alone isn't a key.
+EXEC('CREATE VIEW hierarchyid_composite_view AS SELECT tenant_id, name, node FROM dbo.hierarchyid_composite_pk_table');
+-- Omits the underlying primary key, so no key is inferred even though the unique key is selected.
+EXEC('CREATE VIEW unique_without_pk_view AS SELECT code, name, geom FROM dbo.pk_and_unique_geometry_table');
+-- A join whose second table contributes only the unsupported column.
+EXEC('CREATE VIEW join_geometry_view AS SELECT a.id, a.name, b.geom FROM dbo.geometry_type_table a JOIN dbo.unique_key_geometry_table b ON b.name = a.name');
+-- A self-join, which selects the key of only one of the two instances.
+EXEC('CREATE VIEW self_join_geometry_view AS SELECT a.id, a.name, b.geom FROM dbo.geometry_type_table a JOIN dbo.geometry_type_table b ON b.name = a.name');
 EXEC('CREATE PROCEDURE get_book_by_id @id int AS
       SELECT * FROM dbo.books
       WHERE id = @id');
@@ -704,6 +918,8 @@ EXEC('CREATE PROCEDURE get_publisher_by_id @id int AS
       WHERE id = @id');
 EXEC('CREATE PROCEDURE get_books AS
       SELECT * FROM dbo.books');
+EXEC('CREATE PROCEDURE echo_xml @doc xml AS
+    SELECT @doc AS content');
 EXEC('CREATE PROCEDURE insert_book @title varchar(max), @publisher_id int AS
       INSERT INTO dbo.books(title, publisher_id) VALUES (@title, @publisher_id)');
 EXEC('CREATE PROCEDURE count_books AS
@@ -822,7 +1038,13 @@ CREATE TABLE date_only_table (
     event_timestamp datetime NOT NULL
 );
 
-INSERT INTO date_only_table( event_date, event_time, event_timestamp) 
-VALUES ('2023-01-01', '08:30:00', '2023-01-01 08:30:00'), 
-       ('2023-02-15', '12:45:00', '2023-02-15 12:45:00'), 
+INSERT INTO date_only_table( event_date, event_time, event_timestamp)
+VALUES ('2023-01-01', '08:30:00', '2023-01-01 08:30:00'),
+       ('2023-02-15', '12:45:00', '2023-02-15 12:45:00'),
        ('2023-03-30', '17:15:00', '2023-03-30 17:15:00');
+
+INSERT INTO [order items](id, productname)
+VALUES (1, 'Sample Product');
+
+INSERT INTO [extra     order     items](id, productname)
+VALUES (1, 'Sample Product');

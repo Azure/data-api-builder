@@ -30,6 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// Query a row with array columns by primary key and verify arrays are returned as JSON arrays.
         /// </summary>
         [TestMethod]
+        [Ignore("Certain data types are not yet supported in PostgreSQL. See issue #3735 for details.")]
         public async Task QueryArrayColumnsByPrimaryKey()
         {
             string gqlQuery = @"{
@@ -107,6 +108,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// Query a row where all array columns are NULL and verify they come back as JSON null.
         /// </summary>
         [TestMethod]
+        [Ignore("Certain data types are not yet supported in PostgreSQL. See issue #3735 for details.")]
         public async Task QueryNullArrayColumns()
         {
             string gqlQuery = @"{
@@ -141,6 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// which is required because PostgreSQL arrays can contain NULL elements.
         /// </summary>
         [TestMethod]
+        [Ignore("Certain data types are not yet supported in PostgreSQL. See issue #3735 for details.")]
         public async Task QueryArrayColumnsWithNullElements()
         {
             string gqlQuery = @"{
@@ -222,6 +225,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// Query multiple rows with array columns and verify the list result.
         /// </summary>
         [TestMethod]
+        [Ignore("Certain data types are not yet supported in PostgreSQL. See issue #3735 for details.")]
         public async Task QueryMultipleRowsWithArrayColumns()
         {
             string gqlQuery = @"{

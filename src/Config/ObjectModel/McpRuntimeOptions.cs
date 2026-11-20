@@ -36,12 +36,23 @@ public record McpRuntimeOptions
     [JsonPropertyName("description")]
     public string? Description { get; init; }
 
+    /// <summary>
+    /// The set of host names that are trusted to reach the MCP endpoint.
+    /// Used to protect the browser-reachable MCP Streamable HTTP transport against
+    /// DNS rebinding attacks by validating the incoming Host and Origin headers.
+    /// Loopback host names (localhost, 127.0.0.1, ::1) are always trusted.
+    /// A single entry of "*" disables Host/Origin validation (not recommended).
+    /// </summary>
+    [JsonPropertyName("allowed-hosts")]
+    public List<string>? AllowedHosts { get; init; }
+
     [JsonConstructor]
     public McpRuntimeOptions(
         bool? Enabled = null,
         string? Path = null,
         DmlToolsConfig? DmlTools = null,
-        string? Description = null)
+        string? Description = null,
+        List<string>? AllowedHosts = null)
     {
         this.Enabled = Enabled ?? true;
 
@@ -67,6 +78,12 @@ public record McpRuntimeOptions
         }
 
         this.Description = Description;
+
+        if (AllowedHosts is not null)
+        {
+            this.AllowedHosts = AllowedHosts;
+            UserProvidedAllowedHosts = true;
+        }
     }
 
     /// <summary>
@@ -78,4 +95,12 @@ public record McpRuntimeOptions
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(Enabled))]
     public bool UserProvidedPath { get; init; } = false;
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write the allowed-hosts
+    /// property and value to the runtime config file. When the user doesn't provide
+    /// the property, DAB should not write it to a serialized config.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public bool UserProvidedAllowedHosts { get; init; } = false;
 }

@@ -95,7 +95,7 @@ internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
                                 int parseThresholdMs = reader.GetInt32();
                                 if (parseThresholdMs <= 0)
                                 {
-                                    throw new JsonException($"Invalid value for ttl-seconds: {parseThresholdMs}. Value must be greater than 0.");
+                                    throw new JsonException($"Invalid value for threshold-ms: {parseThresholdMs}. Value must be greater than 0.");
                                 }
 
                                 threshold_ms = parseThresholdMs;

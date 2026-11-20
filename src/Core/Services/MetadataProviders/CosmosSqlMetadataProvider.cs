@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public List<Exception> SqlMetadataExceptions { get; private set; } = new();
 
-        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, RuntimeConfigValidator runtimeConfigValidator, IFileSystem fileSystem, string dataSourceName)
+        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, RuntimeConfigValidator runtimeConfigValidator, IFileSystem fileSystem, string? dataSourceName = null)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             _fileSystem = fileSystem;
@@ -65,10 +65,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             // to store internally.
             _runtimeConfigEntities = new RuntimeEntities(runtimeConfig.Entities.Entities);
             _isDevelopmentMode = runtimeConfig.IsDevelopmentMode();
-            _databaseType = runtimeConfig.DataSource!.DatabaseType;
 
-            // Get the data source for this specific dataSourceName instead of always using the default
-            DataSource dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName);
+            // With multiple data sources, read the options of this provider's data source rather than the default one.
+            DataSource dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName ?? runtimeConfig.DefaultDataSourceName);
             _databaseType = dataSource.DatabaseType;
 
             CosmosDbNoSQLDataSourceOptions? cosmosDb = dataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
@@ -396,6 +395,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return Task.CompletedTask;
         }
 
+        public Task InitializeAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.CompletedTask;
+        }
+
         private string GraphQLSchema()
         {
             if (_cosmosDb.GraphQLSchema is not null)
@@ -533,6 +538,19 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             name = field;
             return true;
+        }
+
+        /// <summary>
+        /// Array types are not yet supported for Cosmos. Returns false.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="fieldName">Name of the field.</param>
+        /// <param name="fieldKind">The kind of the field in GraphQL.</param>
+        /// <returns>False, as array types are not supported.</returns>
+        public bool TryGetArrayElementSyntaxKind(string entityName, string fieldName, out SyntaxKind fieldKind)
+        {
+            fieldKind = default;
+            return false;
         }
 
         public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()

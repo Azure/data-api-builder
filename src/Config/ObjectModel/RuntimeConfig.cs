@@ -7,6 +7,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -31,6 +32,14 @@ public record RuntimeConfig
     public virtual RuntimeEntities Entities { get; init; }
 
     public DataSourceFiles? DataSourceFiles { get; init; }
+
+    /// <summary>
+    /// Bounded, value-free input provenance captured only for opted-in synthetic product telemetry.
+    /// Preserved by record clones; never serialized or populated from customer configuration.
+    /// Recapture or clear it when replacing entity definitions programmatically.
+    /// </summary>
+    [JsonIgnore]
+    public TelemetryConfigurationPresence? TelemetryPresence { get; init; }
 
     /// <summary>
     /// Indicates whether this config was loaded as a child via another config's data-source-files.
@@ -368,22 +377,28 @@ public record RuntimeConfig
 
         if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
         {
-            IEnumerable<KeyValuePair<string, Entity>>? allEntities = Entities?.AsEnumerable();
-            IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = Autoentities?.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Entity>>? allEntities = Entities is null ? new List<KeyValuePair<string, Entity>>().AsEnumerable() : Entities.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = Autoentities is null ? new List<KeyValuePair<string, Autoentity>>().AsEnumerable() : Autoentities.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
-            // This loader is not used as a part of hot reload and therefore does not need a handler.
-            FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null);
 
             // Pass the parent's AKV options so @akv() references in child configs can
             // be resolved using the parent's Key Vault configuration.
             // If a child config defines its own azure-key-vault section, TryParseConfig's
             // ExtractAzureKeyVaultOptions will detect it and override these parent options.
-            DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: this.AzureKeyVault, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
+            DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: this.AzureKeyVault, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore)
+            {
+                // Defer Application Name (telemetry) injection to the top-level load. A child config
+                // has no global runtime section and only its own entities; the root performs the
+                // injection once over the fully-merged config so each data source's pool reflects the
+                // global runtime and the complete entity set.
+                SkipApplicationNameInjection = true
+            };
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
-
+                // This loader is not used as a part of hot reload and therefore does not need a handler.
+                FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null, baseConfigFilePath: dataSourceFile);
                 if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replacementSettings: replacementSettings))
                 {
                     try
@@ -397,8 +412,8 @@ public record RuntimeConfig
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _autoentityNameToDataSourceName = _autoentityNameToDataSourceName.Concat(config._autoentityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                        allEntities = allEntities?.Concat(config.Entities.AsEnumerable());
-                        allAutoentities = allAutoentities?.Concat(config.Autoentities.AsEnumerable());
+                        allEntities = allEntities.Concat(config.Entities.AsEnumerable());
+                        allAutoentities = allAutoentities.Concat(config.Autoentities.AsEnumerable());
                     }
                     catch (Exception e)
                     {
@@ -423,8 +438,8 @@ public record RuntimeConfig
                 }
             }
 
-            this.Entities = new RuntimeEntities(allEntities != null ? allEntities.ToDictionary(x => x.Key, x => x.Value) : new Dictionary<string, Entity>());
-            this.Autoentities = new RuntimeAutoentities(allAutoentities != null ? allAutoentities.ToDictionary(x => x.Key, x => x.Value) : new Dictionary<string, Autoentity>());
+            this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
+            this.Autoentities = new RuntimeAutoentities(allAutoentities.ToDictionary(x => x.Key, x => x.Value));
         }
 
         SetupDataSourcesUsed();
@@ -662,14 +677,25 @@ public record RuntimeConfig
     }
 
     /// <summary>
-    /// Whether the caching service should be used for a given operation. This is determined by
-    /// - whether caching is enabled globally
-    /// - whether the datasource is SQL and session context is disabled.
+    /// Whether response caching is allowed for the default data source.
     /// </summary>
     /// <returns>Whether cache operations should proceed.</returns>
     public virtual bool CanUseCache()
     {
-        bool setSessionContextEnabled = DataSource?.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
+        return DataSource is not null && CanUseCache(DefaultDataSourceName);
+    }
+
+    /// <summary>
+    /// Whether response caching is allowed for the queried data source.
+    /// Session-context queries must reach the database so row-level security runs for each caller.
+    /// </summary>
+    /// <param name="dataSourceName">Name of the data source being queried.</param>
+    /// <returns>Whether cache reads and writes are allowed.</returns>
+    public virtual bool CanUseCache(string dataSourceName)
+    {
+        DataSource dataSource = GetDataSourceFromDataSourceName(dataSourceName);
+        bool setSessionContextEnabled = dataSource.DatabaseType is DatabaseType.MSSQL or DatabaseType.DWSQL
+            && dataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext is true;
         return IsCachingEnabled && !setSessionContextEnabled;
     }
 

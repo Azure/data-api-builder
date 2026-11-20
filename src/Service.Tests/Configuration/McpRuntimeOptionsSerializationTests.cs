@@ -280,6 +280,99 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Validates that the mcp.allowed-hosts array is round-tripped through serialization
+        /// and deserialization when the user explicitly provides it.
+        /// </summary>
+        [TestMethod]
+        public void TestMcpAllowedHostsSerializationRoundTrip()
+        {
+            // Arrange
+            McpRuntimeOptions mcpOptions = new(
+                Enabled: true,
+                Path: "/mcp",
+                DmlTools: null,
+                Description: null,
+                AllowedHosts: new List<string> { "api.contoso.com", "dab.internal" }
+            );
+
+            RuntimeConfig config = CreateMinimalConfigWithMcp(mcpOptions);
+
+            // Act
+            string json = config.ToJson();
+            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig deserializedConfig);
+
+            // Assert
+            Assert.IsTrue(parseSuccess, "Failed to deserialize config with mcp allowed-hosts");
+            Assert.IsTrue(json.Contains("\"allowed-hosts\""), "JSON should contain allowed-hosts field");
+            Assert.IsNotNull(deserializedConfig.Runtime?.Mcp?.AllowedHosts, "AllowedHosts should not be null");
+            CollectionAssert.AreEqual(
+                new List<string> { "api.contoso.com", "dab.internal" },
+                deserializedConfig.Runtime.Mcp.AllowedHosts,
+                "AllowedHosts should round-trip exactly");
+        }
+
+        /// <summary>
+        /// Validates that the mcp.allowed-hosts field is omitted from serialized JSON
+        /// when the user does not provide it, preserving backward compatibility.
+        /// </summary>
+        [TestMethod]
+        public void TestMcpAllowedHostsOmittedWhenNotProvided()
+        {
+            // Arrange
+            McpRuntimeOptions mcpOptions = new(
+                Enabled: true,
+                Path: "/mcp",
+                DmlTools: null,
+                Description: null,
+                AllowedHosts: null
+            );
+
+            RuntimeConfig config = CreateMinimalConfigWithMcp(mcpOptions);
+
+            // Act
+            string json = config.ToJson();
+            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig deserializedConfig);
+
+            // Assert
+            Assert.IsTrue(parseSuccess, "Failed to deserialize config without allowed-hosts");
+            Assert.IsFalse(json.Contains("\"allowed-hosts\""), "JSON should not contain allowed-hosts field when not provided");
+            Assert.IsNull(deserializedConfig.Runtime?.Mcp?.AllowedHosts, "AllowedHosts should be null when not provided");
+        }
+
+        /// <summary>
+        /// Validates that an existing config JSON containing mcp.allowed-hosts is deserialized correctly.
+        /// </summary>
+        [TestMethod]
+        public void TestMcpAllowedHostsDeserializationFromJson()
+        {
+            // Arrange
+            string configJson = @"{
+                ""$schema"": ""test-schema"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""Server=test;Database=test;""
+                },
+                ""runtime"": {
+                    ""mcp"": {
+                        ""enabled"": true,
+                        ""allowed-hosts"": [ ""api.contoso.com"", ""sub.example.com"" ]
+                    }
+                },
+                ""entities"": {}
+            }";
+
+            // Act
+            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig config);
+
+            // Assert
+            Assert.IsTrue(parseSuccess, "Failed to deserialize config with allowed-hosts");
+            Assert.IsNotNull(config.Runtime?.Mcp?.AllowedHosts, "AllowedHosts should not be null");
+            Assert.AreEqual(2, config.Runtime.Mcp.AllowedHosts.Count, "AllowedHosts should have two entries");
+            Assert.AreEqual("api.contoso.com", config.Runtime.Mcp.AllowedHosts[0]);
+            Assert.AreEqual("sub.example.com", config.Runtime.Mcp.AllowedHosts[1]);
+        }
+
+        /// <summary>
         /// Creates a minimal RuntimeConfig with the specified MCP options for testing.
         /// </summary>
         private static RuntimeConfig CreateMinimalConfigWithMcp(McpRuntimeOptions mcpOptions)

@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
 using System.Web;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -14,10 +15,12 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -30,6 +33,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly IMutationEngineFactory _mutationEngineFactory;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
+        private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly RequestValidator _requestValidator;
@@ -41,13 +45,15 @@ namespace Azure.DataApiBuilder.Core.Services
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService,
             RuntimeConfigProvider runtimeConfigProvider,
-            RequestValidator requestValidator
+            RequestValidator requestValidator,
+            IAuthorizationResolver authorizationResolver
             )
         {
             _queryEngineFactory = queryEngineFactory;
             _mutationEngineFactory = mutationEngineFactory;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
+            _authorizationResolver = authorizationResolver;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
             _requestValidator = requestValidator;
@@ -61,6 +67,27 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="operationType">The kind of operation to execute.</param>
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
         public async Task<IActionResult?> ExecuteAsync(
+            string entityName,
+            EntityActionOperation operationType,
+            string? primaryKeyRoute)
+        {
+            // Begin before validation so rejected data operations are not lost. The session
+            // suppresses this scope when a surrounding MCP operation already owns the call.
+            using EngineTelemetryMeasurementScope? operation = BeginTelemetryOperation(entityName, operationType);
+            try
+            {
+                IActionResult? result = await ExecuteCoreAsync(entityName, operationType, primaryKeyRoute);
+                operation?.Complete(GetTelemetryOutcome(result));
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                operation?.Complete(EngineTelemetryOutcome.Canceled);
+                throw;
+            }
+        }
+
+        private async Task<IActionResult?> ExecuteCoreAsync(
             string entityName,
             EntityActionOperation operationType,
             string? primaryKeyRoute)
@@ -223,6 +250,67 @@ namespace Azure.DataApiBuilder.Core.Services
             }
         }
 
+        private EngineTelemetryMeasurementScope? BeginTelemetryOperation(string entityName, EntityActionOperation operationType)
+        {
+            EngineTelemetrySession? session = _runtimeConfigProvider.ProductTelemetry;
+            if (session?.IsEnabled != true)
+            {
+                return null;
+            }
+
+            EngineTelemetryOperation operation = operationType switch
+            {
+                EntityActionOperation.Read => EngineTelemetryOperation.Read,
+                EntityActionOperation.Execute => EngineTelemetryOperation.Execute,
+                EntityActionOperation.Create or EntityActionOperation.Insert or EntityActionOperation.Delete or
+                EntityActionOperation.Update or EntityActionOperation.UpdateGraphQL or EntityActionOperation.Patch or
+                EntityActionOperation.UpdateIncremental or EntityActionOperation.Upsert or EntityActionOperation.UpsertIncremental
+                    => EngineTelemetryOperation.Write,
+                _ => EngineTelemetryOperation.Unknown
+            };
+
+            // Stored procedures execute regardless of the HTTP verb used to expose them.
+            // Do not load configuration or inspect request content solely for telemetry.
+            if (!string.IsNullOrEmpty(entityName) &&
+                _runtimeConfigProvider.TryGetLoadedConfig(out RuntimeConfig? config) &&
+                config.Entities.TryGetValue(entityName, out Entity? entity) &&
+                entity?.Source?.Type is EntitySourceType.StoredProcedure)
+            {
+                operation = EngineTelemetryOperation.Execute;
+            }
+
+            return session.BeginOperation(entityName, operation);
+        }
+
+        private static EngineTelemetryOutcome GetTelemetryOutcome(IActionResult? result)
+        {
+            // RestController turns a null result into a 404, not a successful empty response.
+            if (result is null)
+            {
+                return EngineTelemetryOutcome.Failure;
+            }
+
+            int? statusCode = (result as IStatusCodeActionResult)?.StatusCode;
+            if (statusCode is null)
+            {
+                statusCode = result switch
+                {
+                    ObjectResult { Value: ProblemDetails problem } => problem.Status ?? StatusCodes.Status500InternalServerError,
+                    ObjectResult or JsonResult or ContentResult or EmptyResult => StatusCodes.Status200OK,
+                    ForbidResult => StatusCodes.Status403Forbidden,
+                    ChallengeResult => StatusCodes.Status401Unauthorized,
+                    _ => null
+                };
+            }
+
+            return statusCode switch
+            {
+                >= StatusCodes.Status200OK and < StatusCodes.Status300MultipleChoices => EngineTelemetryOutcome.Success,
+                >= StatusCodes.Status400BadRequest and < 600 => EngineTelemetryOutcome.Failure,
+                _ => EngineTelemetryOutcome.Unknown
+            };
+        }
+
         /// <summary>
         /// Dispatch execution of a request context to the query engine
         /// The two overloads to ExecuteAsync take FindRequestContext and StoredProcedureRequestContext
@@ -236,8 +324,8 @@ namespace Azure.DataApiBuilder.Core.Services
             if (context is FindRequestContext findRequestContext)
             {
                 using JsonDocument? restApiResponse = await queryEngine.ExecuteAsync(findRequestContext);
-                return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext())
-                                               : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext());
+                return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext(), _authorizationResolver)
+                                               : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext(), _authorizationResolver);
             }
             else if (context is StoredProcedureRequestContext storedProcedureRequestContext)
             {

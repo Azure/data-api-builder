@@ -578,12 +578,12 @@ type Table @model(name: ""table"") {
         /// Tests that QueryBuilder.Build correctly adds or omits the groupBy field on the
         /// connection type based on whether the database type is in
         /// <see cref="QueryBuilder.AggregationEnabledDatabaseTypes"/>.
-        /// MSSQL and DWSQL are supported; other types (e.g. PostgreSQL) are not.
+        /// MSSQL, DWSQL, and PostgreSQL are supported; other types (e.g. MySQL) are not.
         /// </summary>
         [DataTestMethod]
         [DataRow(DatabaseType.MSSQL, true, DisplayName = "MSSQL: groupBy field present when aggregation enabled")]
         [DataRow(DatabaseType.DWSQL, true, DisplayName = "DWSQL: groupBy field present when aggregation enabled")]
-        [DataRow(DatabaseType.PostgreSQL, false, DisplayName = "PostgreSQL: groupBy field absent (not in AggregationEnabledDatabaseTypes)")]
+        [DataRow(DatabaseType.PostgreSQL, true, DisplayName = "PostgreSQL: groupBy field present when aggregation enabled")]
         [DataRow(DatabaseType.MySQL, false, DisplayName = "MySQL: groupBy field absent (not in AggregationEnabledDatabaseTypes)")]
         [TestCategory("Query Builder - Aggregation")]
         public void Build_WithAggregationEnabled_GroupByPresenceMatchesDatabaseSupport(

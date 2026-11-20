@@ -1,8 +1,16 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
@@ -583,6 +591,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"SELECT * FROM { _integrationBrokenMappingTable } " +
                 $"WHERE habitat = 'forestland' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindOnTableWithUnsupportedColumnType",
+                $"SELECT [id], [name] FROM geometry_type_table " +
+                $"ORDER BY [id] FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindByIdOnTableWithUnsupportedColumnType",
+                $"SELECT [id], [name] FROM geometry_type_table " +
+                $"WHERE [id] = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
         #region Test Fixture Setup
@@ -660,6 +678,136 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindOneOnTableWithSecPolicyWithNoAccessibleRow")
             );
         }
+        #endregion
+
+        #region RestApiTests Outliers
+
+        /// <summary>
+        /// A table with a geometry column, which the data provider can't read, is served without that column.
+        /// </summary>
+        [TestMethod]
+        public async Task FindOnTableWithUnsupportedColumnType()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: "GeometryType",
+                sqlQuery: GetQuery(nameof(FindOnTableWithUnsupportedColumnType)));
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: string.Empty,
+                entityNameOrPath: "GeometryType",
+                sqlQuery: GetQuery("FindByIdOnTableWithUnsupportedColumnType"));
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?$select=geom",
+                entityNameOrPath: "GeometryType",
+                sqlQuery: string.Empty,
+                exceptionExpected: true,
+                expectedErrorMessage: "Invalid field to be returned requested: geom",
+                expectedStatusCode: HttpStatusCode.BadRequest);
+        }
+
+        /// <summary>
+        /// Tests we ensure that an invalid query in the EasyAuth header
+        /// retruns a successful request without executing the invalid query.
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod]
+        public async Task TestInvalidQueryInHeader()
+        {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+
+            string firstHeader = @"
+            {
+                ""auth_typ"":""aad"",
+                ""claims"":[
+                  {
+                    ""typ"":""x', N'v';SET IDENTITY_INSERT authors ON;--"",
+                    ""val"":""x""
+                  }
+                ],
+                ""UserRoles"":[""authenticated""]
+            }";
+
+            string firstGeneratedToken = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(firstHeader));
+
+            string secondHeader = @"
+            {
+                ""auth_typ"":""aad"",
+                ""claims"":[
+                  {
+                    ""typ"":""x', N'v';INSERT INTO authors (id, name, birthdate) VALUES (10001, 'Hidden Author', '2001-01-01');--"",
+                    ""val"":""x""
+                  }
+                ],
+                ""UserRoles"":[""authenticated""]
+            }";
+
+            string secondGeneratedToken = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(secondHeader));
+
+            const string SESSION_CONFIG = $"session-context-config.{TestCategory.MSSQL}.json";
+            RuntimeConfigProvider configProvider =
+                TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            RuntimeConfig config = configProvider.GetConfig();
+
+            RuntimeConfig updatedConfig = config with
+            {
+                DataSource = config.DataSource! with
+                {
+                    Options = new Dictionary<string, object?>
+                    {
+                        // Matches MsSqlOptions.SetSessionContext (hyphenated naming policy).
+                        { "set-session-context", true }
+                    }
+                },
+                Runtime = config.Runtime! with
+                {
+                    Host = config.Runtime.Host! with
+                    {
+                        Authentication = new AuthenticationOptions(
+                            Provider: EasyAuthType.AppService.ToString(), Jwt: null)
+                    }
+                }
+            };
+
+            File.WriteAllText(SESSION_CONFIG, updatedConfig.ToJson());
+
+            string[] args = [$"--ConfigFileName={SESSION_CONFIG}"];
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+
+            // Request with the first header
+            HttpRequestMessage requestWithHeader = new(HttpMethod.Get, "api/Author");
+            requestWithHeader.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, firstGeneratedToken);
+            requestWithHeader.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, "authenticated");
+            HttpResponseMessage responseWithHeader = await client.SendAsync(requestWithHeader);
+            Assert.AreEqual(expected: HttpStatusCode.OK, actual: responseWithHeader.StatusCode);
+
+            // Request with second header
+            HttpRequestMessage requestWithHeaderSec = new(HttpMethod.Get, "api/Author");
+            requestWithHeaderSec.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, secondGeneratedToken);
+            requestWithHeaderSec.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, "authenticated");
+            HttpResponseMessage responseWithHeaderSec = await client.SendAsync(requestWithHeaderSec);
+            Assert.AreEqual(expected: HttpStatusCode.OK, actual: responseWithHeaderSec.StatusCode);
+
+            HttpRequestMessage request = new(HttpMethod.Get, $"api/Author/id/10001");
+            HttpResponseMessage response = await client.SendAsync(request);
+            string responseBody = await response.Content.ReadAsStringAsync();
+
+            Assert.IsFalse(responseBody.Contains($"\"id\":10001"),
+                "The GET request should not return the invalid row.");
+            Assert.IsFalse(responseBody.Contains("Hidden Author"),
+                "The GET request should not return any information related to the invalid row.");
+
+            if (File.Exists(SESSION_CONFIG))
+            {
+                File.Delete(SESSION_CONFIG);
+            }
+        }
+
         #endregion
     }
 }

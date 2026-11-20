@@ -31,11 +31,17 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // We need to create a new application factory to pick up the environment variable
             WebApplicationFactory<Startup> application = SetupTestApplicationFactory();
-
-            CosmosClientProvider cosmosClientProvider = application.Services.GetService<CosmosClientProvider>();
-            CosmosClient client = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
-            // Validate results
-            Assert.AreEqual(client.ClientOptions.ApplicationName, appName);
+            try
+            {
+                CosmosClientProvider cosmosClientProvider = application.Services.GetService<CosmosClientProvider>();
+                CosmosClient client = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
+                // Validate results
+                Assert.AreEqual(client.ClientOptions.ApplicationName, appName);
+            }
+            finally
+            {
+                DisposeApplicationFactory(application);
+            }
         }
 
         [TestCleanup]

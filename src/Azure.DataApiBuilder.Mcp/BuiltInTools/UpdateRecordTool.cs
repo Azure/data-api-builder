@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -166,6 +167,26 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpErrorHelpers.PermissionDenied(toolName, entityName, "update", authError, logger);
                 }
 
+                // Column-level authorization: ensure the caller's effective role is permitted to write
+                // every column present in the request payload (fields.include/fields.exclude enforcement).
+                try
+                {
+                    if (!McpAuthorizationHelper.AreColumnsAuthorizedForOperation(
+                            authResolver,
+                            entityName,
+                            effectiveRole!,
+                            EntityActionOperation.Update,
+                            fields.Keys,
+                            out string columnAuthError))
+                    {
+                        return McpErrorHelpers.PermissionDenied(toolName, entityName, "update", columnAuthError, logger);
+                    }
+                }
+                catch (Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException dabEx)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "ValidationFailed", $"Request validation failed: {dabEx.Message}", logger);
+                }
+
                 // 6) Build and validate Upsert (UpdateIncremental) context
                 JsonElement upsertPayloadRoot = RequestValidator.ValidateAndParseRequestBody(JsonSerializer.Serialize(fields));
                 RequestValidator requestValidator = new(metadataProviderFactory, runtimeConfigProvider);
@@ -254,6 +275,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             catch (ArgumentException argEx)
             {
                 return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", argEx.Message, logger);
+            }
+            catch (DataApiBuilderException ex) when (ex.SubStatusCode == DataApiBuilderException.SubStatusCodes.DatabaseInputError)
+            {
+                return McpResponseBuilder.BuildErrorResult(toolName, nameof(DataApiBuilderException.SubStatusCodes.DatabaseInputError), ex.Message, logger);
             }
             catch (Exception ex)
             {

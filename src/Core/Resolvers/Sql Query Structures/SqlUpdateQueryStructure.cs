@@ -183,11 +183,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
+                string stringValue = GetStringifiedValue(param.Value);
                 predicate = new(
                     new PredicateOperand(
                         new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"{MakeDbConnectionParam(GetParamAsSystemType(param.Value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)), backingColumn)}"));
+                    new PredicateOperand($"{MakeDbConnectionParam(GetParamAsSystemType(stringValue, backingColumn, GetColumnSystemType(backingColumn)), backingColumn)}"));
             }
 
             return predicate;

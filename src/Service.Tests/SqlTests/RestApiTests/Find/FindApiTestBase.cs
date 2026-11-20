@@ -3,12 +3,17 @@
 
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataApiBuilder.Core.AuthenticationHelpers.AppServiceAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 {
@@ -39,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the REST Api for FindByDateTimePk operation without a query string.
+        /// Tests the REST API for FindByDateTimePk operation without a query string.
         /// </summary>
         [TestMethod]
         public virtual async Task FindByDateTimePKTest()
@@ -53,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the REST Api for find many operation on stored procedure
+        /// Tests the REST API for find many operation on stored procedure
         /// Stored procedure result is not necessarily json.
         /// </summary>
         [TestMethod]
@@ -71,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the REST Api for find one operation using required parameter
+        /// Tests the REST API for find one operation using required parameter
         /// For Find operations, parameters must be passed in query string
         /// </summary>
         [TestMethod]
@@ -89,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operations on empty result sets
+        /// Tests the REST API for Find operations on empty result sets
         /// 1. GET an entity with no rows (empty table)
         /// 2. GET an entity with rows, filtered to none by query parameter
         /// Should be a 200 response with an empty array
@@ -113,7 +118,61 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the Rest Api to validate that unique unicode
+        /// Sends real authenticated REST requests through the database-policy pipeline and verifies
+        /// that a string claim is treated as data after URI processing. This inherited test runs
+        /// against MSSQL, PostgreSQL, MySQL, and DWSQL in their respective CI jobs.
+        /// </summary>
+        [TestMethod]
+        public async Task FindMany_StringClaimWithEncodedQuotes_RemainsPolicyData()
+        {
+            JsonElement matchingRows = await ExecuteStringClaimPolicyRequestAsync("Policy-Test-01");
+            Assert.AreEqual(1, matchingRows.GetArrayLength());
+            Assert.AreEqual(9, matchingRows[0].GetProperty("id").GetInt32());
+            Assert.AreEqual("Policy-Test-01", matchingRows[0].GetProperty("title").GetString());
+
+            JsonElement injectionAttemptRows = await ExecuteStringClaimPolicyRequestAsync(
+                "Policy-Test-01%27 or 1 eq 1 or %27");
+            Assert.AreEqual(0, injectionAttemptRows.GetArrayLength(),
+                "The encoded claim value must remain a bound value and must not become OData policy syntax.");
+        }
+
+        /// <summary>
+        /// Executes a Book query as a role whose read policy compares the title to the userId claim.
+        /// </summary>
+        private static async Task<JsonElement> ExecuteStringClaimPolicyRequestAsync(string userId)
+        {
+            const string clientRole = "claim_policy_tester";
+            AppServiceClaim roleClaim = new()
+            {
+                Typ = AuthenticationOptions.ROLE_CLAIM_TYPE,
+                Val = clientRole
+            };
+            AppServiceClaim userIdClaim = new()
+            {
+                Typ = StaticWebAppsAuthentication.USER_ID_CLAIM,
+                Val = userId
+            };
+
+            using HttpRequestMessage request = new(HttpMethod.Get, "api/Book?$select=id,title");
+            request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRole);
+            request.Headers.Add(
+                AuthenticationOptions.CLIENT_PRINCIPAL_HEADER,
+                AuthTestHelper.CreateAppServiceEasyAuthToken(
+                    roleClaimType: AuthenticationOptions.ROLE_CLAIM_TYPE,
+                    additionalClaims: [roleClaim, userIdClaim]));
+
+            using HttpResponseMessage response = await HttpClient.SendAsync(request);
+            string responseBody = await response.Content.ReadAsStringAsync();
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, responseBody);
+
+            using JsonDocument responseDocument = JsonDocument.Parse(responseBody);
+            return responseDocument.RootElement
+                .GetProperty(SqlTestHelper.jsonResultTopLevelKey)
+                .Clone();
+        }
+
+        /// <summary>
+        /// Tests the REST API to validate that unique unicode
         /// characters work in queries.
         /// </summary>
         /// <returns></returns>
@@ -128,7 +187,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the Rest Api to validate that queries work
+        /// Tests the REST API to validate that queries work
         /// when there is the same table name in two different
         /// schemas. In this test we have two tables both
         /// named magazines but with one in the schema "foo" and
@@ -240,7 +299,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 
         /// <summary>
         /// Validates the repsonse when both $select and $orderby query strings are
-        /// used with Find API reqeusts. The response is expected to contain only the 
+        /// used with Find API reqeusts. The response is expected to contain only the
         /// fields requested in $select clause.
         /// This test is executed against a table.
         /// </summary>
@@ -260,7 +319,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 
         /// <summary>
         /// Validates the repsonse when both $select and $orderby query strings are
-        /// used with Find API reqeusts. The response is expected to contain only the 
+        /// used with Find API reqeusts. The response is expected to contain only the
         /// fields requested in $select clause.
         /// This test is executed against a view.
         /// </summary>

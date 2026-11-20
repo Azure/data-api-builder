@@ -15,6 +15,13 @@ namespace Azure.DataApiBuilder.Core.Parsers
     /// <seealso cref="https://devblogs.microsoft.com/odata/tutorial-sample-odatauriparser-extension-support/#write-customized-extensions-from-scratch"/>
     public class ClaimsTypeDataUriResolver : ODataUriResolver
     {
+        private readonly IReadOnlyDictionary<string, SingleValueNode> _claimValueNodes;
+
+        public ClaimsTypeDataUriResolver(IReadOnlyDictionary<string, SingleValueNode>? claimValueNodes = null)
+        {
+            _claimValueNodes = claimValueNodes ?? new Dictionary<string, SingleValueNode>();
+        }
+
         /// <summary>
         /// Between two nodes in the filter clause, determine the:
         /// - PrimaryOperand: Node representing an OData EDM model object and has Kind == QueryNodeKind.SingleValuePropertyAccess.
@@ -27,25 +34,48 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <param name="typeReference">type reference for the result BinaryOperatorNode.</param>
         public override void PromoteBinaryOperandTypes(BinaryOperatorKind binaryOperatorKind, ref SingleValueNode leftNode, ref SingleValueNode rightNode, out IEdmTypeReference typeReference)
         {
-            if (leftNode.TypeReference.PrimitiveKind() != rightNode.TypeReference.PrimitiveKind())
+            ResolveClaimAlias(ref leftNode);
+            ResolveClaimAlias(ref rightNode);
+
+            EdmPrimitiveTypeKind? leftPrimitiveKind = leftNode.TypeReference?.PrimitiveKind();
+            EdmPrimitiveTypeKind? rightPrimitiveKind = rightNode.TypeReference?.PrimitiveKind();
+
+            if (leftPrimitiveKind != rightPrimitiveKind)
             {
-                if ((leftNode.Kind == QueryNodeKind.SingleValuePropertyAccess) && (rightNode is ConstantNode))
+                if (leftPrimitiveKind.HasValue &&
+                    leftNode.Kind == QueryNodeKind.SingleValuePropertyAccess &&
+                    rightNode is ConstantNode)
                 {
                     TryConvertNodeToTargetType(
-                        targetType: leftNode.TypeReference.PrimitiveKind(),
+                        targetType: leftPrimitiveKind.Value,
                         operandToConvert: ref rightNode
                         );
                 }
-                else if (rightNode.Kind == QueryNodeKind.SingleValuePropertyAccess && leftNode is ConstantNode)
+                else if (rightPrimitiveKind.HasValue &&
+                    rightNode.Kind == QueryNodeKind.SingleValuePropertyAccess &&
+                    leftNode is ConstantNode)
                 {
                     TryConvertNodeToTargetType(
-                        targetType: rightNode.TypeReference.PrimitiveKind(),
+                        targetType: rightPrimitiveKind.Value,
                         operandToConvert: ref leftNode
                         );
                 }
             }
 
             base.PromoteBinaryOperandTypes(binaryOperatorKind, ref leftNode, ref rightNode, out typeReference);
+        }
+
+        /// <summary>
+        /// Replaces a policy parameter alias with its typed claim constant before OData
+        /// performs type promotion. The claim value therefore never enters URI text.
+        /// </summary>
+        private void ResolveClaimAlias(ref SingleValueNode node)
+        {
+            if (node is ParameterAliasNode aliasNode &&
+                _claimValueNodes.TryGetValue(aliasNode.Alias, out SingleValueNode? claimValueNode))
+            {
+                node = claimValueNode;
+            }
         }
 
         /// <summary>

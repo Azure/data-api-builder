@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service;
 using Cli.Constants;
@@ -128,7 +129,10 @@ public class EndToEndTests
             replacementSettings: replacementSettings));
 
         SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource!.ConnectionString);
-        Assert.AreEqual(ProductInfo.GetDataApiBuilderUserAgent(), builder.ApplicationName);
+        // Application Name now embeds the dab_oss telemetry block (dab_oss_<version>+<payload>+),
+        // so assert it begins with the product user agent rather than exact-matching it.
+        Assert.IsTrue(builder.ApplicationName.StartsWith(ProductInfo.GetDataApiBuilderUserAgent()),
+            $"Expected Application Name to start with '{ProductInfo.GetDataApiBuilderUserAgent()}' but was '{builder.ApplicationName}'.");
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
@@ -137,6 +141,300 @@ public class EndToEndTests
         Assert.IsFalse(runtimeConfig.Runtime.Rest?.Enabled);
         Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL?.Path);
         Assert.IsTrue(runtimeConfig.Runtime.GraphQL?.Enabled);
+    }
+
+    /// <summary>
+    /// The `appname` command encodes the telemetry Application Name from a config (offline — no
+    /// validation and no database connection) and decodes a telemetry string back into a
+    /// human-readable description.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeAndDecode()
+    {
+        // Arrange: a minimal, self-contained MSSQL config in the mock file system.
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=localhost;Database=demo;User Id=sa;Password=Placeholder1;"" },
+            ""runtime"": { ""rest"": { ""enabled"": true }, ""graphql"": { ""enabled"": true }, ""host"": { ""mode"": ""development"", ""authentication"": { ""provider"": ""StaticWebApps"" } } },
+            ""entities"": { ""Book"": { ""source"": { ""object"": ""dbo.books"", ""type"": ""table"" }, ""permissions"": [ { ""role"": ""anonymous"", ""actions"": [ ""read"" ] } ] } }
+        }";
+        _fileSystem!.File.WriteAllText("appname-config.json", configJson);
+
+        // Act: encode to an output file. This must succeed offline (no validation / no DB connection).
+        int encodeCode = Program.Execute(
+            new[] { "appname", "--config", "appname-config.json", "--output", "appname-out.txt" },
+            _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: encode succeeded and produced a well-formed telemetry string.
+        Assert.AreEqual(0, encodeCode, "appname --config should succeed offline");
+        string telemetry = _fileSystem.File.ReadAllText("appname-out.txt");
+        Assert.IsTrue(telemetry.StartsWith("dab_oss_"), telemetry);
+        Assert.IsTrue(telemetry.EndsWith("+"), telemetry);
+        string[] sections = telemetry[(telemetry.IndexOf('+') + 1)..^1].Split('|');
+        Assert.AreEqual(4, sections.Length, "General settings must not shift runtime/entity sections.");
+        Assert.AreEqual("XXXX", sections[0], "The CLI still has no live connection context.");
+        Assert.AreEqual(6, sections[1].Length, "The CLI should emit all six general flags.");
+        Assert.AreEqual('0', sections[1][4], "One parsed data source is not multiple data sources.");
+        Assert.AreEqual('0', sections[1][5], "The default data source uses explicit SQL credentials, not MI.");
+
+        // Act: decode the produced string back into a human-readable description.
+        int decodeCode = Program.Execute(
+            new[] { "appname", "--decode", telemetry, "--output", "appname-decoded.txt" },
+            _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: decode succeeded and produced recognizable lines.
+        Assert.AreEqual(0, decodeCode, "appname --decode should succeed");
+        string decoded = _fileSystem.File.ReadAllText("appname-decoded.txt");
+        Assert.IsTrue(decoded.Contains("Version: dab_oss_"), decoded);
+        Assert.IsTrue(decoded.Contains("General > operating-system:"), decoded);
+        Assert.IsTrue(decoded.Contains("General > running-in-container:"), decoded);
+        Assert.IsTrue(decoded.Contains("General > hosting-environment:"), decoded);
+        Assert.IsTrue(decoded.Contains("General > azure-hosting-service:"), decoded);
+        Assert.IsTrue(decoded.Contains("General > multiple-data-sources: 0"), decoded);
+        Assert.IsTrue(decoded.Contains("General > managed-identity: 0"), decoded);
+        Assert.IsTrue(decoded.Contains("runtime.rest.enabled"), decoded);
+        Assert.IsTrue(decoded.Contains("entities.any.table"), decoded);
+    }
+
+    /// <summary>
+    /// The `appname` encode path accepts absolute config and output paths. The relative-path case is
+    /// covered by <see cref="TestAppNameEncodeAndDecode"/>.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeSupportsAbsolutePaths()
+    {
+        string configPath = _fileSystem!.Path.GetFullPath("absolute-appname-config.json");
+        string outputPath = _fileSystem.Path.GetFullPath("absolute-appname-output.txt");
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=localhost;Database=demo;"" },
+            ""entities"": { }
+        }";
+        _fileSystem.File.WriteAllText(configPath, configJson);
+
+        int code = Program.Execute(
+            new[] { "appname", "--config", configPath, "--output", outputPath },
+            _cliLogger!, _fileSystem, _runtimeConfigLoader!);
+
+        Assert.AreEqual(CliReturnCode.SUCCESS, code, "appname should support absolute config and output paths.");
+        Assert.IsTrue(_fileSystem.File.Exists(outputPath), "The absolute output path should be written.");
+        Assert.IsTrue(_fileSystem.File.ReadAllText(outputPath).StartsWith("dab_oss_", StringComparison.Ordinal));
+    }
+
+    /// <summary>Inspection must not require a resolvable connection string or create a Key Vault client.</summary>
+    [DataTestMethod]
+    [DataRow("@env('DAB_GENERAL_REVIEW_UNSET_CONNECTION')")]
+    [DataRow("not a connection string")]
+    [DataRow("@akv('database-connection')")]
+    public void TestAppNameReview_InspectsUnresolvedCredentialsOffline(string connectionString)
+    {
+        // The invalid URI fails before any network access if the runtime AKV resolver is invoked.
+        string configJson = $$"""
+        {
+            "data-source": { "database-type": "mssql", "connection-string": "{{connectionString}}" },
+            "azure-key-vault": { "endpoint": "not-a-valid-vault-uri" },
+            "entities": {}
+        }
+        """;
+        _fileSystem!.File.WriteAllText("appname-review.json", configJson);
+
+        int code = Program.Execute(
+            new[] { "appname", "--config", "appname-review.json", "--output", "appname-review.txt" },
+            _cliLogger!, _fileSystem, _runtimeConfigLoader!);
+
+        Assert.AreEqual(CliReturnCode.SUCCESS, code);
+        string telemetry = _fileSystem.File.ReadAllText("appname-review.txt");
+        string[] sections = telemetry[(telemetry.IndexOf('+') + 1)..^1].Split('|');
+        Assert.AreEqual('M', sections[1][5]);
+    }
+
+    /// <summary>Inspection applies the offline policy recursively and preserves global/runtime semantics.</summary>
+    [TestMethod]
+    public void TestAppNameReview_NestedConfigurationsAreOffline()
+    {
+        const string root = """
+        {
+            "data-source-files": ["appname-child.json", "appname-missing.json"],
+            "runtime": { "rest": { "enabled": false } },
+            "entities": {}
+        }
+        """;
+        const string child = """
+        {
+            "data-source": { "database-type": "mssql", "connection-string": "@akv('connection')" },
+            "azure-key-vault": { "endpoint": "not-a-vault-uri" },
+            "data-source-files": ["appname-grandchild.json"],
+            "entities": { "Table": { "source": { "object": "table", "type": "table" }, "permissions": [] } }
+        }
+        """;
+        const string grandchild = """
+        {
+            "data-source": { "database-type": "postgresql", "connection-string": "@akv('connection')" },
+            "azure-key-vault": { "endpoint": "not-a-vault-uri" },
+            "entities": { "View": { "source": { "object": "view", "type": "view" }, "permissions": [] } }
+        }
+        """;
+        _fileSystem!.File.WriteAllText("appname-review.json", root);
+        _fileSystem.File.WriteAllText("appname-child.json", child);
+        _fileSystem.File.WriteAllText("appname-grandchild.json", grandchild);
+
+        int code = Program.Execute(
+            new[] { "appname", "--config", "appname-review.json", "--output", "appname-review.txt" },
+            _cliLogger!, _fileSystem, _runtimeConfigLoader!);
+
+        Assert.AreEqual(CliReturnCode.SUCCESS, code);
+        string telemetry = _fileSystem.File.ReadAllText("appname-review.txt");
+        string[] sections = telemetry[(telemetry.IndexOf('+') + 1)..^1].Split('|');
+        Assert.AreEqual('1', sections[1][4], "Two loaded sources, not three file references.");
+        Assert.AreEqual('M', sections[1][5], "The root has no default connection context.");
+        Assert.AreEqual('0', sections[2][0], "Use the root runtime, not the child's defaults.");
+        Assert.AreEqual("11", sections[3][..2], "Both descendants' entities must be counted.");
+        Assert.IsNull(_runtimeConfigLoader!.RuntimeConfig, "Inspection must not configure or start the runtime loader.");
+        Assert.AreEqual(root, _fileSystem.File.ReadAllText("appname-review.json"));
+        Assert.AreEqual(child, _fileSystem.File.ReadAllText("appname-child.json"));
+    }
+
+    /// <summary>Bad/cyclic child configs fail predictably without runaway recursive loading.</summary>
+    [DataTestMethod]
+    [DataRow("{ not json }")]
+    [DataRow("{\"data-source-files\":[\"appname-review.json\"],\"entities\":{}}")]
+    public void TestAppNameReview_InvalidOrCyclicChildFails(string child)
+    {
+        _fileSystem!.File.WriteAllText("appname-review.json", "{\"data-source-files\":[\"appname-child.json\"],\"entities\":{}}");
+        _fileSystem.File.WriteAllText("appname-child.json", child);
+
+        int code = Program.Execute(
+            new[] { "appname", "--config", "appname-review.json", "--output", "appname-review.txt" },
+            _cliLogger!, _fileSystem, _runtimeConfigLoader!);
+
+        Assert.AreEqual(CliReturnCode.GENERAL_ERROR, code);
+        Assert.IsFalse(_fileSystem.File.Exists("appname-review.txt"));
+    }
+
+    /// <summary>Local environment substitution remains supported without resolving external secrets.</summary>
+    [TestMethod]
+    public void TestAppNameReview_UsesLocalEnvironmentAuthentication()
+    {
+        const string variable = "DAB_GENERAL_REVIEW_CONNECTION";
+        string? original = Environment.GetEnvironmentVariable(variable);
+        try
+        {
+            Environment.SetEnvironmentVariable(variable, "Server=unit-test.invalid;Authentication=Active Directory Managed Identity;");
+            _fileSystem!.File.WriteAllText("appname-review.json", """
+            {
+                "data-source": { "database-type": "mssql", "connection-string": "@env('DAB_GENERAL_REVIEW_CONNECTION')" },
+                "entities": {}
+            }
+            """);
+
+            int code = Program.Execute(
+                new[] { "appname", "--config", "appname-review.json", "--output", "appname-review.txt" },
+                _cliLogger!, _fileSystem, _runtimeConfigLoader!);
+
+            Assert.AreEqual(CliReturnCode.SUCCESS, code);
+            string telemetry = _fileSystem.File.ReadAllText("appname-review.txt");
+            Assert.AreEqual('1', telemetry[(telemetry.IndexOf('+') + 1)..^1].Split('|')[1][5]);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(variable, original);
+        }
+    }
+
+    /// <summary>
+    /// The `appname` encode path returns GENERAL_ERROR (and writes no output file) when the config
+    /// file cannot be found.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeFailsWhenConfigMissing()
+    {
+        int code = Program.Execute(
+            new[] { "appname", "--config", "does-not-exist.json", "--output", "appname-out.txt" },
+            _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.AreEqual(CliReturnCode.GENERAL_ERROR, code, "appname encode should fail when the config cannot be found.");
+        Assert.IsFalse(_fileSystem!.File.Exists("appname-out.txt"), "No output file should be written on failure.");
+    }
+
+    /// <summary>
+    /// The `appname` encode path writes the telemetry string to stdout when --output is omitted.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeWritesToStdout()
+    {
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=localhost;Database=demo;User Id=sa;Password=Placeholder1;"" },
+            ""runtime"": { ""rest"": { ""enabled"": true }, ""graphql"": { ""enabled"": true } },
+            ""entities"": { }
+        }";
+        _fileSystem!.File.WriteAllText("appname-config.json", configJson);
+
+        TextWriter originalOut = Console.Out;
+        StringWriter capturedOut = new();
+        Console.SetOut(capturedOut);
+        int code;
+        try
+        {
+            code = Program.Execute(
+                new[] { "appname", "--config", "appname-config.json" },
+                _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+
+        Assert.AreEqual(CliReturnCode.SUCCESS, code, "appname encode to stdout should succeed.");
+        string stdout = capturedOut.ToString();
+        Assert.IsTrue(stdout.Contains("dab_oss_"), $"stdout should contain the telemetry marker but was '{stdout}'.");
+        Assert.IsTrue(stdout.TrimEnd().EndsWith("+"), $"stdout telemetry should end with '+' but was '{stdout}'.");
+    }
+
+    /// <summary>
+    /// The `appname` command is a design-time inspection tool: it always shows the full telemetry
+    /// encoding so users can see what would be collected, independent of either runtime opt-out
+    /// switch. This pins that intentional behavior without configuring the engine.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("1", null)]
+    [DataRow(null, "true")]
+    [DataRow("1", "1")]
+    public void TestAppNameEncodeIsIndependentOfOptOut(string? legacyOptOut, string? productOptOut)
+    {
+        string? originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+        string? originalProductOptOut = Environment.GetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR);
+        Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, legacyOptOut);
+        Environment.SetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR, productOptOut);
+        try
+        {
+            string configJson = @"{
+                ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=localhost;Database=demo;User Id=sa;Password=Placeholder1;"" },
+                ""runtime"": { ""rest"": { ""enabled"": true }, ""graphql"": { ""enabled"": true } },
+                ""entities"": { }
+            }";
+            _fileSystem!.File.WriteAllText("appname-config.json", configJson);
+
+            int code = Program.Execute(
+                new[] { "appname", "--config", "appname-config.json", "--output", "appname-out.txt" },
+                _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+            Assert.AreEqual(CliReturnCode.SUCCESS, code, "appname encode should succeed even when opted out.");
+            string telemetry = _fileSystem.File.ReadAllText("appname-out.txt");
+            Assert.IsTrue(
+                telemetry.StartsWith("dab_oss_") && telemetry.EndsWith("+"),
+                $"appname should show the full telemetry encoding regardless of opt-out, but was '{telemetry}'.");
+            string[] sections = telemetry[(telemetry.IndexOf('+') + 1)..^1].Split('|');
+            Assert.AreEqual(4, sections.Length);
+            Assert.AreEqual(6, sections[1].Length);
+            Assert.IsNull(_runtimeConfigLoader!.RuntimeConfig, "Offline inspection must not initialize engine collection.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+            Environment.SetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR, originalProductOptOut);
+        }
     }
 
     /// <summary>
@@ -343,11 +641,12 @@ public class EndToEndTests
     [DataRow("/updatedPath", true, DisplayName = "Success in updated GraphQL Path to /updatedPath.")]
     [DataRow("/updated-Path", true, DisplayName = "Success in updated GraphQL Path to /updated-Path.")]
     [DataRow("/updated_Path", true, DisplayName = "Success in updated GraphQL Path to /updated_Path.")]
+    [DataRow("/api/v2", true, DisplayName = "Success in updated GraphQL Path to multi-segment path /api/v2.")]
     [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
     [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
     [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]
     [DataRow("/updated@Path", false, DisplayName = "Failure due reserved chars '@'.")]
-    [DataRow("/updated/Path", false, DisplayName = "Failure due reserved chars '/'.")]
+    [DataRow("/api//v2", false, DisplayName = "Failure due to empty path segment.")]
     public void TestUpdateGraphQLPathRuntimeSettings(string path, bool isSuccess)
     {
         // Initialize the config file.
@@ -405,11 +704,12 @@ public class EndToEndTests
     [DataRow("/updatedPath", true, DisplayName = "Successfully updated Rest Path to /updatedPath.")]
     [DataRow("/updated-Path", true, DisplayName = "Successfully updated Rest Path to /updated-Path.")]
     [DataRow("/updated_Path", true, DisplayName = "Successfully updated Rest Path to /updated_Path.")]
+    [DataRow("/api/v2", true, DisplayName = "Successfully updated Rest Path to multi-segment path /api/v2.")]
     [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
     [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
     [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]
     [DataRow("/updated@Path", false, DisplayName = "Failure due reserved chars '@'.")]
-    [DataRow("/updated/Path", false, DisplayName = "Failure due reserved chars '/'.")]
+    [DataRow("/api//v2", false, DisplayName = "Failure due to empty path segment.")]
     public void TestUpdateRestPathRuntimeSettings(string path, bool isSuccess)
     {
         // Initialize the config file.
@@ -916,6 +1216,7 @@ public class EndToEndTests
         Assert.IsTrue(string.IsNullOrEmpty(engineStdOut), $"Expected no output at LogLevel {logLevelOption}, but got: {engineStdOut}");
     }
 
+    /// <summary>
     /// Validates that `dab start` correctly sets <see cref="Startup.IsCliOverriding"/>
     /// based on whether the --log-level CLI flag is provided.
     ///
@@ -927,7 +1228,7 @@ public class EndToEndTests
     [DataTestMethod]
     [DataRow(null, false, DisplayName = "IsCliOverriding is false")]
     [DataRow(LogLevel.Error, true, DisplayName = "IsCliOverriding is true")]
-    public async Task TestStartCommandResolvesLogLevelFromConfigOrFlag(
+    public void TestStartCommandResolvesLogLevelFromConfigOrFlag(
         LogLevel? cliLogLevel,
         bool expectedIsOverridden)
     {
@@ -974,6 +1275,39 @@ public class EndToEndTests
         string configWithLogLevel = AddPropertiesToJson(baseConfig, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, configWithLogLevel);
 
+        // Mirrors the args `dab start` passes to the engine: --log-level only when given on the CLI.
+        List<string> engineArgs = new() { "--ConfigFileName", TEST_RUNTIME_CONFIG_FILE };
+        if (cliLogLevel is not null)
+        {
+            engineArgs.Add("--log-level");
+            engineArgs.Add(cliLogLevel.Value.ToString());
+        }
+
+        // Seed the opposite value so a stale static from another test cannot satisfy the assertion.
+        Startup.IsCliOverriding = !expectedIsOverridden;
+        Azure.DataApiBuilder.Service.Program.InitializeLogLevel(engineArgs.ToArray(), runMcpStdio: false);
+
+        Assert.AreEqual(expectedIsOverridden, Startup.IsCliOverriding);
+    }
+
+    /// <summary>
+    /// Runs the production `dab start` path (<see cref="TryStartEngineWithOptions"/>) against a config that sets
+    /// its own log level, and validates the engine only treats the level as a CLI override when --log-level was
+    /// passed on the command line. Guards against the CLI forwarding the configured level as --log-level.
+    /// </summary>
+    /// <param name="cliLogLevel">The --log-level CLI flag value, or null to omit the flag.</param>
+    /// <param name="expectedIsCliOverriding">Expected value of Startup.IsCliOverriding.</param>
+    [DataTestMethod]
+    [DataRow(null, false, DisplayName = "Config-only log level is not forwarded as a CLI override")]
+    [DataRow(LogLevel.Error, true, DisplayName = "--log-level flag is forwarded as a CLI override")]
+    public void TestStartCommandForwardsLogLevelOnlyWhenProvidedOnCli(
+        LogLevel? cliLogLevel,
+        bool expectedIsCliOverriding)
+    {
+        string configWithEntity = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
+        string configWithLogLevel = AddPropertiesToJson(configWithEntity, @"{ ""runtime"": { ""telemetry"": { ""log-level"": { ""default"": ""Warning"" } } } }");
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, configWithLogLevel);
+
         StartOptions options = new(
             verbose: false,
             logLevel: cliLogLevel,
@@ -983,14 +1317,24 @@ public class EndToEndTests
             logLevelLegacy: null,
             config: TEST_RUNTIME_CONFIG_FILE);
 
-        // Run TryStartEngineWithOptions on a background task because StartEngine blocks until the host shuts down.
-        Task engineTask = Task.Run(() =>
-            TryStartEngineWithOptions(options, _runtimeConfigLoader!, _fileSystem!));
+        // Seed the opposite value so the assertion can only pass once the engine has parsed the CLI-built args.
+        Startup.IsCliOverriding = !expectedIsCliOverriding;
 
-        // Wait for the engine to finish loading the config.
-        await Task.Delay(TimeSpan.FromSeconds(5));
+        // Resolve the log level from the args the CLI built, as StartEngine does first, without launching a host.
+        string[]? engineArgs = null;
+        bool reachedEngineStart = TryStartEngineWithOptions(options, _runtimeConfigLoader!, _fileSystem!, startEngine: args =>
+        {
+            engineArgs = args;
+            Azure.DataApiBuilder.Service.Program.InitializeLogLevel(args, runMcpStdio: false);
+            return true;
+        });
 
-        Assert.AreEqual(expectedIsOverridden, Startup.IsCliOverriding);
+        Assert.IsTrue(reachedEngineStart, "The CLI should have reached the engine-start step.");
+        Assert.AreEqual(expectedIsCliOverriding, engineArgs!.Contains("--log-level"), $"Unexpected engine args: {string.Join(' ', engineArgs)}");
+
+        // The CLI tracks a config-driven level separately; it must not also be reported as a CLI override.
+        Assert.AreEqual(!expectedIsCliOverriding, Utils.IsConfigOverriding, "Config-driven log level tracking is incorrect.");
+        Assert.AreEqual(expectedIsCliOverriding, Startup.IsCliOverriding, "The engine resolved an unexpected CLI override state from the args built by `dab start`.");
     }
 
     /// <summary>

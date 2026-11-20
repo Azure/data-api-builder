@@ -92,7 +92,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// Includes: RuntimeConfigProvider, IMetadataProviderFactory, IAuthorizationResolver,
         /// IHttpContextAccessor, IMutationEngineFactory, RequestValidator.
         /// </summary>
-        protected static IServiceProvider BuildMutationServiceProvider()
+        /// <param name="role">
+        /// Client role header value to use for the request. Defaults to the anonymous role.
+        /// Pass a custom role (already defined in the test config's permissions) to exercise
+        /// role-specific and column-level authorization scenarios.
+        /// </param>
+        protected static IServiceProvider BuildMutationServiceProvider(string role = AuthorizationResolver.ROLE_ANONYMOUS)
         {
             ServiceCollection services = new();
 
@@ -102,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             services.AddSingleton(_metadataProviderFactory.Object);
             services.AddSingleton(_authorizationResolver);
 
-            IHttpContextAccessor httpContextAccessor = CreateAnonymousHttpContextAccessor();
+            IHttpContextAccessor httpContextAccessor = CreateHttpContextAccessorForRole(role);
             services.AddSingleton(httpContextAccessor);
 
             services.AddSingleton(new RequestValidator(_metadataProviderFactory.Object, configProvider));
@@ -154,13 +159,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// </summary>
         protected static IHttpContextAccessor CreateAnonymousHttpContextAccessor()
         {
+            return CreateHttpContextAccessorForRole(AuthorizationResolver.ROLE_ANONYMOUS);
+        }
+
+        /// <summary>
+        /// Creates an HttpContextAccessor with the given role set as both the client role header
+        /// and a matching role claim, for exercising role-specific MCP tool authorization scenarios.
+        /// </summary>
+        protected static IHttpContextAccessor CreateHttpContextAccessorForRole(string role)
+        {
             DefaultHttpContext httpContext = new();
-            httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = AuthorizationResolver.ROLE_ANONYMOUS;
+            httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = role;
             ClaimsIdentity identity = new(
                 authenticationType: "TestAuth",
                 nameType: null,
                 roleType: AuthenticationOptions.ROLE_CLAIM_TYPE);
-            identity.AddClaim(new Claim(AuthenticationOptions.ROLE_CLAIM_TYPE, AuthorizationResolver.ROLE_ANONYMOUS));
+            identity.AddClaim(new Claim(AuthenticationOptions.ROLE_CLAIM_TYPE, role));
             httpContext.User = new ClaimsPrincipal(identity);
             return new HttpContextAccessor { HttpContext = httpContext };
         }

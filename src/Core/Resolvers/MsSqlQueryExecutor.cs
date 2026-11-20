@@ -18,6 +18,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlTypes;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -338,8 +339,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
         /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
-        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName)
+        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(
+            DbConnection conn,
+            string dataSourceName,
+            CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.
             if (string.IsNullOrEmpty(dataSourceName))
             {
@@ -358,7 +363,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     // At runtime with an HTTP request - attempt OBO flow
                     // Note: DatabaseAudience is validated at startup by RuntimeConfigValidator
-                    string? oboToken = await GetOboAccessTokenAsync(userDelegatedAuth.DatabaseAudience!);
+                    string? oboToken = await GetOboAccessTokenAsync(
+                        userDelegatedAuth.DatabaseAudience!,
+                        cancellationToken);
                     if (oboToken is not null)
                     {
                         sqlConn.AccessToken = oboToken;
@@ -391,7 +398,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string? accessToken = accessTokenFromController ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
-                        await GetAccessTokenAsync());
+                        await GetAccessTokenAsync(cancellationToken));
 
                 if (accessToken is not null)
                 {
@@ -405,7 +412,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="databaseAudience">The target database audience.</param>
         /// <returns>The OBO access token, or null if OBO cannot be performed.</returns>
-        private async Task<string?> GetOboAccessTokenAsync(string databaseAudience)
+        private async Task<string?> GetOboAccessTokenAsync(
+            string databaseAudience,
+            CancellationToken cancellationToken)
         {
             if (_oboTokenProvider is null || HttpContextAccessor?.HttpContext is null)
             {
@@ -428,7 +437,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return await _oboTokenProvider.GetAccessTokenOnBehalfOfAsync(
                 principal!,
                 incomingJwt,
-                databaseAudience);
+                databaseAudience,
+                cancellationToken);
         }
 
         /// <summary>
@@ -465,11 +475,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <returns>The string representation of the access token if found,
         /// null otherwise.</returns>
-        private async Task<string?> GetAccessTokenAsync()
+        private async Task<string?> GetAccessTokenAsync(
+            CancellationToken cancellationToken)
         {
             try
             {
-                _defaultAccessToken = await AzureCredential.GetTokenAsync(new TokenRequestContext(new[] { DATABASE_SCOPE }));
+                _defaultAccessToken = await AzureCredential.GetTokenAsync(
+                    new TokenRequestContext(new[] { DATABASE_SCOPE }),
+                    cancellationToken);
             }
             catch (CredentialUnavailableException ex)
             {
@@ -515,6 +528,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // Counter to generate different param name for each of the sessionParam.
             IncrementingInteger counter = new();
+            const string SESSION_KEY_NAME = $"{BaseQueryStructure.PARAM_NAME_PREFIX}session_key";
             const string SESSION_PARAM_NAME = $"{BaseQueryStructure.PARAM_NAME_PREFIX}session_param";
             StringBuilder sessionMapQuery = new();
 
@@ -527,10 +541,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 foreach ((string claimType, string claimValue) in sessionParams)
                 {
+                    string keyName = $"{SESSION_KEY_NAME}{counter.Current()}";
+                    parameters.Add(keyName, new(claimType));
+
                     string paramName = $"{SESSION_PARAM_NAME}{counter.Next()}";
                     parameters.Add(paramName, new(claimValue));
+
                     // Append statement to set read only param value - can be set only once for a connection.
-                    string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 0;";
+                    string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + keyName + ", " + paramName + ", @read_only = 0;";
                     sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
                 }
             }
@@ -693,6 +711,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         && parameterEntry.Value?.Length is not null)
                     {
                         parameter.Size = parameterEntry.Value.Length.Value;
+                    }
+
+                    // if sqldbtype is vector then set the value as an SqlVector object
+                    if (parameter.SqlDbType is SqlDbType.Vector)
+                    {
+                        List<float> values = new();
+                        foreach (float val in (Array)parameter.Value)
+                        {
+                            values.Add(val);
+                        }
+
+                        SqlVector<float> value = new(values.ToArray());
+                        parameter.Value = value;
                     }
 
                     cmd.Parameters.Add(parameter);

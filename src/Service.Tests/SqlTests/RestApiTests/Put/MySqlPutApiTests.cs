@@ -3,7 +3,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
@@ -94,6 +97,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable = 10
                         AND piecesRequired = 5
+                    ) AS subq
+                "
+            },
+            {
+                "PutOneUpdateWithDatabasePolicy",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 100 AND pieceid = 99 AND categoryName ='SciFi' AND piecesAvailable = 4
+                        AND piecesRequired = 5 AND pieceid != 1
                     ) AS subq
                 "
             },
@@ -359,16 +375,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
         #region overridden tests
 
+        // Create-action database policies are only supported for MSSQL and DWSQL. Since MySQL does not
+        // support a database policy on the create action, the PUT tests that rely on a create policy
+        // (insert path) remain unsupported here. The update-policy path is validated by
+        // PutOneUpdateWithDatabasePolicy.
         [TestMethod]
         [Ignore]
-        public override Task PutOneUpdateWithDatabasePolicy()
+        public override Task PutOneInsertWithDatabasePolicy()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod]
         [Ignore]
-        public override Task PutOneInsertWithDatabasePolicy()
+        public override Task PutOneWithUnsatisfiedDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
         {
             throw new NotImplementedException();
         }
@@ -397,20 +424,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         [TestMethod]
         [Ignore]
         public void PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneWithUnsatisfiedDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
         {
             throw new NotImplementedException();
         }
@@ -456,6 +469,53 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         public override string GetUniqueDbErrorMessage()
         {
             return "Column 'piecesRequired' cannot be null";
+        }
+
+        /// <summary>
+        /// MySQL-specific negative PUT test for the update database policy. A PUT targeting an existing row
+        /// that violates the update policy ("@item.pieceid ne 1") must be rejected with 403
+        /// DatabasePolicyFailure, and the targeted row must be left unmodified.
+        /// The inherited <see cref="PutApiTestBase.PutOneWithUnsatisfiedDatabasePolicy"/> is skipped for MySQL
+        /// because it also exercises a create-action database policy, which MySQL does not support; this test
+        /// provides the denied-update coverage for the PUT path.
+        /// </summary>
+        [TestMethod]
+        public async Task PutOneUpdateWithUnsatisfiedDatabasePolicyIsBlocked()
+        {
+            // Row (categoryid=0, pieceid=1) exists in the seed with categoryName='', piecesAvailable=0,
+            // piecesRequired=0. pieceid=1 violates the update policy, so the PUT must be denied.
+            string requestBody = @"
+            {
+                ""categoryName"": ""SciFi"",
+                ""piecesRequired"": 2,
+                ""piecesAvailable"": 2
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/0/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    sqlQuery: string.Empty,
+                    exceptionExpected: true,
+                    expectedErrorMessage: DataApiBuilderException.AUTHORIZATION_FAILURE,
+                    expectedStatusCode: HttpStatusCode.Forbidden,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure.ToString(),
+                    clientRoleHeader: "database_policy_tester"
+                );
+
+            // Verify the row was not modified: it must still match its original seed values.
+            string unchangedRow = await GetDatabaseResultAsync(
+                "SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName, " +
+                "'piecesAvailable', piecesAvailable, 'piecesRequired', piecesRequired) AS data " +
+                "FROM " + _Composite_NonAutoGenPK_TableName + " " +
+                "WHERE categoryid = 0 AND pieceid = 1 AND categoryName = '' AND piecesAvailable = 0 AND piecesRequired = 0");
+
+            Assert.AreNotEqual(
+                "[]",
+                unchangedRow,
+                "The row (categoryid=0, pieceid=1) must remain unmodified after a PUT blocked by the update policy.");
         }
     }
 }

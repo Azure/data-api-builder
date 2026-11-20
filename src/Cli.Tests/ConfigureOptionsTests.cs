@@ -418,6 +418,7 @@ namespace Cli.Tests
         [DataRow("/updatedPath", DisplayName = "Update REST path to /updatedPath.")]
         [DataRow("/updated_Path", DisplayName = "Ensure underscore is allowed in REST path.")]
         [DataRow("/updated-Path", DisplayName = "Ensure hyphen is allowed in REST path.")]
+        [DataRow("/api/v2", DisplayName = "Ensure multi-segment paths are allowed in REST path.")]
         public void TestUpdatePathForRestSettings(string updatedPathValue)
         {
             // Arrange -> all the setup which includes creating options.

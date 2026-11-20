@@ -21,11 +21,113 @@ pr:
     - '*.md'
     - templates/**
 
-pool:
-  vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
-
 variables:
 - template: templates/variables.yml
 
-steps:
-- template: templates/build-pipelines.yml
+jobs:
+- job: build
+  displayName: 'Build and Unit Tests'
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - template: templates/build-pipelines.yml
+
+# ---------------------------------------------------------------------------
+# Total Code Coverage (rolling dashboard, not a per-PR gate)
+# ---------------------------------------------------------------------------
+# Unions this run's unit coverage with the latest DB coverage and publishes one
+# combined report. Best-effort (continueOnError) so it never blocks unit CI.
+- job: total_code_coverage
+  displayName: 'Total Code Coverage (rolling dashboard)'
+  dependsOn: build
+  condition: succeededOrFailed()
+  continueOnError: true
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
+
+  # This run's unit coverage (published by the build job above).
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download unit coverage (current run)'
+    continueOnError: true
+    inputs:
+      source: 'current'
+      artifact: 'coverage-unit'
+      patterns: '**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/unit'
+
+  # DB coverage: each pipeline's numeric definition ID (Azure DevOps pipeline URL
+  # ...?definitionId=NN). Mapping: DwSql=1, MsSql=2, MySql=3, PgSql=4, Cosmos=6.
+  # (5 is THIS unit pipeline, so it is not downloaded here.) If a pipeline is
+  # recreated its ID changes and that DB silently drops from the union - the merge
+  # step's -ExpectedSources warning flags any source that produced no files.
+  # No 'artifact' name is set so ALL of a run's coverage artifacts are pulled
+  # (some DBs publish one per job, e.g. MsSql linux + windows_combined +
+  # windows_configuration); the pattern keeps only raw cobertura for the merger.
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download MsSql coverage (latest)'
+    continueOnError: true
+    inputs:
+      source: 'specific'
+      project: '$(System.TeamProject)'
+      pipeline: '2'
+      runVersion: 'latest'
+      patterns: 'coverage-*/**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/db/mssql'
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download PostgreSql coverage (latest)'
+    continueOnError: true
+    inputs:
+      source: 'specific'
+      project: '$(System.TeamProject)'
+      pipeline: '4'
+      runVersion: 'latest'
+      patterns: 'coverage-*/**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/db/pg'
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download MySql coverage (latest)'
+    continueOnError: true
+    inputs:
+      source: 'specific'
+      project: '$(System.TeamProject)'
+      pipeline: '3'
+      runVersion: 'latest'
+      patterns: 'coverage-*/**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/db/mysql'
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download DwSql coverage (latest)'
+    continueOnError: true
+    inputs:
+      source: 'specific'
+      project: '$(System.TeamProject)'
+      pipeline: '1'
+      runVersion: 'latest'
+      patterns: 'coverage-*/**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/db/dwsql'
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download CosmosDb coverage (latest)'
+    continueOnError: true
+    inputs:
+      source: 'specific'
+      project: '$(System.TeamProject)'
+      pipeline: '6'
+      runVersion: 'latest'
+      patterns: 'coverage-*/**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/db/cosmos'
+
+  # Union-merge every downloaded cobertura and emit ONE combined Cobertura.xml
+  # (test projects excluded). Dependency-free - no ReportGenerator extension.
+  - task: PowerShell@2
+    displayName: 'Merge cobertura union and emit combined report'
+    continueOnError: true
+    inputs:
+      filePath: 'scripts/merge-coverage.ps1'
+      arguments: '-Path "$(Pipeline.Workspace)" -OutFile "$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml" -ExpectedSources unit,mssql,pg,mysql,dwsql,cosmos'
+      pwsh: true
+
+  - task: PublishCodeCoverageResults@2
+    displayName: 'Publish combined code coverage'
+    continueOnError: true
+    inputs:
+      summaryFileLocation: '$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml'

@@ -3,6 +3,7 @@
 
 using System.Data;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -379,6 +380,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Exposes the groupBy fields of this structure as a list of OrderByColumn,
+        /// giving groupBy queries a deterministic row order (in the absence of an explicit
+        /// client-provided orderBy) since Postgres/MSSQL do not guarantee GROUP BY row order otherwise.
+        /// </summary>
+        private List<OrderByColumn> GroupByColumnsAsOrderByColumns()
+        {
+            List<OrderByColumn> groupByColumnsAsOrderByColumns = new();
+
+            foreach (Column column in GroupByMetadata.Fields.Values)
+            {
+                groupByColumnsAsOrderByColumns.Add(new OrderByColumn(tableSchema: column.TableSchema,
+                                                                     tableName: column.TableName,
+                                                                     columnName: column.ColumnName,
+                                                                     tableAlias: column.TableAlias));
+            }
+
+            return groupByColumnsAsOrderByColumns;
+        }
+
+        /// <summary>
         /// Private constructor that is used for recursive query generation,
         /// for each subquery that's necessary to resolve a nested GraphQL
         /// request.
@@ -511,8 +532,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            // primary key should only be added to order by for non groupby queries.
-            OrderByColumns = isGroupByQuery ? [] : PrimaryKeyAsOrderByColumns();
+            // groupBy queries default to ordering by the grouped columns (since Postgres/MSSQL
+            // don't guarantee GROUP BY row order otherwise); non-groupBy queries default to the primary key.
+            OrderByColumns = isGroupByQuery ? GroupByColumnsAsOrderByColumns() : PrimaryKeyAsOrderByColumns();
             if (IsListQuery && queryParams.ContainsKey(QueryBuilder.ORDER_BY_FIELD_NAME))
             {
                 object? orderByObject = queryParams[QueryBuilder.ORDER_BY_FIELD_NAME];
@@ -905,7 +927,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
 
                     GroupByMetadata.Fields[columnName] = new Column(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, SourceAlias);
-                    AddColumn(fieldName, backingColumn ?? fieldName);
+                    AddColumn(columnName: columnName, labelName: fieldName);
                     fieldsInArgument.Add(fieldName);
                 }
             }
@@ -953,7 +975,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
 
                 string columnName = MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? backingColumn) ? backingColumn : fieldName;
-                AddColumn(fieldName, columnName);
+                AddColumn(columnName: columnName, labelName: fieldName);
             }
 
         }
@@ -1097,6 +1119,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 return 1;
             }
+        }
+
+        internal string CreatePaginationCursor(JsonElement element, bool isGroupByQuery)
+        {
+            if (_ctx is null)
+            {
+                throw new InvalidOperationException("GraphQL context is required to authorize a pagination cursor.");
+            }
+
+            return SqlPaginationUtil.MakeCursorFromJsonElement(
+                element,
+                PrimaryKey(),
+                OrderByColumns,
+                AuthorizationResolver,
+                Authorization.AuthorizationResolver.GetRoleOfGraphQLRequest(_ctx),
+                EntityName,
+                DatabaseObject.SchemaName,
+                DatabaseObject.Name,
+                MetadataProvider,
+                isGroupByQuery);
         }
 
         /// <summary>

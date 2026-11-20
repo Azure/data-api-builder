@@ -62,6 +62,39 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Reads records with whitespace after a comma in the select clause.
+        /// </summary>
+        [TestMethod]
+        public async Task ReadRecords_WithWhitespaceAfterSelectComma_ReturnsSelectedFields()
+        {
+            CallToolResult result = await ExecuteReadAsync("Book", select: "id, title");
+
+            AssertSuccess(result, "ReadRecords with whitespace after a select comma should succeed.");
+
+            JsonElement root = ParseResultRoot(result);
+            JsonElement records = GetRecordsArray(root);
+            JsonElement firstRecord = records[0];
+            Assert.IsTrue(firstRecord.TryGetProperty("id", out _), "Expected 'id' field in result.");
+            Assert.IsTrue(firstRecord.TryGetProperty("title", out _), "Expected 'title' field in result.");
+        }
+
+        /// <summary>
+        /// Rejects empty field names in the select clause with a clear error.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("id,title,")]
+        [DataRow("id,,title")]
+        public async Task ReadRecords_WithEmptySelectField_ReturnsInvalidArguments(string select)
+        {
+            CallToolResult result = await ExecuteReadAsync("Book", select: select);
+
+            AssertError(result);
+            JsonElement error = ParseResultRoot(result).GetProperty("error");
+            Assert.AreEqual("InvalidArguments", error.GetProperty("type").GetString());
+            Assert.AreEqual("The 'select' argument cannot contain empty field names.", error.GetProperty("message").GetString());
+        }
+
+        /// <summary>
         /// Reads records with an OData filter expression and verifies filtered results are returned.
         /// </summary>
         [TestMethod]
@@ -102,6 +135,43 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 int currentId = record.GetProperty("id").GetInt32();
                 Assert.IsTrue(currentId <= previousId, $"Records should be in descending order. Got {currentId} after {previousId}.");
                 previousId = currentId;
+            }
+        }
+
+        /// <summary>
+        /// Verifies sort-field precedence and descending secondary ordering when the first field has duplicate values.
+        /// </summary>
+        [TestMethod]
+        public async Task ReadRecords_WithMultipleOrderByFields_RespectsFieldPrecedence()
+        {
+            CallToolResult result = await ExecuteReadAsync(
+                "Book",
+                select: "id,publisher_id",
+                filter: "id ge 1 and id le 8",
+                orderby: new[] { "publisher_id asc", "id desc" },
+                first: 8);
+
+            AssertSuccess(result, "ReadRecords with multiple orderby fields should succeed.");
+
+            JsonElement records = GetRecordsArray(ParseResultRoot(result));
+
+            // The seeded books include repeated publishers. This sequence differs from both
+            // global id-descending order and the default id-ascending primary-key tie-breaker.
+            (int Id, int PublisherId)[] expected =
+            {
+                (2, 1234), (1, 1234),
+                (5, 2323),
+                (8, 2324), (7, 2324), (6, 2324),
+                (4, 2345), (3, 2345)
+            };
+
+            Assert.AreEqual(expected.Length, records.GetArrayLength(), "All eight seeded books should be returned.");
+            for (int i = 0; i < expected.Length; i++)
+            {
+                Assert.AreEqual(expected[i].PublisherId, records[i].GetProperty("publisher_id").GetInt32(),
+                    $"Row {i} should respect publisher_id as the primary ascending sort field.");
+                Assert.AreEqual(expected[i].Id, records[i].GetProperty("id").GetInt32(),
+                    $"Row {i} should respect id descending within each publisher.");
             }
         }
 

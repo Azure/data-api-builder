@@ -48,7 +48,6 @@ public class JsonConfigSchemaValidator
 
             if (isValid)
             {
-                _logger!.LogInformation("The config satisfies the schema requirements.");
                 return new(isValid: true, errors: null);
             }
             else

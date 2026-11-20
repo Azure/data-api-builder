@@ -1,12 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -89,52 +91,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 HttpContext? httpContext = httpContextAccessor.HttpContext;
 
-                // Get current user's role for permission filtering
-                // For discovery tools like describe_entities, we use the first valid role from the header
-                // This differs from operation-specific tools that check permissions per entity per operation
+                // Get the caller's role for authorization filtering. DAB uses a single-role request
+                // model: the value validated by IsValidRoleContext (via User.IsInRole) is the role
+                // used to gate visibility here, matching REST, GraphQL, and the other MCP tools.
                 string? currentUserRole = null;
                 if (httpContext != null && authResolver.IsValidRoleContext(httpContext))
                 {
                     string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
                     if (!string.IsNullOrWhiteSpace(roleHeader))
                     {
-                        string[] roles = roleHeader
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-                        if (roles.Length > 1)
-                        {
-                            logger?.LogWarning("Multiple roles detected in request header: [{Roles}]. Using first role '{FirstRole}' for entity discovery. " +
-                                "Consider using a single role for consistent permission reporting.",
-                                string.Join(", ", roles), roles[0]);
-                        }
-
-                        // For discovery operations, take the first role from comma-separated list
-                        // This provides a consistent view of available entities for the primary role
-                        currentUserRole = roles.FirstOrDefault();
-                    }
-                }
-
-                // Get current user's role for permission filtering
-                // For discovery tools like describe_entities, we use the first valid role from the header
-                // This differs from operation-specific tools that check permissions per entity per operation
-                if (httpContext != null && authResolver.IsValidRoleContext(httpContext))
-                {
-                    string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
-                    if (!string.IsNullOrWhiteSpace(roleHeader))
-                    {
-                        string[] roles = roleHeader
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-                        if (roles.Length > 1)
-                        {
-                            logger?.LogWarning("Multiple roles detected in request header: [{Roles}]. Using first role '{FirstRole}' for entity discovery. " +
-                                "Consider using a single role for consistent permission reporting.",
-                                string.Join(", ", roles), roles[0]);
-                        }
-
-                        // For discovery operations, take the first role from comma-separated list
-                        // This provides a consistent view of available entities for the primary role
-                        currentUserRole = roles.FirstOrDefault();
+                        currentUserRole = roleHeader;
                     }
                 }
 
@@ -178,8 +144,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             continue;
                         }
 
+                        // Authorization filtering: skip entities the caller's role has no permission on.
+                        // This prevents information disclosure of schema metadata (entity/field/parameter names and descriptions)
+                        // for entities the caller is not authorized to access, matching REST/GraphQL/OpenAPI behavior.
+                        // If currentUserRole is null, no entities are visible (empty result).
+                        if (!HasAnyPermissionForEntity(entityName, entity, currentUserRole, authResolver))
+                        {
+                            continue;
+                        }
+
                         try
                         {
+                            ISqlMetadataProvider? sqlMetadataProvider = null;
                             DatabaseObject? databaseObject = null;
                             if (entity.Source.Type == EntitySourceType.StoredProcedure)
                             {
@@ -201,12 +177,39 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                                         $"Could not resolve DB metadata for stored procedure entity '{entityName}'. Error: {resolveError}");
                                 }
                             }
+                            else if (!nameOnly)
+                            {
+                                if (McpMetadataHelper.TryResolveMetadata(
+                                        entityName,
+                                        runtimeConfig,
+                                        serviceProvider,
+                                        out ISqlMetadataProvider resolvedMetadataProvider,
+                                        out DatabaseObject resolvedDbObject,
+                                        out _,
+                                        out string resolveError,
+                                        cancellationToken))
+                                {
+                                    sqlMetadataProvider = resolvedMetadataProvider;
+                                    databaseObject = resolvedDbObject;
+                                }
+                                else
+                                {
+                                    logger?.LogDebug(
+                                        "Could not resolve DB metadata for entity '{EntityName}'; falling back to config-declared fields. Details: {ResolveError}",
+                                        entityName,
+                                        resolveError);
+                                }
+                            }
 
                             Dictionary<string, object?> entityInfo = nameOnly
                                 ? BuildBasicEntityInfo(entityName, entity)
-                                : BuildFullEntityInfo(entityName, entity, currentUserRole, databaseObject);
+                                : BuildFullEntityInfo(entityName, entity, currentUserRole, sqlMetadataProvider, databaseObject, authResolver);
 
                             entityList.Add(entityInfo);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            throw;
                         }
                         catch (Exception ex)
                         {
@@ -402,6 +405,39 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
+        /// Determines whether the specified entity is accessible to the given role, using the
+        /// authorization resolver as the source of truth. This respects role inheritance
+        /// (anonymous -> authenticated -> named role) and wildcard operation expansion, matching
+        /// REST/GraphQL/OpenAPI authorization behavior.
+        /// </summary>
+        /// <param name="entityName">The name of the entity being checked.</param>
+        /// <param name="entity">The entity object (used only to select the valid operation set for its source type).</param>
+        /// <param name="role">The role to check permissions for. If null or whitespace, the entity is not accessible.</param>
+        /// <param name="authResolver">The authorization resolver.</param>
+        /// <returns><see langword="true"/> if any valid operation is authorized on the entity for the role; otherwise, <see langword="false"/>.</returns>
+        private static bool HasAnyPermissionForEntity(string entityName, Entity entity, string? role, IAuthorizationResolver authResolver)
+        {
+            if (string.IsNullOrWhiteSpace(role))
+            {
+                return false;
+            }
+
+            HashSet<EntityActionOperation> validOperations = entity.Source.Type == EntitySourceType.StoredProcedure
+                ? EntityAction.ValidStoredProcedurePermissionOperations
+                : EntityAction.ValidPermissionOperations;
+
+            foreach (EntityActionOperation operation in validOperations)
+            {
+                if (authResolver.AreRoleAndOperationDefinedForEntity(entityName, role, operation))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Creates a dictionary containing basic information about an entity.
         /// </summary>
         /// <param name="entityName">The name of the entity to include in the dictionary.</param>
@@ -427,23 +463,39 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// </summary>
         /// <param name="entityName">The name of the entity to include in the dictionary.</param>
         /// <param name="entity">The entity object from which to extract additional information.</param>
-        /// <param name="currentUserRole">The role of the current user, used to determine permissions.</param>
+        /// <param name="currentUserRole">The role of the current user, used to determine permissions and visible fields.</param>
+        /// <param name="sqlMetadataProvider">The resolved metadata provider if available, used for authoritative exposed column name resolution.</param>
         /// <param name="databaseObject">The resolved database object metadata if available.</param>
+        /// <param name="authResolver">The authorization resolver used to compute allowed exposed columns.</param>
         /// <returns>
         /// A dictionary containing the entity's name, description, fields, parameters (if applicable), and permissions.
         /// </returns>
-        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity, string? currentUserRole, DatabaseObject? databaseObject)
+        private static Dictionary<string, object?> BuildFullEntityInfo(
+            string entityName,
+            Entity entity,
+            string? currentUserRole,
+            ISqlMetadataProvider? sqlMetadataProvider,
+            DatabaseObject? databaseObject,
+            IAuthorizationResolver authResolver)
         {
             // Use GraphQL singular name as alias if available, otherwise use entity name
             string displayName = !string.IsNullOrWhiteSpace(entity.GraphQL?.Singular)
                 ? entity.GraphQL.Singular
                 : entityName;
 
+            // Column-level authorization: filter fields by the columns the caller's role is allowed
+            // to see across every valid operation on this entity. Without this filter, describe_entities
+            // would leak the names and descriptions of columns restricted by fields.include /
+            // fields.exclude, extending the MSRC info-disclosure (CWE-285 -> CWE-200) from the entity
+            // level down to the column level.
+            HashSet<string>? allowedFieldNames = ComputeAllowedFieldNames(
+                entityName, entity, currentUserRole, authResolver);
+
             Dictionary<string, object?> info = new()
             {
                 ["name"] = displayName,
                 ["description"] = entity.Description ?? string.Empty,
-                ["fields"] = BuildFieldMetadataInfo(entity.Fields),
+                ["fields"] = BuildFieldMetadataInfo(entityName, entity, sqlMetadataProvider, databaseObject, allowedFieldNames),
             };
 
             if (entity.Source.Type == EntitySourceType.StoredProcedure)
@@ -451,34 +503,400 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 info["parameters"] = BuildParameterMetadataInfo(databaseObject);
             }
 
-            info["permissions"] = BuildPermissionsInfo(entity, currentUserRole);
+            info["permissions"] = BuildPermissionsInfo(entityName, entity, currentUserRole, authResolver);
 
             return info;
         }
 
         /// <summary>
-        /// Builds a list of metadata information objects from the provided collection of fields.
+        /// Builds field metadata for an entity.
+        /// For tables and views, merges DB columns (<see cref="SourceDefinition.Columns"/> and
+        /// <see cref="SourceDefinition.PrimaryKey"/>) with config overrides (<see cref="Entity.Fields"/>
+        /// and <see cref="Entity.Mappings"/>), filtered by <paramref name="allowedFieldNames"/>.
+        /// Falls back to config-declared fields when DB metadata is unavailable.
+        /// For stored procedures, projects config-declared result fields without column-level filtering.
         /// </summary>
-        /// <param name="fields">A list of <see cref="FieldMetadata"/> objects representing the fields to process. Can be null.</param>
-        /// <returns>A list of objects, each containing the name and description of a field. If <paramref name="fields"/> is
-        /// null, an empty list is returned.</returns>
-        private static List<object> BuildFieldMetadataInfo(List<FieldMetadata>? fields)
+        private static List<object> BuildFieldMetadataInfo(
+            string entityName,
+            Entity entity,
+            ISqlMetadataProvider? sqlMetadataProvider,
+            DatabaseObject? databaseObject,
+            HashSet<string>? allowedFieldNames)
         {
-            List<object> result = new();
-
-            if (fields != null)
+            if (entity.Source.Type == EntitySourceType.StoredProcedure)
             {
-                foreach (FieldMetadata field in fields)
+                return BuildStoredProcedureFieldMetadataInfo(entity.Fields);
+            }
+
+            List<object> result = new();
+            SourceDefinition? sourceDefinition = TryGetTableOrViewSourceDefinition(databaseObject);
+            bool hasDbColumns = sourceDefinition?.Columns is { Count: > 0 };
+            HashSet<string> primaryKeys = ResolveEffectivePrimaryKeyColumns(
+                entity,
+                hasDbColumns ? sourceDefinition : null);
+            Dictionary<string, string>? mappingsByColumn = BuildMappingsLookup(entity.Mappings);
+
+            if (hasDbColumns)
+            {
+                foreach ((string columnName, ColumnDefinition columnDefinition) in sourceDefinition!.Columns)
                 {
-                    result.Add(new
+                    FieldMetadata? fieldMetadata = FindConfigFieldMetadata(entity.Fields, columnName);
+                    string exposedName = ResolveExposedFieldName(
+                        entityName,
+                        columnName,
+                        fieldMetadata,
+                        mappingsByColumn,
+                        sqlMetadataProvider);
+
+                    if (allowedFieldNames != null && !allowedFieldNames.Contains(exposedName))
                     {
-                        name = field.Alias ?? field.Name,
-                        description = field.Description ?? string.Empty
-                    });
+                        continue;
+                    }
+
+                    result.Add(BuildTableOrViewFieldEntry(
+                        name: exposedName,
+                        description: fieldMetadata?.Description ?? string.Empty,
+                        primaryKey: primaryKeys.Contains(columnName),
+                        dataType: MapColumnDataType(columnDefinition)));
                 }
+
+                return result;
+            }
+
+            // Degraded fallback when DB metadata is unavailable (e.g., non-SQL provider or unpopulated metadata).
+            if (entity.Fields == null)
+            {
+                return result;
+            }
+
+            foreach (FieldMetadata field in entity.Fields)
+            {
+                string exposedName = ResolveExposedFieldNameFromConfig(field.Name, field, mappingsByColumn);
+
+                if (allowedFieldNames != null && !allowedFieldNames.Contains(exposedName))
+                {
+                    continue;
+                }
+
+                result.Add(BuildTableOrViewFieldEntry(
+                    name: exposedName,
+                    description: field.Description ?? string.Empty,
+                    primaryKey: primaryKeys.Contains(field.Name),
+                    dataType: null));
             }
 
             return result;
+        }
+
+        private static List<object> BuildStoredProcedureFieldMetadataInfo(List<FieldMetadata>? fields)
+        {
+            List<object> result = new();
+
+            if (fields == null)
+            {
+                return result;
+            }
+
+            foreach (FieldMetadata field in fields)
+            {
+                result.Add(new
+                {
+                    name = field.Alias ?? field.Name,
+                    description = field.Description ?? string.Empty
+                });
+            }
+
+            return result;
+        }
+
+        private static Dictionary<string, object?> BuildTableOrViewFieldEntry(
+            string name,
+            string description,
+            bool primaryKey,
+            string? dataType) => new()
+            {
+                ["name"] = name,
+                ["description"] = description,
+                ["primaryKey"] = primaryKey,
+                ["dataType"] = dataType
+            };
+
+        private static SourceDefinition? TryGetTableOrViewSourceDefinition(DatabaseObject? databaseObject) =>
+            databaseObject switch
+            {
+                DatabaseTable table => table.TableDefinition,
+                DatabaseView view => view.ViewDefinition,
+                _ => null
+            };
+
+        /// <summary>
+        /// Resolves primary key backing column names.
+        /// When DB metadata is available, <see cref="SourceDefinition.PrimaryKey"/> is already populated
+        /// upstream by <see cref="Core.Services.MetadataProviders.SqlMetadataProvider"/> (applying
+        /// <c>fields[].primary-key</c> -> <c>source.key-fields</c> -> DB PK) and is the exact key set
+        /// enforced by <see cref="RequestValidator.ValidatePrimaryKey"/> in <c>update_record</c> and
+        /// <c>delete_record</c>. Config fallback is used only when DB metadata is unavailable.
+        /// </summary>
+        private static HashSet<string> ResolveEffectivePrimaryKeyColumns(Entity entity, SourceDefinition? sourceDefinition)
+        {
+            HashSet<string> primaryKeys = new(StringComparer.OrdinalIgnoreCase);
+
+            if (sourceDefinition != null)
+            {
+                if (sourceDefinition.PrimaryKey is { Count: > 0 })
+                {
+                    foreach (string pk in sourceDefinition.PrimaryKey)
+                    {
+                        if (!string.IsNullOrWhiteSpace(pk))
+                        {
+                            primaryKeys.Add(pk);
+                        }
+                    }
+                }
+
+                return primaryKeys;
+            }
+
+            if (entity.Fields != null)
+            {
+                foreach (FieldMetadata field in entity.Fields)
+                {
+                    if (field.PrimaryKey && !string.IsNullOrWhiteSpace(field.Name))
+                    {
+                        primaryKeys.Add(field.Name);
+                    }
+                }
+
+                if (primaryKeys.Count > 0)
+                {
+                    return primaryKeys;
+                }
+            }
+
+            if (entity.Source.KeyFields is { Length: > 0 })
+            {
+                foreach (string keyField in entity.Source.KeyFields)
+                {
+                    if (!string.IsNullOrWhiteSpace(keyField))
+                    {
+                        primaryKeys.Add(keyField);
+                    }
+                }
+            }
+
+            return primaryKeys;
+        }
+
+        /// <summary>
+        /// Finds config <see cref="FieldMetadata"/> for a DB column, preferring an exact case-sensitive
+        /// (<see cref="StringComparison.Ordinal"/>) match before falling back to case-insensitive matching.
+        /// </summary>
+        private static FieldMetadata? FindConfigFieldMetadata(List<FieldMetadata>? fields, string columnName)
+        {
+            if (fields is not { Count: > 0 })
+            {
+                return null;
+            }
+
+            FieldMetadata? caseInsensitiveMatch = null;
+            foreach (FieldMetadata field in fields)
+            {
+                if (string.IsNullOrWhiteSpace(field.Name))
+                {
+                    continue;
+                }
+
+                if (string.Equals(field.Name, columnName, StringComparison.Ordinal))
+                {
+                    return field;
+                }
+
+                if (caseInsensitiveMatch is null &&
+                    string.Equals(field.Name, columnName, StringComparison.OrdinalIgnoreCase))
+                {
+                    caseInsensitiveMatch = field;
+                }
+            }
+
+            return caseInsensitiveMatch;
+        }
+
+        private static Dictionary<string, string>? BuildMappingsLookup(Dictionary<string, string>? mappings)
+        {
+            if (mappings is not { Count: > 0 })
+            {
+                return null;
+            }
+
+            Dictionary<string, string> lookup = new(StringComparer.OrdinalIgnoreCase);
+            foreach ((string backingColumn, string alias) in mappings)
+            {
+                if (!string.IsNullOrWhiteSpace(backingColumn) && !string.IsNullOrWhiteSpace(alias))
+                {
+                    lookup.TryAdd(backingColumn, alias);
+                }
+            }
+
+            return lookup;
+        }
+
+        /// <summary>
+        /// Resolves the exposed name for a backing column, preferring <see cref="ISqlMetadataProvider.TryGetExposedColumnName"/>
+        /// so advertised names match <see cref="AuthorizationResolver"/> and REST/GraphQL projections,
+        /// and falling back to config rules when the provider mapping is unavailable (e.g., unit-test stubs).
+        /// </summary>
+        private static string ResolveExposedFieldName(
+            string entityName,
+            string backingColumnName,
+            FieldMetadata? fieldMetadata,
+            Dictionary<string, string>? mappingsByColumn,
+            ISqlMetadataProvider? sqlMetadataProvider)
+        {
+            if (sqlMetadataProvider != null)
+            {
+                try
+                {
+                    if (sqlMetadataProvider.TryGetExposedColumnName(entityName, backingColumnName, out string? providerExposedName) &&
+                        !string.IsNullOrWhiteSpace(providerExposedName))
+                    {
+                        return providerExposedName;
+                    }
+                }
+                catch (KeyNotFoundException)
+                {
+                    // Fall back to config-derived mapping if provider column maps were not initialized.
+                }
+            }
+
+            return ResolveExposedFieldNameFromConfig(backingColumnName, fieldMetadata, mappingsByColumn);
+        }
+
+        /// <summary>
+        /// Mirrors <c>SqlMetadataProvider.GenerateExposedToBackingColumnMapUtil</c>:
+        /// any entry in <c>entity.Fields</c> claims the column (using <c>Alias</c> if non-whitespace,
+        /// else <c>backingColumnName</c>), and <c>entity.Mappings</c> applies only to columns not
+        /// already claimed by <c>entity.Fields</c>.
+        /// </summary>
+        private static string ResolveExposedFieldNameFromConfig(
+            string backingColumnName,
+            FieldMetadata? fieldMetadata,
+            Dictionary<string, string>? mappingsByColumn)
+        {
+            if (fieldMetadata != null)
+            {
+                return !string.IsNullOrWhiteSpace(fieldMetadata.Alias)
+                    ? fieldMetadata.Alias
+                    : backingColumnName;
+            }
+
+            if (mappingsByColumn != null && mappingsByColumn.TryGetValue(backingColumnName, out string? mappedAlias))
+            {
+                return mappedAlias;
+            }
+
+            return backingColumnName;
+        }
+
+        private static string? MapColumnDataType(ColumnDefinition column)
+        {
+            if (column.IsArrayType)
+            {
+                return "array";
+            }
+
+            Type systemType = Nullable.GetUnderlyingType(column.SystemType) ?? column.SystemType;
+
+            if (systemType == typeof(int) || systemType == typeof(long) ||
+                systemType == typeof(short) || systemType == typeof(byte) ||
+                systemType == typeof(sbyte) || systemType == typeof(uint) ||
+                systemType == typeof(ulong) || systemType == typeof(ushort))
+            {
+                return "integer";
+            }
+
+            if (systemType == typeof(float) || systemType == typeof(double) ||
+                systemType == typeof(decimal))
+            {
+                return "number";
+            }
+
+            if (systemType == typeof(bool))
+            {
+                return "boolean";
+            }
+
+            if (systemType == typeof(string) || systemType == typeof(char) ||
+                systemType == typeof(Guid) || systemType == typeof(DateTime) ||
+                systemType == typeof(DateTimeOffset) || systemType == typeof(DateOnly) ||
+                systemType == typeof(TimeOnly) || systemType == typeof(TimeSpan) ||
+                systemType == typeof(byte[]))
+            {
+                return "string";
+            }
+
+            return column.DbType switch
+            {
+                DbType.Byte or DbType.SByte or DbType.Int16 or DbType.UInt16
+                    or DbType.Int32 or DbType.UInt32 or DbType.Int64 or DbType.UInt64 => "integer",
+                DbType.Single or DbType.Double or DbType.Decimal or DbType.Currency
+                    or DbType.VarNumeric => "number",
+                DbType.Boolean => "boolean",
+                DbType.AnsiString or DbType.AnsiStringFixedLength or DbType.String
+                    or DbType.StringFixedLength or DbType.Xml or DbType.Guid
+                    or DbType.Date or DbType.DateTime or DbType.DateTime2
+                    or DbType.DateTimeOffset or DbType.Time or DbType.Binary => "string",
+                _ => null
+            };
+        }
+
+        /// <summary>
+        /// Returns the set of exposed field names (aliased where applicable) the caller is
+        /// allowed to see on the given entity, computed across every valid operation the caller's
+        /// role is authorized for.
+        /// </summary>
+        /// <remarks>
+        /// Uses <see cref="IAuthorizationResolver.GetAllowedExposedColumns"/>, the same source
+        /// of truth REST uses when materializing a response's column projection. Stored procedures
+        /// return null because SP result-set columns are not governed by fields.include/exclude
+        /// (SP permissions are Execute-only); returning null signals "no filter" to the projection.
+        /// </remarks>
+        /// <returns>
+        /// Null for stored procedures (do not filter). An empty set when the caller has no role,
+        /// which produces an empty fields[] projection while leaving the entity entry intact
+        /// (entity-level authorization has already passed by the time this runs).
+        /// </returns>
+        private static HashSet<string>? ComputeAllowedFieldNames(
+            string entityName,
+            Entity entity,
+            string? currentUserRole,
+            IAuthorizationResolver authResolver)
+        {
+            if (entity.Source.Type == EntitySourceType.StoredProcedure)
+            {
+                return null;
+            }
+
+            HashSet<string> allowed = new(StringComparer.OrdinalIgnoreCase);
+
+            if (string.IsNullOrWhiteSpace(currentUserRole))
+            {
+                return allowed;
+            }
+
+            foreach (EntityActionOperation operation in EntityAction.ValidPermissionOperations)
+            {
+                if (!authResolver.AreRoleAndOperationDefinedForEntity(entityName, currentUserRole, operation))
+                {
+                    continue;
+                }
+
+                foreach (string column in authResolver.GetAllowedExposedColumns(entityName, currentUserRole, operation))
+                {
+                    allowed.Add(column);
+                }
+            }
+
+            return allowed;
         }
 
         /// <summary>
@@ -539,51 +957,38 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             };
 
         /// <summary>
-        /// Build a list of permission metadata info for the current user's role
+        /// Builds the sorted list of operation permissions the caller has on the given entity,
+        /// using the authorization resolver as the source of truth so role inheritance
+        /// (anonymous -> authenticated -> named role) and wildcard operation expansion are applied
+        /// consistently with REST/GraphQL/OpenAPI.
         /// </summary>
-        /// <param name="entity">The entity object</param>
-        /// <param name="currentUserRole">The current user's role - if null, returns empty permissions</param>
-        /// <returns>A list of permissions available to the current user's role for this entity</returns>
-        private static string[] BuildPermissionsInfo(Entity entity, string? currentUserRole)
+        /// <param name="entityName">The name of the entity being described.</param>
+        /// <param name="entity">The entity object (used only to select the valid operation set for its source type).</param>
+        /// <param name="currentUserRole">The current user's role - if null or whitespace, returns empty permissions.</param>
+        /// <param name="authResolver">The authorization resolver.</param>
+        /// <returns>A sorted list of operation names (uppercased) authorized on the entity for the caller's role.</returns>
+        private static string[] BuildPermissionsInfo(string entityName, Entity entity, string? currentUserRole, IAuthorizationResolver authResolver)
         {
-            if (entity.Permissions == null || string.IsNullOrWhiteSpace(currentUserRole))
+            if (string.IsNullOrWhiteSpace(currentUserRole))
             {
                 return Array.Empty<string>();
             }
 
-            bool isStoredProcedure = entity.Source.Type == EntitySourceType.StoredProcedure;
-            HashSet<EntityActionOperation> validOperations = isStoredProcedure
+            HashSet<EntityActionOperation> validOperations = entity.Source.Type == EntitySourceType.StoredProcedure
                 ? EntityAction.ValidStoredProcedurePermissionOperations
                 : EntityAction.ValidPermissionOperations;
 
             HashSet<string> permissions = new(StringComparer.OrdinalIgnoreCase);
 
-            // Only include permissions for the current user's role
-            foreach (EntityPermission permission in entity.Permissions)
+            foreach (EntityActionOperation operation in validOperations)
             {
-                // Check if this permission applies to the current user's role
-                if (!string.Equals(permission.Role, currentUserRole, StringComparison.OrdinalIgnoreCase))
+                if (authResolver.AreRoleAndOperationDefinedForEntity(entityName, currentUserRole, operation))
                 {
-                    continue;
-                }
-
-                foreach (EntityAction action in permission.Actions)
-                {
-                    if (action.Action == EntityActionOperation.All)
-                    {
-                        foreach (EntityActionOperation op in validOperations)
-                        {
-                            permissions.Add(op.ToString().ToUpperInvariant());
-                        }
-                    }
-                    else
-                    {
-                        permissions.Add(action.Action.ToString().ToUpperInvariant());
-                    }
+                    permissions.Add(operation.ToString().ToUpperInvariant());
                 }
             }
 
-            return permissions.OrderBy(p => p).ToArray();
+            return permissions.OrderBy(p => p, StringComparer.Ordinal).ToArray();
         }
     }
 }

@@ -34,6 +34,31 @@ public class StaticWebAppsAuthentication
     }
 
     /// <summary>
+    /// Environment variable key set by the Azure platform for every App Service and Static Web Apps
+    /// hosted site. Its presence is the best-effort signal that the runtime is executing behind an
+    /// Azure-managed proxy that injects and validates the X-MS-CLIENT-PRINCIPAL header.
+    /// </summary>
+    public const string WEBSITE_SITE_NAME_ENVVAR = "WEBSITE_SITE_NAME";
+
+    // ── StaticWebApps messages ───────────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Error message used when StaticWebApps Authentication is configured in production mode
+    /// without a detectable Azure-hosted environment.
+    /// </summary>
+    public const string SWA_PROD_MISSING_ENV_CONFIG =
+        "StaticWebApps environment not detected while runtime is in production mode. " +
+        "The X-MS-CLIENT-PRINCIPAL header is not cryptographically validated by DAB and can be trivially " +
+        "forged when the service is not hosted behind an Azure Static Web Apps proxy. " +
+        "Set host.mode to 'development' for local testing, or deploy behind Azure Static Web Apps.";
+
+    /// <summary>
+    /// Warning message logged when StaticWebApps environment not detected (applicable to development mode).
+    /// </summary>
+    public const string SWA_DEV_MISSING_ENV_CONFIG =
+        "StaticWebApps environment not detected. The X-MS-CLIENT-PRINCIPAL header is not cryptographically " +
+        "validated; EasyAuth authentication may not behave as expected outside an Azure Static Web Apps environment.";
+
+    /// <summary>
     /// Base64 decodes and deserializes the x-ms-client-principal payload containing
     /// SWA token metadata.
     /// Writes SWA token metadata (roles and token claims) to .NET ClaimsIdentity object.
@@ -97,5 +122,15 @@ public class StaticWebAppsAuthentication
         }
 
         return identity;
+    }
+
+    /// <summary>
+    /// Returns a best-effort indication that the runtime is executing inside an Azure Static Web Apps
+    /// environment by checking for the presence of <see cref="WEBSITE_SITE_NAME_ENVVAR"/>, which is
+    /// injected by the Azure platform for every SWA-hosted application.
+    /// </summary>
+    public static bool AreExpectedSWAEnvVarsPresent()
+    {
+        return !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(WEBSITE_SITE_NAME_ENVVAR));
     }
 }

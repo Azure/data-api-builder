@@ -4,9 +4,18 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Text;
+using System.Threading;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Telemetry;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
+using Azure.DataApiBuilder.Mcp.Core;
+using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace Azure.DataApiBuilder.Service.Utilities
 {
@@ -15,6 +24,14 @@ namespace Azure.DataApiBuilder.Service.Utilities
     /// </summary>
     internal static class McpStdioHelper
     {
+        /// <summary>
+        /// Reported when the MCP stdio host fails, mirroring the single message the web path uses in
+        /// Startup.PerformOnConfigChangeAsync. Deliberately not "startup": the catch also covers the
+        /// stdio loop, so a mid-session failure reports through here too.
+        /// </summary>
+        private const string STDIO_HOST_FAILED_MESSAGE =
+            "Unable to run the MCP stdio host. Refer to exception for error details.";
+
         /// <summary>
         /// Determines if MCP stdio mode should be run based on command line arguments.
         /// </summary>
@@ -74,26 +91,120 @@ namespace Azure.DataApiBuilder.Service.Utilities
         /// Runs the MCP stdio host.
         /// </summary>
         /// <param name="host"> The host to run.</param>
+        /// <returns>True when the stdio loop ran to completion; false when startup or the loop failed and was
+        /// reported, which Program.Main surfaces as a non-zero exit code.</returns>
         public static bool RunMcpStdioHost(IHost host)
         {
-            host.Start();
+            EngineTelemetrySession? productTelemetry = null;
+            TelemetryFailureContext? failure = null;
+            TelemetryFailureStage stage = TelemetryFailureStage.Serving;
+            try
+            {
+                productTelemetry = host.Services.GetService<EngineTelemetrySession>();
+                failure = productTelemetry?.IsEnabled == true ? TelemetryFailureContext.Current ?? new() : null;
+                using IDisposable? failureScope = TelemetryFailureContext.Enter(failure);
+                // Resolve the protocol loop without inferring database metadata. The server
+                // answers initialize immediately and reports readiness only after its first
+                // tools/list or tools/call successfully initializes metadata and the registry.
+                IHostApplicationLifetime lifetime =
+                    host.Services.GetRequiredService<IHostApplicationLifetime>();
+                IMcpStdioServer stdio =
+                    host.Services.GetRequiredService<IMcpStdioServer>();
 
-            Mcp.Core.McpToolRegistry registry =
-                host.Services.GetRequiredService<Mcp.Core.McpToolRegistry>();
-            IEnumerable<Mcp.Model.IMcpTool> tools =
-                host.Services.GetServices<Mcp.Model.IMcpTool>();
+                // Stdio never starts the HTTP host. Observe caches, but do not infer readiness
+                // from opening the protocol loop or completing the early initialize handshake.
+                // McpStdioServer owns readiness/failure at its deferred tool initialization.
+                host.Services.GetService<EngineTelemetryHosting>()?.StartAsync(default).GetAwaiter().GetResult();
 
-            Mcp.Core.McpToolRegistry.InitializeAndRegisterTools(tools, registry, host.Services);
+                stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
 
-            IHostApplicationLifetime lifetime =
-                host.Services.GetRequiredService<IHostApplicationLifetime>();
-            Mcp.Core.IMcpStdioServer stdio =
-                host.Services.GetRequiredService<Mcp.Core.IMcpStdioServer>();
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                // Record pre-ready cancellation before finally stops/disables the session.
+                // StartupFailed is a no-op once ready; normal loop cancellation is not a
+                // startup failure. Preserve propagation to Program's existing handler.
+                failure?.RecordFailure(stage);
+                productTelemetry?.StartupFailed(failure?.FailureStage ?? stage);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                failure?.RecordFailure(stage);
+                productTelemetry?.StartupFailed(failure?.FailureStage ?? stage);
+                // Mirrors Startup.PerformOnConfigChangeAsync: report and return false instead of letting
+                // the exception escape a method whose contract is a bool, and Program.Main turns that
+                // false into ExitCode -1. Cancellation is left to Program.StartEngine's own handler.
+                // ILogger reaches nobody this early -- stdio keeps only McpLoggerProvider, which stays
+                // disabled until the client sends logging/setLevel, impossible before the JSON-RPC loop
+                // runs -- so stderr is the only open channel. At the --mcp-stdio default of LogLevel.None
+                // Program has already pointed stderr at TextWriter.Null, so write the stream directly in
+                // that case rather than installing a writer that would outlive this call. stdout is left
+                // untouched for JSON-RPC.
+                string report = $"{STDIO_HOST_FAILED_MESSAGE} {ex}";
 
-            stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
-            host.StopAsync().GetAwaiter().GetResult();
+                if (ReferenceEquals(Console.Error, TextWriter.Null))
+                {
+                    using StreamWriter standardError = new(
+                        Console.OpenStandardError(),
+                        new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                    standardError.WriteLine(report);
+                }
+                else
+                {
+                    Console.Error.WriteLine(report);
+                }
 
-            return true;
+                return false;
+            }
+            finally
+            {
+                try
+                {
+                    FileSystemRuntimeConfigLoader? configLoader =
+                        host.Services.GetService<FileSystemRuntimeConfigLoader>();
+                    if (configLoader is not null)
+                    {
+                        TimeSpan shutdownTimeout = host.Services
+                            .GetService<IOptions<HostOptions>>()?
+                            .Value.ShutdownTimeout ?? new HostOptions().ShutdownTimeout;
+                        using CancellationTokenSource shutdownCancellation = new(shutdownTimeout);
+                        try
+                        {
+                            configLoader
+                                .StopAsync(shutdownCancellation.Token)
+                                .GetAwaiter()
+                                .GetResult();
+                        }
+                        catch (OperationCanceledException)
+                            when (shutdownCancellation.IsCancellationRequested)
+                        {
+                            // Match Generic Host shutdown semantics: cancellation bounds the drain.
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // Report before the unconditional telemetry drain below. The outer CLI
+                    // handoff must still observe pre-ready cleanup failure after this runner stops.
+                    productTelemetry?.StartupFailed(TelemetryFailureStage.Serving);
+                    throw;
+                }
+                finally
+                {
+                    try
+                    {
+                        productTelemetry?.StopAsync().GetAwaiter().GetResult();
+                    }
+                    finally
+                    {
+                        // This runner owns the host even if service resolution or a shutdown
+                        // hook fails. StartEngineCore must not add a second disposal owner.
+                        host.Dispose();
+                    }
+                }
+            }
         }
     }
 }

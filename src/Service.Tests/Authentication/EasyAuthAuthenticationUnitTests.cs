@@ -325,7 +325,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             DisplayName = "Anonymous role - X-MS-API-ROLE is not honored")]
         [DataRow(true, "author",
             DisplayName = "Authenticated role - existing X-MS-API-ROLE is honored")]
-        [TestMethod]
         public async Task TestClientRoleHeaderPresence(bool addAuthenticated, string clientRoleHeader)
         {
             string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated);

@@ -142,6 +142,11 @@ steps:
     codeCoverageTool: Cobertura
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
+# Publish this job's raw cobertura as a uniquely-named artifact (suffixed per job).
+- template: publish-coverage-artifact.yml
+  parameters:
+    artifactName: 'coverage-mssql${{ parameters.artifactSuffix }}'
+
 - task: CopyFiles@2
   condition: eq(variables['publishverify'], 'Yes')
   displayName: 'Copy received files to Artifact Staging'

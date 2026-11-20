@@ -61,6 +61,9 @@ update Stock --config "dab-config.MySql.json" --permissions "test_role_with_excl
 update Stock --config "dab-config.MySql.json" --permissions "test_role_with_excluded_fields:read" --fields.exclude "categoryName"
 update Stock --config "dab-config.MySql.json" --permissions "test_role_with_policy_excluded_fields:create,update,delete"
 update Stock --config "dab-config.MySql.json" --permissions "test_role_with_policy_excluded_fields:read" --fields.exclude "categoryName" --policy-database "@item.piecesAvailable ne 0"
+update Stock --config "dab-config.MySql.json" --permissions "database_policy_tester:update" --policy-database "@item.pieceid ne 1"
+update Stock --config "dab-config.MySql.json" --permissions "database_policy_tester:create"
+update Stock --config "dab-config.MySql.json" --permissions "database_policy_tester:read"
 update Book --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.MySql.json" --relationship publishers --target.entity Publisher --cardinality one
 update Book --config "dab-config.MySql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
@@ -93,6 +96,7 @@ update Book --config "dab-config.MySql.json" --permissions "policy_tester_08:cre
 update Book --config "dab-config.MySql.json" --permissions "policy_tester_08:update" --fields.include "*" --policy-database "@item.id eq 9"
 update Book --config "dab-config.MySql.json" --permissions "policy_tester_08:delete" --fields.include "*" --policy-database "@item.id eq 9"
 update Book --config "dab-config.MySql.json" --permissions "policy_tester_08:read" --fields.include "*"
+update Book --config "dab-config.MySql.json" --permissions "claim_policy_tester:read" --fields.include "*" --policy-database "@item.title eq @claims.userId"
 update Book --config "dab-config.MySql.json" --permissions "test_role_with_noread:create,update,delete"
 update Book --config "dab-config.MySql.json" --permissions "test_role_with_excluded_fields:create,update,delete"
 update Book --config "dab-config.MySql.json" --permissions "test_role_with_excluded_fields:read" --fields.exclude "publisher_id"

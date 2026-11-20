@@ -622,7 +622,7 @@ public class EmbeddingsHealthCheckTests
         RuntimeOptions runtimeOptions = new(
             Rest: new RestRuntimeOptions(Enabled: true),
             GraphQL: new GraphQLRuntimeOptions(Enabled: true),
-            Mcp: new McpRuntimeOptions(Enabled: true),
+            Mcp: new McpRuntimeOptions(Enabled: false),
             Host: new HostOptions(Cors: null, Authentication: null, Mode: HostMode.Development),
             Health: new RuntimeHealthCheckConfig(enabled: true),
             Embeddings: embeddingsOptions);

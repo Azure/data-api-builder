@@ -15,13 +15,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// </summary>
     public class MsSqlDbExceptionParser : DbExceptionParser
     {
+        private const string INVALID_XML_MESSAGE = "Invalid XML value supplied for an xml field.";
+
+        // Error numbers caused by client-supplied input: HTTP 400 with the DatabaseInputError substatus.
+        private static readonly HashSet<int> _databaseInputErrorCodes = new()
+        {
+            // Procedure or function '%.*ls' expects parameter '%.*ls', which was not supplied.
+            201,
+            // Stopgap: 8116/8117 are generic invalid argument/operand type errors, so type bugs inside
+            // stored procedure bodies also map here.
+            // TODO: Remove once #3897 rejects these operations before SQL.
+            305, 8116, 8117,
+            // JSON data type validation errors (SQL Server 2025+).
+            13608, 13609, 13610, 13611, 13612, 13613, 13614
+        };
+
+        // XML data type input errors, in addition to the 9400-9480 parsing range (see IsXmlParsingError).
+        private static readonly HashSet<int> _xmlInputErrorCodes = new() { 6335, 6359, 6908, 6926 };
+
         public MsSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
         {
             // HashSet of Error codes ('Number') which are to be considered as bad requests.
+            // Database input errors are classified separately by IsDatabaseInputError.
             BadRequestExceptionCodes.UnionWith(new List<string>
             {
                 "157", "158", "169",
-                "201", // Procedure or function '%.*ls' expects parameter '%.*ls', which was not supplied.
                 "404", "412", "414", "415",
                 "489", "513", "515", "544", "545", "547",
                 "550", "611", "681", "1060", "4005", "4006",
@@ -32,6 +50,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "4450", "4451", "4452", "4453", "4454", "4455", "4456",
                 "4457", "4933", "4934", "4936", "4988", "8102"
             });
+
+            _errorMessages[9402] = "XML encoding declaration conflicts with UTF-16 input. Omit the XML encoding declaration or use encoding=\"utf-16\".";
 
             TransientExceptionCodes.UnionWith(new List<string>
             {
@@ -66,13 +86,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc/>
         public override HttpStatusCode GetHttpStatusCodeForException(DbException e)
         {
-            string exceptionNumber = ((SqlException)e).Number.ToString();
-            if (BadRequestExceptionCodes.Contains(exceptionNumber))
+            int errorCode = ((SqlException)e).Number;
+            if (IsDatabaseInputError(errorCode) || BadRequestExceptionCodes.Contains(errorCode.ToString()))
             {
                 return HttpStatusCode.BadRequest;
             }
 
-            if (ConflictExceptionCodes.Contains(exceptionNumber))
+            if (ConflictExceptionCodes.Contains(errorCode.ToString()))
             {
                 return HttpStatusCode.Conflict;
             }
@@ -90,10 +110,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc/>
         public override DataApiBuilderException.SubStatusCodes GetResultSubStatusCodeForException(DbException e)
         {
-            int errorCode = ((SqlException)e).Number;
-            // MSSQL 201 - Procedure or function '%.*ls' expects parameter '%.*ls', which was not supplied.
             // Pending revisions of error code classifications, this is a temporary fix to determine substatus code.
-            if (errorCode == 201)
+            if (IsDatabaseInputError(((SqlException)e).Number))
             {
                 return DataApiBuilderException.SubStatusCodes.DatabaseInputError;
             }
@@ -113,13 +131,45 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>Error message returned to client.</returns>
         public override string GetMessage(DbException e)
         {
+            int errorCode = ((SqlException)e).Number;
             if (_developerMode)
             {
-                return e.Message;
+                return errorCode == 9402 ? AppendXmlEncodingGuidance(e.Message) : e.Message;
             }
 
-            int errorCode = ((SqlException)e).Number;
-            return _errorMessages.ContainsKey(errorCode) ? _errorMessages[errorCode] : GENERIC_DB_EXCEPTION_MESSAGE;
+            if (_errorMessages.TryGetValue(errorCode, out string? message))
+            {
+                return message;
+            }
+
+            return IsXmlInputError(errorCode) ? INVALID_XML_MESSAGE : GENERIC_DB_EXCEPTION_MESSAGE;
+        }
+
+        /// <inheritdoc/>
+        public override string GetLogMessage(DbException e)
+        {
+            return e is SqlException { Number: 9402 } ? AppendXmlEncodingGuidance(e.Message) : e.Message;
+        }
+
+        private string AppendXmlEncodingGuidance(string message)
+        {
+            return $"{message.TrimEnd().TrimEnd('.')}. {_errorMessages[9402]}";
+        }
+
+        private static bool IsDatabaseInputError(int errorCode)
+        {
+            return _databaseInputErrorCodes.Contains(errorCode) || IsXmlInputError(errorCode);
+        }
+
+        private static bool IsXmlInputError(int errorCode)
+        {
+            return _xmlInputErrorCodes.Contains(errorCode) || IsXmlParsingError(errorCode);
+        }
+
+        // SQL Server reserves 9400-9480 for XML parsing errors.
+        private static bool IsXmlParsingError(int errorCode)
+        {
+            return errorCode is >= 9400 and <= 9480;
         }
     }
 }

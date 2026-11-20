@@ -158,6 +158,81 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         #endregion
 
+        #region Column-Level Authorization Tests
+
+        /// <summary>
+        /// Regression test for column-level authorization bypass in update_record.
+        /// A role holding UPDATE permission on the entity, but with a column explicitly
+        /// excluded via fields.exclude, must be denied when supplying a value for that column
+        /// even though the operation itself is authorized. Fails pre-fix, passes post-fix.
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateRecord_ExcludedColumn_ReturnsPermissionDenied()
+        {
+            int createdId = await CreateBookForUpdate("Book For Column Auth Test");
+            try
+            {
+                var keys = new Dictionary<string, object> { { "id", createdId } };
+                var fields = new Dictionary<string, object> { { "publisher_id", 9999 } };
+
+                IServiceProvider serviceProvider = BuildMutationServiceProvider(role: "test_role_with_excluded_fields_on_mutation");
+                UpdateRecordTool tool = new();
+
+                var args = new Dictionary<string, object?>
+                {
+                    { "entity", "Book" },
+                    { "keys", keys },
+                    { "fields", fields }
+                };
+
+                CallToolResult result = await ExecuteToolAsync(tool, serviceProvider, args);
+
+                AssertError(result, "permission",
+                    "UpdateRecord should deny writes to columns excluded for the caller's role, even though " +
+                    "the role holds UPDATE permission on the entity.");
+            }
+            finally
+            {
+                await DeleteBook(createdId);
+            }
+        }
+
+        /// <summary>
+        /// Sanity check accompanying <see cref="UpdateRecord_ExcludedColumn_ReturnsPermissionDenied"/>:
+        /// the same restricted role must still be able to update a record when it only supplies
+        /// columns it is permitted to write.
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateRecord_AllowedColumnsOnly_WithColumnRestrictedRole_ReturnsSuccess()
+        {
+            int createdId = await CreateBookForUpdate("Book For Allowed Column Update Test");
+            try
+            {
+                var keys = new Dictionary<string, object> { { "id", createdId } };
+                var fields = new Dictionary<string, object> { { "title", "Updated By Restricted Role" } };
+
+                IServiceProvider serviceProvider = BuildMutationServiceProvider(role: "test_role_with_excluded_fields_on_mutation");
+                UpdateRecordTool tool = new();
+
+                var args = new Dictionary<string, object?>
+                {
+                    { "entity", "Book" },
+                    { "keys", keys },
+                    { "fields", fields }
+                };
+
+                CallToolResult result = await ExecuteToolAsync(tool, serviceProvider, args);
+
+                AssertSuccess(result, "UpdateRecord should succeed when only permitted columns are supplied.");
+            }
+            finally
+            {
+                await DeleteBook(createdId);
+            }
+        }
+
+        #endregion
+
         #region Helpers
 
         private static async Task<CallToolResult> ExecuteUpdateAsync(

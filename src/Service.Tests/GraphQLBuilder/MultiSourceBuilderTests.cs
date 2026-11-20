@@ -210,8 +210,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             // relationship named "character" targeting Character.
             ObjectTypeDefinitionNode planet = await BuildCosmosPlanetTypeAsync(
                 characterContainer: "graphqldb.planet",
-                relationshipName: "character",
-                cardinality: "one");
+                ("character", "one"));
 
             HashSet<string> fieldNames = planet.Fields.Select(f => f.Name.Value).ToHashSet();
 
@@ -249,8 +248,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             ObjectTypeDefinitionNode planet = await BuildCosmosPlanetTypeAsync(
                 characterContainer: "graphqldb.character",
-                relationshipName: "characters",
-                cardinality: "many");
+                ("characters", "many"));
 
             HashSet<string> fieldNames = planet.Fields.Select(f => f.Name.Value).ToHashSet();
 
@@ -279,36 +277,10 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         [TestMethod]
         public async Task CosmosRelationship_MultipleRelationshipsToSameSharedContainerTarget_AllPreserved()
         {
-            string configContents = BuildCosmosMultiRelationshipConfig(
+            ObjectTypeDefinitionNode planet = await BuildCosmosPlanetTypeAsync(
                 characterContainer: "graphqldb.planet",
-                relationshipNames: new[] { "characterA", "characterB" });
-            string cosmosSchemaContents = await File.ReadAllTextAsync("schema.gql");
-
-            IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
-            {
-                { "dab-config.json", new MockFileData(configContents) },
-                { "schema.gql", new MockFileData(cosmosSchemaContents) }
-            });
-
-            FileSystemRuntimeConfigLoader loader = new(fs);
-            RuntimeConfigProvider provider = new(loader);
-
-            Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
-            RuntimeConfigValidator validator = new(provider, fs, loggerValidator.Object);
-
-            Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
-            Mock<IQueryEngineFactory> queryEngineFactory = new();
-            Mock<IMutationEngineFactory> mutationEngineFactory = new();
-            Mock<ILogger<ISqlMetadataProvider>> logger = new();
-            IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(provider, validator, queryManagerFactory.Object, logger.Object, fs, handler: null);
-            Mock<IAuthorizationResolver> authResolver = new();
-
-            GraphQLSchemaCreator creator = new(provider, queryEngineFactory.Object, mutationEngineFactory.Object, metadataProviderFactory, authResolver.Object);
-            (DocumentNode root, _) = creator.GenerateGraphQLObjects();
-
-            ObjectTypeDefinitionNode planet = root.Definitions
-                .OfType<ObjectTypeDefinitionNode>()
-                .Single(d => d.Name.Value == "Planet");
+                ("characterA", "one"),
+                ("characterB", "one"));
 
             HashSet<string> fieldNames = planet.Fields.Select(f => f.Name.Value).ToHashSet();
 
@@ -331,163 +303,82 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
 
         /// <summary>
         /// Builds the Cosmos GraphQL schema for a Planet/Character/Star configuration and returns the
-        /// generated <c>Planet</c> object type. The Character entity's container and the Planet-&gt;Character
-        /// relationship are parameterized so callers can exercise the shared- and separate-container paths.
+        /// generated <c>Planet</c> object type. Planet maps to <c>graphqldb.planet</c> and declares the given
+        /// relationships to Character; Character maps to <paramref name="characterContainer"/>, so callers can
+        /// exercise both the shared-container (embedded) and separate-container paths.
         /// </summary>
         private static async Task<ObjectTypeDefinitionNode> BuildCosmosPlanetTypeAsync(
             string characterContainer,
-            string relationshipName,
-            string cardinality)
+            params (string Name, string Cardinality)[] relationships)
         {
-            string configContents = BuildCosmosRelationshipConfig(characterContainer, relationshipName, cardinality);
-            string cosmosSchemaContents = await File.ReadAllTextAsync("schema.gql");
+            // Local CosmosDB emulator well-known endpoint/key; not a secret.
+            const string connectionString = "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
+
+            string relationshipsJson = string.Join(",", relationships.Select(r =>
+                $$"""
+                "{{r.Name}}": { "cardinality": "{{r.Cardinality}}", "target.entity": "Character" }
+                """));
+
+            string configContents = $$"""
+            {
+              "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
+              "data-source": {
+                "database-type": "cosmosdb_nosql",
+                "connection-string": "{{connectionString}}",
+                "options": { "database": "graphqldb", "container": "planet", "schema": "schema.gql" }
+              },
+              "runtime": {
+                "rest": { "enabled": false, "path": "/api" },
+                "graphql": { "enabled": true, "path": "/graphql", "allow-introspection": true },
+                "host": { "authentication": { "provider": "StaticWebApps" }, "mode": "development" }
+              },
+              "entities": {
+                "PlanetAlias": {
+                  "source": { "object": "graphqldb.planet" },
+                  "graphql": { "enabled": true, "type": { "singular": "Planet", "plural": "Planets" } },
+                  "rest": { "enabled": false },
+                  "permissions": [ { "role": "anonymous", "actions": [ { "action": "*" } ] } ],
+                  "relationships": { {{relationshipsJson}} }
+                },
+                "Character": {
+                  "source": { "object": "{{characterContainer}}" },
+                  "graphql": { "enabled": true, "type": { "singular": "Character", "plural": "Characters" } },
+                  "rest": { "enabled": false },
+                  "permissions": [ { "role": "anonymous", "actions": [ { "action": "*" } ] } ]
+                },
+                "Star": {
+                  "source": { "object": "graphqldb.star" },
+                  "graphql": { "enabled": true, "type": { "singular": "Star", "plural": "Stars" } },
+                  "rest": { "enabled": false },
+                  "permissions": [ { "role": "anonymous", "actions": [ { "action": "*" } ] } ]
+                }
+              }
+            }
+            """;
 
             IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
             {
                 { "dab-config.json", new MockFileData(configContents) },
-                { "schema.gql", new MockFileData(cosmosSchemaContents) }
+                { "schema.gql", new MockFileData(await File.ReadAllTextAsync("schema.gql")) }
             });
 
             FileSystemRuntimeConfigLoader loader = new(fs);
             RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator validator = new(provider, fs, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(
+                provider, validator, new Mock<IAbstractQueryManagerFactory>().Object, new Mock<ILogger<ISqlMetadataProvider>>().Object, fs, handler: null);
 
-            Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
-            RuntimeConfigValidator validator = new(provider, fs, loggerValidator.Object);
-
-            Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
-            Mock<IQueryEngineFactory> queryEngineFactory = new();
-            Mock<IMutationEngineFactory> mutationEngineFactory = new();
-            Mock<ILogger<ISqlMetadataProvider>> logger = new();
-            IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(provider, validator, queryManagerFactory.Object, logger.Object, fs, handler: null);
-            Mock<IAuthorizationResolver> authResolver = new();
-
-            GraphQLSchemaCreator creator = new(provider, queryEngineFactory.Object, mutationEngineFactory.Object, metadataProviderFactory, authResolver.Object);
+            GraphQLSchemaCreator creator = new(
+                provider,
+                new Mock<IQueryEngineFactory>().Object,
+                new Mock<IMutationEngineFactory>().Object,
+                metadataProviderFactory,
+                new Mock<IAuthorizationResolver>().Object);
             (DocumentNode root, _) = creator.GenerateGraphQLObjects();
 
             return root.Definitions
                 .OfType<ObjectTypeDefinitionNode>()
                 .Single(d => d.Name.Value == "Planet");
-        }
-
-        /// <summary>
-        /// Produces a minimal CosmosDB runtime config with Planet (PlanetAlias), Character and Star
-        /// entities sharing the <c>schema.gql</c> schema. Planet maps to <c>graphqldb.planet</c> and
-        /// declares the supplied relationship to Character; Character maps to the supplied container,
-        /// which the caller sets equal to Planet's container to exercise the embedded (shared-container) path.
-        /// </summary>
-        /// <summary>
-        /// Produces a minimal CosmosDB runtime config with a Planet (PlanetAlias) entity that declares
-        /// multiple one-cardinality relationships (named per <paramref name="relationshipNames"/>) all
-        /// targeting the Character entity, plus the Character and Star entities. Character maps to the
-        /// supplied container, which callers set equal to Planet's container (graphqldb.planet) to
-        /// exercise the shared-container embedded-projection stripping path.
-        /// </summary>
-        private static string BuildCosmosMultiRelationshipConfig(string characterContainer, string[] relationshipNames)
-        {
-            // Local CosmosDB emulator well-known endpoint/key; not a secret.
-            const string connectionString = "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
-
-            string relationshipsJson = string.Join(",\n", relationshipNames.Select(name => $$"""
-                    "{{name}}": {
-                      "cardinality": "one",
-                      "target.entity": "Character"
-                    }
-            """));
-
-            return $$"""
-            {
-              "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
-              "data-source": {
-                "database-type": "cosmosdb_nosql",
-                "connection-string": "{{connectionString}}",
-                "options": {
-                  "database": "graphqldb",
-                  "container": "planet",
-                  "schema": "schema.gql"
-                }
-              },
-              "runtime": {
-                "rest": { "enabled": false, "path": "/api" },
-                "graphql": { "enabled": true, "path": "/graphql", "allow-introspection": true },
-                "host": { "authentication": { "provider": "StaticWebApps" }, "mode": "development" }
-              },
-              "entities": {
-                "PlanetAlias": {
-                  "source": { "object": "graphqldb.planet" },
-                  "graphql": { "enabled": true, "type": { "singular": "Planet", "plural": "Planets" } },
-                  "rest": { "enabled": false },
-                  "permissions": [ { "role": "anonymous", "actions": [ { "action": "*" } ] } ],
-                  "relationships": {
-            {{relationshipsJson}}
-                  }
-                },
-                "Character": {
-                  "source": { "object": "{{characterContainer}}" },
-                  "graphql": { "enabled": true, "type": { "singular": "Character", "plural": "Characters" } },
-                  "rest": { "enabled": false },
-                  "permissions": [ { "role": "anonymous", "actions": [ { "action": "*" } ] } ]
-                },
-                "Star": {
-                  "source": { "object": "graphqldb.star" },
-                  "graphql": { "enabled": true, "type": { "singular": "Star", "plural": "Stars" } },
-                  "rest": { "enabled": false },
-                  "permissions": [ { "role": "anonymous", "actions": [ { "action": "*" } ] } ]
-                }
-              }
-            }
-            """;
-        }
-
-        private static string BuildCosmosRelationshipConfig(string characterContainer, string relationshipName, string cardinality)
-        {
-            // Local CosmosDB emulator well-known endpoint/key; not a secret.
-            const string connectionString = "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
-
-            return $$"""
-            {
-              "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
-              "data-source": {
-                "database-type": "cosmosdb_nosql",
-                "connection-string": "{{connectionString}}",
-                "options": {
-                  "database": "graphqldb",
-                  "container": "planet",
-                  "schema": "schema.gql"
-                }
-              },
-              "runtime": {
-                "rest": { "enabled": false, "path": "/api" },
-                "graphql": { "enabled": true, "path": "/graphql", "allow-introspection": true },
-                "host": { "authentication": { "provider": "StaticWebApps" }, "mode": "development" }
-              },
-              "entities": {
-                "PlanetAlias": {
-                  "source": { "object": "graphqldb.planet" },
-                  "graphql": { "enabled": true, "type": { "singular": "Planet", "plural": "Planets" } },
-                  "rest": { "enabled": false },
-                  "permissions": [ { "role": "anonymous", "actions": [ { "action": "*" } ] } ],
-                  "relationships": {
-                    "{{relationshipName}}": {
-                      "cardinality": "{{cardinality}}",
-                      "target.entity": "Character"
-                    }
-                  }
-                },
-                "Character": {
-                  "source": { "object": "{{characterContainer}}" },
-                  "graphql": { "enabled": true, "type": { "singular": "Character", "plural": "Characters" } },
-                  "rest": { "enabled": false },
-                  "permissions": [ { "role": "anonymous", "actions": [ { "action": "*" } ] } ]
-                },
-                "Star": {
-                  "source": { "object": "graphqldb.star" },
-                  "graphql": { "enabled": true, "type": { "singular": "Star", "plural": "Stars" } },
-                  "rest": { "enabled": false },
-                  "permissions": [ { "role": "anonymous", "actions": [ { "action": "*" } ] } ]
-                }
-              }
-            }
-            """;
         }
     }
 }

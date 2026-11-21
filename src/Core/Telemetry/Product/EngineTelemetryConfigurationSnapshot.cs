@@ -50,7 +50,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             RuntimeOptions? runtime = config.Runtime;
             RuntimeCacheOptions? cache = runtime?.Cache;
             EmbeddingsOptions? embeddings = runtime?.Embeddings;
-            bool canUseCache = config.CanUseCache();
+            bool canUseCache = config.GetDataSourceNamesToDataSourcesIterator()
+                .Any(source => config.CanUseCache(source.Key));
 
             result.Add("snapshot_schema", "configuration-v1");
             Add(result, "runtime.rest",
@@ -71,7 +72,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 State(canUseCache));
 
             // Startup installs L2 only under the runtime cache gate; query engines additionally
-            // require CanUseCache(), including its session-context rule. No Redis probe is made.
+            // require source-specific cache eligibility. No Redis probe is made.
             Add(result, "runtime.cache.l2",
                 Configured(runtimeInput.Child("cache").Child("level-2").Child("enabled"),
                     State(cache?.Level2?.Enabled), NullableSetting(cache?.Level2?.Enabled)),
@@ -268,7 +269,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             [
                 ("entities.any.cache", EntityFeature.Cache,
                     (_, entity, raw) => Configured(raw.Child("cache").Child("enabled"), State(entity.Cache?.Enabled), Provided(entity.Cache?.Enabled, entity.Cache?.UserProvidedEnabledOptions == true)),
-                    (name, _) => State(canUseCache && config.IsEntityCachingEnabled(name))),
+                    (name, _) => State(canUseCache && config.IsEntityCachingEnabled(name)
+                        && config.CanUseCache(config.GetDataSourceNameFromEntityName(name)))),
                 ("entities.any.rest", EntityFeature.Rest,
                     (_, entity, raw) => Configured(raw.Child("rest").Enablement(allowString: true), State(entity.IsRestEnabled), UNKNOWN),
                     (_, entity) => State(config.IsRestEnabled && entity.IsRestEnabled)),

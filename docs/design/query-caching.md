@@ -1,4 +1,3 @@
-
 ## Why cache?
 
 Reduce the number of round-trip requests between Data API builder (DAB) and the configured back-end database. Reducing the number of round-trip requests results in the end-user experiencing quicker response times.
@@ -95,6 +94,14 @@ __DAB will return unexpired cache entries when a database goes offline.__ Depend
 __Data returned by the database is received over the same TLS connection established to execute queries.__ The caching service described in this document is an in-memory cache and not a distributed cache. Consequently, the cache does not further transmit data returned by the database, by design. 
 
 ### Access token metadata usage
+
+Response caching is disabled for an MSSQL or DWSQL data source when its
+`set-session-context` option is enabled. This check uses the data source being
+queried, including sources loaded through `data-source-files`, not the default
+source's options. Both cache reads and writes are bypassed, including
+cache-control paths and stored-procedure reads, so database row-level security
+evaluates each caller's session context. Other eligible data sources can still
+use caching.
 
 __Cache entries will not be created for database query text generated from database policies.__ This is because database policies directly affect values set within SQL Server's `-set-session-context` variables and is an implementation detail of database specific query executors. The caching service will be implemented independent of and before execution of query executor code. 
 

@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -103,6 +104,39 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             StringAssert.Contains(query, "STRING_AGG");
             StringAssert.Contains(query, "FROM [dbo].[books] AS [table0]");
             Assert.IsFalse(query.Contains("FOR JSON PATH"));
+        }
+
+        [DataTestMethod]
+        [DataRow(true, true, false)]
+        [DataRow(true, false, false)]
+        [DataRow(false, true, false)]
+        [DataRow(true, true, true)]
+        public void Build_GroupedJsonOrderingUsesProjectedLabels(bool grouped, bool ordered, bool useJsonFunctions)
+        {
+            SqlQueryStructure structure = CreateBuildableStructure(isList: true);
+            structure.Columns.Clear();
+            structure.Columns.Add(new LabelledColumn("dbo", "books", "id", "bookId", "table0"));
+            if (grouped)
+            {
+                structure.GroupByMetadata.Fields.Add("id", new Column("dbo", "books", "id", "table0"));
+            }
+
+            if (ordered)
+            {
+                structure.OrderByColumns.Add(new OrderByColumn("dbo", "books", "id", "table0", OrderBy.DESC));
+            }
+
+            string query = new DwSqlQueryBuilder(enableNto1JoinOpt: useJsonFunctions).Build(structure);
+
+            if (grouped && ordered && !useJsonFunctions)
+            {
+                StringAssert.Contains(query, "WITHIN GROUP (ORDER BY [bookId] DESC)");
+                StringAssert.Contains(query, "GROUP BY [table0].[id] ORDER BY [table0].[id] DESC");
+            }
+            else
+            {
+                Assert.IsFalse(query.Contains("WITHIN GROUP"));
+            }
         }
 
         /// <summary>

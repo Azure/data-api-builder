@@ -837,7 +837,7 @@ namespace Azure.DataApiBuilder.Service
         {
             // Re-add GraphQL services with updated config.
             RuntimeConfig runtimeConfig = _configProvider!.GetConfig();
-            Console.WriteLine("Updating GraphQL service.");
+            _logger.LogInformation("Updating GraphQL service.");
             AddGraphQLService(services, runtimeConfig.Runtime?.GraphQL);
         }
 
@@ -1036,7 +1036,7 @@ namespace Azure.DataApiBuilder.Service
                 (_, args) =>
                 {
                     args.CancellationToken.ThrowIfCancellationRequested();
-                    EvictGraphQLSchema(requestExecutorManager);
+                    EvictGraphQLSchema(requestExecutorManager, _logger);
                 });
 
             app.UseEndpoints(endpoints =>
@@ -1102,9 +1102,9 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Evicts the GraphQL schema from the request executor resolver.
         /// </summary>
-        private static void EvictGraphQLSchema(IRequestExecutorManager requestExecutorResolver)
+        private static void EvictGraphQLSchema(IRequestExecutorManager requestExecutorResolver, Microsoft.Extensions.Logging.ILogger logger)
         {
-            Console.WriteLine("Evicting old GraphQL schema.");
+            logger.LogInformation("Evicting old GraphQL schema.");
             requestExecutorResolver.EvictExecutor();
         }
 

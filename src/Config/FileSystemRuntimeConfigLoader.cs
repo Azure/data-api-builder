@@ -321,9 +321,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    // Need to remove the dependencies in startup on the RuntimeConfigProvider
-                    // before we can have an ILogger here.
-                    Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
+                    SendLogToBufferOrLogger(
+                        LogLevel.Warning,
+                        $"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
                 }
 
                 return _configFileWatcher is not null;

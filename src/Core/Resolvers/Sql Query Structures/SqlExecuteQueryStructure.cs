@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string? parameterizedName;
                     if (requestParamValue is not null)
                     {
-                        parameterizedName = MakeDbConnectionParam(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType), paramKey);
+                        parameterizedName = MakeDbConnectionParam(GetParamAsSystemType(GetInvariantString(requestParamValue), paramKey, systemType), paramKey);
                     }
                     else
                     {
@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // Database metadata does not indicate whether a SP parameter has a default value
                     // and as a result, we don't know whether an SP parameter is optional.
                     // Therefore, DAB relies on the database error to indicate that a required parameter is missing.
-                    object? value = paramDefinition.ConfigDefaultValue == null ? null : GetParamAsSystemType(paramDefinition.ConfigDefaultValue!.ToString()!, paramKey, systemType);
+                    object? value = paramDefinition.ConfigDefaultValue == null ? null : GetParamAsSystemType(GetInvariantString(paramDefinition.ConfigDefaultValue!), paramKey, systemType);
                     string parameterizedName = MakeDbConnectionParam(value, paramKey);
                     ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                 }

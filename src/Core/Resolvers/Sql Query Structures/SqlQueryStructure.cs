@@ -664,7 +664,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 column.TableAlias = SourceAlias;
                 column.ParamName = column.Value is not null ?
-                     MakeDbConnectionParam(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName)), column.ColumnName) :
+                     MakeDbConnectionParam(GetParamAsSystemType(GetInvariantString(column.Value!), column.ColumnName, GetColumnSystemType(column.ColumnName)), column.ColumnName) :
                      MakeDbConnectionParam(null, column.ColumnName);
             }
 
@@ -687,7 +687,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (value != null)
                 {
                     parameterName = MakeDbConnectionParam(
-                        GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)), backingColumn);
+                        GetParamAsSystemType(GetInvariantString(value), backingColumn, GetColumnSystemType(backingColumn)), backingColumn);
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
                         op,

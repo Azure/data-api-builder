@@ -457,14 +457,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return systemType.Name switch
             {
                 "String" => param,
-                "Byte" => byte.Parse(param),
+                "Byte" => byte.Parse(param, CultureInfo.InvariantCulture),
                 "Byte[]" => Convert.FromBase64String(param),
-                "Int16" => short.Parse(param),
-                "Int32" => int.Parse(param),
-                "Int64" => long.Parse(param),
-                "Single" => float.Parse(param),
-                "Double" => double.Parse(param),
-                "Decimal" => decimal.Parse(param),
+                "Int16" => short.Parse(param, CultureInfo.InvariantCulture),
+                "Int32" => int.Parse(param, CultureInfo.InvariantCulture),
+                "Int64" => long.Parse(param, CultureInfo.InvariantCulture),
+                "Single" => float.Parse(param, CultureInfo.InvariantCulture),
+                "Double" => double.Parse(param, CultureInfo.InvariantCulture),
+                "Decimal" => decimal.Parse(param, CultureInfo.InvariantCulture),
                 "Boolean" => bool.Parse(param),
                 // When GraphQL input specifies a TZ offset "12-31-2024T12:00:00+03:00"
                 // and DAB has resolved the ColumnDefinition.SystemType to DateTime,
@@ -738,6 +738,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return value switch
             {
                 IEnumerable<IValueNode> valueNodes => JsonSerializer.Serialize(valueNodes.Select(TypeHelper.GetValue)),
+                _ => GetInvariantString(value)
+            };
+        }
+
+        /// <summary>
+        /// Returns the string form of a value that is about to be parsed by ParseParamAsSystemType.
+        /// Numbers are formatted with the invariant culture because ParseParamAsSystemType parses them
+        /// with the invariant culture: on a host whose culture uses a decimal comma (e.g. de-DE),
+        /// 3.14d.ToString() would be "3,14", which the invariant parser reads as 314.
+        /// Other values keep their ToString() form.
+        /// </summary>
+        /// <param name="value">The value to be transformed into a string.</param>
+        /// <returns>A string representation of the value.</returns>
+        protected static string GetInvariantString(object value)
+        {
+            return value switch
+            {
+                sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal
+                    => Convert.ToString(value, CultureInfo.InvariantCulture)!,
                 _ => value.ToString()!
             };
         }

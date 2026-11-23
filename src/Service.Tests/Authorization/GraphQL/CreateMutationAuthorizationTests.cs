@@ -1,11 +1,22 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataApiBuilder.Core.AuthenticationHelpers.AppServiceAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 {
@@ -390,6 +401,344 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 isAuthenticated: true,
                 clientRoleHeader: "test_role_with_excluded_fields_on_create",
                 expectedErrorMessage: "");
+        }
+
+        #endregion
+
+        #region Multiple create linking table authorization tests
+
+        private const string LINKING_TABLE_ENTITY_NAME = "BookAuthorLink";
+        private const string LINKING_TABLE_CONFIG = "linking-table-authorization-config.json";
+        private const string ROLE_WITH_EXCLUDED_LINKING_FIELD = "test_role_with_excluded_linking_field_on_create";
+        private const string ROLE_WITH_EXCLUDED_LINKING_FOREIGN_KEY = "test_role_with_excluded_linking_foreign_key_on_create";
+        private const string ROLE_WITH_LINKING_TABLE_CREATE = "test_role_with_linking_table_create";
+        private const string ROLE_WITH_LINKING_TABLE_CREATE_POLICY = "test_role_with_linking_table_create_policy";
+        private const string UNAUTHORIZED_FIELDS_MESSAGE = "Unauthorized due to one or more fields in this mutation.";
+
+        /// <summary>
+        /// Validates that when the linking table of a many-to-many relationship is exposed as an entity, the linking table row
+        /// created by a multiple create mutation needs the role's create permission on that entity for every column written:
+        /// any linking table field the request supplies, and the foreign key columns derived from the related records.
+        /// Each role may create Book and Author, so the request is rejected only because of the linking table row,
+        /// and without leaving any record in the database.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(AuthorizationResolver.ROLE_AUTHENTICATED, true, DisplayName = "Role without create permission on the linking table entity supplies the field")]
+        [DataRow(AuthorizationResolver.ROLE_AUTHENTICATED, false, DisplayName = "Role without create permission on the linking table entity omits the field")]
+        [DataRow(ROLE_WITH_EXCLUDED_LINKING_FIELD, true, DisplayName = "Role whose create permission on the linking table entity excludes the field supplies it")]
+        [DataRow(ROLE_WITH_EXCLUDED_LINKING_FOREIGN_KEY, false, DisplayName = "Role whose create permission on the linking table entity excludes a foreign key column")]
+        public async Task ValidateAuthZCheckOnLinkingTableWritesForMultipleCreateMutations(string role, bool supplyLinkingField)
+        {
+            string title = $"Linking table authz book ({role}, {supplyLinkingField})";
+            string authorName = $"Linking table authz author ({role}, {supplyLinkingField})";
+            string mutation = CreateBookWithAuthorMutation(title, authorName, supplyLinkingField ? "99.5" : null);
+
+            await ValidateLinkingTableWriteIsRejected("createbook", mutation, variables: null, role, title, authorName);
+        }
+
+        /// <summary>
+        /// Validates the authorization of a linking table field supplied through other input shapes: a many type mutation,
+        /// the inverse relationship, a deeper nesting level, a variable, or an explicit null value.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("ManyType", DisplayName = "Many type multiple create mutation")]
+        [DataRow("InverseRelationship", DisplayName = "Linking table field supplied through the inverse relationship")]
+        [DataRow("DeeperNesting", DisplayName = "Linking table field supplied at a deeper nesting level")]
+        [DataRow("Variable", DisplayName = "Linking table field supplied through a variable")]
+        [DataRow("ExplicitNull", DisplayName = "Linking table field explicitly set to null")]
+        public async Task ValidateAuthZCheckOnLinkingTableFieldsForAlternateMultipleCreateInputs(string inputShape)
+        {
+            string title = $"Linking table authz book ({inputShape})";
+            string authorName = $"Linking table authz author ({inputShape})";
+            string publisherName = $"Linking table authz publisher ({inputShape})";
+            Dictionary<string, object> variables = null;
+            string mutationName;
+            string mutation;
+            switch (inputShape)
+            {
+                case "ManyType":
+                    mutationName = "createbooks";
+                    mutation = @"mutation {
+                        createbooks(items: [{
+                            title: """ + title + @""",
+                            publisher_id: 1234,
+                            authors: [{ name: """ + authorName + @""", birthdate: ""2000-01-01"", royalty_percentage: 99.5 }] }])
+                        {
+                            items { id }
+                        }
+                    }";
+                    break;
+                case "InverseRelationship":
+                    mutationName = "createAuthor";
+                    mutation = @"mutation {
+                        createAuthor(item: {
+                            name: """ + authorName + @""",
+                            birthdate: ""2000-01-01"",
+                            books: [{ title: """ + title + @""", publisher_id: 1234, royalty_percentage: 99.5 }] })
+                        {
+                            id
+                        }
+                    }";
+                    break;
+                case "DeeperNesting":
+                    mutationName = "createPublisher";
+                    mutation = @"mutation {
+                        createPublisher(item: {
+                            name: """ + publisherName + @""",
+                            books: [{
+                                title: """ + title + @""",
+                                authors: [{ name: """ + authorName + @""", birthdate: ""2000-01-01"", royalty_percentage: 99.5 }] }] })
+                        {
+                            id
+                        }
+                    }";
+                    break;
+                case "Variable":
+                    mutationName = "createbook";
+                    mutation = @"mutation ($royalty: Float) {
+                        createbook(item: {
+                            title: """ + title + @""",
+                            publisher_id: 1234,
+                            authors: [{ name: """ + authorName + @""", birthdate: ""2000-01-01"", royalty_percentage: $royalty }] })
+                        {
+                            id
+                        }
+                    }";
+                    variables = new() { { "royalty", 99.5 } };
+                    break;
+                case "ExplicitNull":
+                    mutationName = "createbook";
+                    mutation = @"mutation {
+                        createbook(item: {
+                            title: """ + title + @""",
+                            publisher_id: 1234,
+                            authors: [{ name: """ + authorName + @""", birthdate: ""2000-01-01"", royalty_percentage: null }] })
+                        {
+                            id
+                        }
+                    }";
+                    break;
+                default:
+                    throw new ArgumentException($"Unexpected input shape: {inputShape}", nameof(inputShape));
+            }
+
+            await ValidateLinkingTableWriteIsRejected(mutationName, mutation, variables, AuthorizationResolver.ROLE_AUTHENTICATED, title, authorName, publisherName);
+        }
+
+        /// <summary>
+        /// Validates that a multiple create mutation writes the linking table row as permitted by the entity exposing the linking
+        /// table: a supplied field is stored, an omitted field gets its database default, and the entity's create policy applies.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(ROLE_WITH_LINKING_TABLE_CREATE, "99.5", @"[{""royalty_percentage"":99.5}]", DisplayName = "Role permitted to create the field supplies it")]
+        [DataRow(ROLE_WITH_EXCLUDED_LINKING_FIELD, null, @"[{""royalty_percentage"":0.0}]", DisplayName = "Role with the field excluded omits it")]
+        [DataRow(ROLE_WITH_LINKING_TABLE_CREATE_POLICY, "25.0", @"[{""royalty_percentage"":25.0}]", DisplayName = "Role with a create policy supplies a value the policy allows")]
+        public async Task ValidateAuthorizedLinkingTableWritesForMultipleCreateMutations(string role, string royaltyPercentage, string expectedLinkingRows)
+        {
+            string title = $"Linking table authz allowed book ({role})";
+            string authorName = $"Linking table authz allowed author ({role})";
+
+            JsonElement response;
+            using (TestServer server = CreateServerWithLinkingTableEntity())
+            {
+                response = await ExecuteLinkingTableMutationAsync(server, "createbook", CreateBookWithAuthorMutation(title, authorName, royaltyPercentage), variables: null, role);
+            }
+
+            Assert.AreEqual(JsonValueKind.Object, response.ValueKind, $"Expected the mutation to succeed. Response: {response}");
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedLinkingRows, await GetLinkingTableRowsAsync(title, authorName));
+        }
+
+        /// <summary>
+        /// Validates that the create policy of the entity exposing the linking table applies to the linking table row created by
+        /// a multiple create mutation, as it does to a direct create of that entity, and that a violation rolls back the mutation.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("99.5", "Could not insert row with given values for entity: BookAuthorLink", DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure, DisplayName = "Supplied value violates the create policy")]
+        [DataRow(null, "One or more fields referenced by the database policy are not present in the request body.", DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed, DisplayName = "Field referenced by the create policy is omitted")]
+        public async Task ValidateLinkingTableEntityCreatePolicyForMultipleCreateMutations(string royaltyPercentage, string expectedMessage, DataApiBuilderException.SubStatusCodes expectedStatusCode)
+        {
+            string title = $"Linking table authz policy book ({royaltyPercentage})";
+            string authorName = $"Linking table authz policy author ({royaltyPercentage})";
+
+            await ValidateLinkingTableWriteIsRejected(
+                "createbook",
+                CreateBookWithAuthorMutation(title, authorName, royaltyPercentage),
+                variables: null,
+                ROLE_WITH_LINKING_TABLE_CREATE_POLICY,
+                title,
+                authorName,
+                expectedMessage: expectedMessage,
+                expectedStatusCode: expectedStatusCode);
+        }
+
+        /// <summary>
+        /// Validates that when no entity exposes the linking table, a multiple create mutation keeps writing the linking table row
+        /// for a role that may create both related entities: a supplied field is stored and an omitted field gets its database default.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("99.5", @"[{""royalty_percentage"":99.5}]", DisplayName = "Linking table field supplied")]
+        [DataRow(null, @"[{""royalty_percentage"":0.0}]", DisplayName = "Linking table field omitted")]
+        public async Task ValidateLinkingTableWritesWithoutLinkingTableEntityForMultipleCreateMutations(string royaltyPercentage, string expectedLinkingRows)
+        {
+            string title = $"Linking table without entity book ({royaltyPercentage})";
+            string authorName = $"Linking table without entity author ({royaltyPercentage})";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                query: CreateBookWithAuthorMutation(title, authorName, royaltyPercentage),
+                queryName: "createbook",
+                isAuthenticated: true,
+                clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
+
+            Assert.AreEqual(JsonValueKind.Object, response.ValueKind, $"Expected the mutation to succeed. Response: {response}");
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedLinkingRows, await GetLinkingTableRowsAsync(title, authorName));
+        }
+
+        private static string CreateBookWithAuthorMutation(string title, string authorName, string royaltyPercentage)
+        {
+            string linkingField = royaltyPercentage is null ? string.Empty : $", royalty_percentage: {royaltyPercentage}";
+            return @"mutation {
+                    createbook(item: {
+                        title: """ + title + @""",
+                        publisher_id: 1234,
+                        authors: [{ name: """ + authorName + @""", birthdate: ""2000-01-01""" + linkingField + @" }] })
+                    {
+                        id
+                    }
+                }";
+        }
+
+        private static Task<string> GetLinkingTableRowsAsync(string title, string authorName)
+        {
+            return GetDatabaseResultAsync(@"
+                SELECT [link].[royalty_percentage]
+                FROM [dbo].[book_author_link] AS [link]
+                INNER JOIN [dbo].[books] AS [book] ON [book].[id] = [link].[book_id]
+                INNER JOIN [dbo].[authors] AS [author] ON [author].[id] = [link].[author_id]
+                WHERE [book].[title] = '" + title + @"' AND [author].[name] = '" + authorName + @"'
+                FOR JSON PATH, INCLUDE_NULL_VALUES");
+        }
+
+        /// <summary>
+        /// Executes a multiple create mutation whose linking table row the role may not create, and validates that it fails
+        /// with the expected error without leaving any of the records referenced in the mutation in the database.
+        /// </summary>
+        private static async Task ValidateLinkingTableWriteIsRejected(
+            string mutationName,
+            string mutation,
+            Dictionary<string, object> variables,
+            string role,
+            string title,
+            string authorName,
+            string publisherName = "",
+            string expectedMessage = UNAUTHORIZED_FIELDS_MESSAGE,
+            DataApiBuilderException.SubStatusCodes expectedStatusCode = DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed)
+        {
+            JsonElement response;
+            using (TestServer server = CreateServerWithLinkingTableEntity())
+            {
+                response = await ExecuteLinkingTableMutationAsync(server, mutationName, mutation, variables, role);
+            }
+
+            string writtenRecords = await GetDatabaseResultAsync(@"
+                SELECT
+                    (SELECT COUNT(*) FROM [dbo].[publishers] WHERE [name] = '" + publisherName + @"') AS [publishers],
+                    (SELECT COUNT(*) FROM [dbo].[books] WHERE [title] = '" + title + @"') AS [books],
+                    (SELECT COUNT(*) FROM [dbo].[authors] WHERE [name] = '" + authorName + @"') AS [authors],
+                    (SELECT COUNT(*) FROM [dbo].[book_author_link] AS [link]
+                        INNER JOIN [dbo].[authors] AS [author] ON [author].[id] = [link].[author_id]
+                        WHERE [author].[name] = '" + authorName + @"') AS [links]
+                FOR JSON PATH, WITHOUT_ARRAY_WRAPPER");
+
+            Assert.IsTrue(
+                SqlTestHelper.JsonStringsDeepEqual(@"{""publishers"":0,""books"":0,""authors"":0,""links"":0}", writtenRecords),
+                $"The rejected mutation left records: {writtenRecords}. Response: {response}");
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                response.ToString(),
+                message: expectedMessage,
+                statusCode: expectedStatusCode.ToString());
+        }
+
+        /// <summary>
+        /// Starts an engine whose configuration also exposes the linking table book_author_link, used by the many-to-many
+        /// relationship between Book and Author, as the BookAuthorLink entity with role specific create permissions.
+        /// The entity maps book_id to bookId, so that its exposed names differ from the linking table's column names.
+        /// </summary>
+        private static TestServer CreateServerWithLinkingTableEntity()
+        {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            RuntimeConfig config = SqlTestHelper.SetupRuntimeConfig();
+
+            EntityAction read = new(EntityActionOperation.Read, Fields: null, Policy: new());
+            EntityAction create = new(EntityActionOperation.Create, Fields: null, Policy: new());
+            EntityAction createWithoutRoyaltyPercentage = new(
+                EntityActionOperation.Create,
+                Fields: new(Exclude: new HashSet<string> { "royalty_percentage" }),
+                Policy: new());
+            EntityAction createWithoutAuthorId = new(
+                EntityActionOperation.Create,
+                Fields: new(Exclude: new HashSet<string> { "author_id" }),
+                Policy: new());
+            EntityAction createWithPolicy = new(
+                EntityActionOperation.Create,
+                Fields: null,
+                Policy: new(Database: "@item.royalty_percentage le 50"));
+
+            Dictionary<string, Entity> entities = new(config.Entities);
+            foreach (string relatedEntityName in new[] { "Book", "Author" })
+            {
+                Entity relatedEntity = entities[relatedEntityName];
+                entities[relatedEntityName] = relatedEntity with
+                {
+                    Permissions = relatedEntity.Permissions.Concat(new[]
+                    {
+                        new EntityPermission(ROLE_WITH_EXCLUDED_LINKING_FIELD, new[] { read, create }),
+                        new EntityPermission(ROLE_WITH_EXCLUDED_LINKING_FOREIGN_KEY, new[] { read, create }),
+                        new EntityPermission(ROLE_WITH_LINKING_TABLE_CREATE, new[] { read, create }),
+                        new EntityPermission(ROLE_WITH_LINKING_TABLE_CREATE_POLICY, new[] { read, create })
+                    }).ToArray()
+                };
+            }
+
+            entities.Add(LINKING_TABLE_ENTITY_NAME, new Entity(
+                Source: new("book_author_link", EntitySourceType.Table, Parameters: null, KeyFields: null),
+                GraphQL: new(Singular: LINKING_TABLE_ENTITY_NAME, Plural: LINKING_TABLE_ENTITY_NAME + "s"),
+                Fields: null,
+                Rest: new(Enabled: true),
+                Permissions: new[]
+                {
+                    new EntityPermission(AuthorizationResolver.ROLE_AUTHENTICATED, new[] { read }),
+                    new EntityPermission(ROLE_WITH_EXCLUDED_LINKING_FIELD, new[] { read, createWithoutRoyaltyPercentage }),
+                    new EntityPermission(ROLE_WITH_EXCLUDED_LINKING_FOREIGN_KEY, new[] { read, createWithoutAuthorId }),
+                    new EntityPermission(ROLE_WITH_LINKING_TABLE_CREATE, new[] { read, create }),
+                    new EntityPermission(ROLE_WITH_LINKING_TABLE_CREATE_POLICY, new[] { read, createWithPolicy })
+                },
+                Mappings: new() { { "book_id", "bookId" } },
+                Relationships: null));
+
+            File.WriteAllText(LINKING_TABLE_CONFIG, (config with { Entities = new(entities) }).ToJson());
+            return new(Program.CreateWebHostBuilder(new[] { $"--ConfigFileName={LINKING_TABLE_CONFIG}" }));
+        }
+
+        private static async Task<JsonElement> ExecuteLinkingTableMutationAsync(
+            TestServer server,
+            string mutationName,
+            string mutation,
+            Dictionary<string, object> variables,
+            string role)
+        {
+            using HttpClient client = server.CreateClient();
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                roleClaimType: AuthenticationOptions.ROLE_CLAIM_TYPE,
+                additionalClaims: new[] { new AppServiceClaim { Typ = AuthenticationOptions.ROLE_CLAIM_TYPE, Val = role } });
+
+            return await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                client,
+                server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                mutationName,
+                mutation,
+                variables,
+                authToken,
+                clientRoleHeader: role);
         }
 
         #endregion

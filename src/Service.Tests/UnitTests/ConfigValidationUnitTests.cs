@@ -228,6 +228,32 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
+        [DataTestMethod]
+        [DataRow(EntitySourceType.Table, "@item.col1 eq 1")]
+        [DataRow(EntitySourceType.View, "@item.col1 eq 1")]
+        [DataRow(EntitySourceType.Table, null)]
+        [DataRow(EntitySourceType.View, null)]
+        public void ValidateMySqlWildcardPermission(EntitySourceType sourceType, string databasePolicy)
+        {
+            RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
+                entitySource: new EntitySource(AuthorizationHelpers.TEST_ENTITY, sourceType, null, null),
+                operation: EntityActionOperation.All,
+                databasePolicy: databasePolicy,
+                dbType: DatabaseType.MySQL);
+            RuntimeConfigValidator validator = InitializeRuntimeConfigValidator();
+
+            if (databasePolicy is null)
+            {
+                validator.ValidatePermissionsInConfig(config);
+                return;
+            }
+
+            DataApiBuilderException error = Assert.ThrowsException<DataApiBuilderException>(
+                () => validator.ValidatePermissionsInConfig(config));
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, error.SubStatusCode);
+            StringAssert.Contains(error.Message, "The Create action");
+        }
+
         /// <summary>
         /// Test method to check that Exception is thrown when Target Entity used in relationship is not defined in the config.
         /// </summary>

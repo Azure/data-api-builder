@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -1396,29 +1395,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             param => sqlMetadataProvider.TryGetBackingColumn(linkingEntityName, param.Key, out string? backingColumn) ? backingColumn : param.Key,
                             param => param.Value);
 
-                        if (!TryGetEntityAllowingCreate(
-                                sqlMetadataProvider,
-                                exposingEntityNames,
-                                AuthorizationResolver.GetRoleOfGraphQLRequest(context),
-                                linkingTableColumnValues.Keys,
-                                out string? exposingEntityName,
-                                out Dictionary<string, string>? exposedColumnNames))
-                        {
-                            throw new DataApiBuilderException(
-                                message: "Unauthorized due to one or more fields in this mutation.",
-                                statusCode: HttpStatusCode.Forbidden,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
-                        }
-
-                        // Inserting the row as the exposing entity applies its create policy, as a direct create would.
-                        _ = BuildAndExecuteInsertDbQueries(
-                                sqlMetadataProvider: sqlMetadataProvider,
-                                entityName: exposingEntityName,
-                                parentEntityName: entityName,
-                                parameters: linkingTableColumnValues.ToDictionary(column => exposedColumnNames[column.Key], column => column.Value),
-                                sourceDefinition: sqlMetadataProvider.GetSourceDefinition(exposingEntityName),
-                                isLinkingEntity: false,
-                                nestingLevel: nestingLevel);
+                        InsertLinkingTableRowAsExposingEntity(
+                            sqlMetadataProvider,
+                            GetEntitiesAllowingCreate(sqlMetadataProvider, exposingEntityNames, AuthorizationResolver.GetRoleOfGraphQLRequest(context), linkingTableColumnValues.Keys),
+                            linkingTableColumnValues,
+                            relatedEntityName: entityName,
+                            nestingLevel);
                     }
                 }
 
@@ -2283,7 +2265,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     List<string> exposingEntityNames = GetEntitiesExposingLinkingTable(metadataProvider, linkingEntityName);
                     if (exposingEntityNames.Count > 0
-                        && !TryGetEntityAllowingCreate(metadataProvider, exposingEntityNames, clientRole, linkingTableColumns, out _, out _))
+                        && GetEntitiesAllowingCreate(metadataProvider, exposingEntityNames, clientRole, linkingTableColumns).Count == 0)
                     {
                         throw new DataApiBuilderException(
                             message: $"Unauthorized due to one or more fields in this mutation.",
@@ -2520,23 +2502,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Finds the first of the given entities whose create permission allows the role to write the given backing columns.
+        /// Returns, in the given order, the entities whose create permission allows the role to write the given backing columns,
+        /// each with the exposed name in that entity of every column.
         /// </summary>
         /// <param name="metadataProvider">Metadata provider of the data source of the entities.</param>
         /// <param name="entityNames">Candidate entities, all backed by the same table.</param>
         /// <param name="clientRole">Role of the request.</param>
         /// <param name="backingColumns">Backing columns to be written.</param>
-        /// <param name="allowingEntityName">The first entity which allows the role to create a row with the columns.</param>
-        /// <param name="exposedColumnNames">Exposed name in that entity for each of the backing columns.</param>
-        /// <returns>True if any of the entities allows the role to create a row with the columns.</returns>
-        private bool TryGetEntityAllowingCreate(
+        private List<(string EntityName, Dictionary<string, string> ExposedColumnNames)> GetEntitiesAllowingCreate(
             ISqlMetadataProvider metadataProvider,
             IEnumerable<string> entityNames,
             string clientRole,
-            IReadOnlyCollection<string> backingColumns,
-            [NotNullWhen(true)] out string? allowingEntityName,
-            [NotNullWhen(true)] out Dictionary<string, string>? exposedColumnNames)
+            IReadOnlyCollection<string> backingColumns)
         {
+            List<(string EntityName, Dictionary<string, string> ExposedColumnNames)> allowingEntities = new();
             foreach (string entityName in entityNames)
             {
                 Dictionary<string, string> exposedNames = new();
@@ -2551,15 +2530,58 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (exposedNames.Count == backingColumns.Count
                     && _authorizationResolver.AreColumnsAllowedForOperation(entityName, clientRole, EntityActionOperation.Create, exposedNames.Values))
                 {
-                    allowingEntityName = entityName;
-                    exposedColumnNames = exposedNames;
-                    return true;
+                    allowingEntities.Add((entityName, exposedNames));
                 }
             }
 
-            allowingEntityName = null;
-            exposedColumnNames = null;
-            return false;
+            return allowingEntities;
+        }
+
+        /// <summary>
+        /// Inserts a linking table row as the first of the given entities whose create policy allows it, as a direct create
+        /// through that entity would. When none of them allows the row, throws the failure of the first one, or an authorization
+        /// failure when there are no entities.
+        /// </summary>
+        /// <param name="metadataProvider">Metadata provider of the data source of the entities.</param>
+        /// <param name="allowingEntities">Entities whose create permission allows the role to write the row's columns, each with
+        /// the exposed name in that entity of every column.</param>
+        /// <param name="linkingTableColumnValues">Value of each backing column of the row.</param>
+        /// <param name="relatedEntityName">Entity created in the mutation whose record the row links.</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request.</param>
+        private void InsertLinkingTableRowAsExposingEntity(
+            ISqlMetadataProvider metadataProvider,
+            List<(string EntityName, Dictionary<string, string> ExposedColumnNames)> allowingEntities,
+            Dictionary<string, object?> linkingTableColumnValues,
+            string relatedEntityName,
+            int nestingLevel)
+        {
+            DataApiBuilderException? firstPolicyFailure = null;
+            foreach ((string allowingEntityName, Dictionary<string, string> exposedColumnNames) in allowingEntities)
+            {
+                try
+                {
+                    _ = BuildAndExecuteInsertDbQueries(
+                            sqlMetadataProvider: metadataProvider,
+                            entityName: allowingEntityName,
+                            parentEntityName: relatedEntityName,
+                            parameters: linkingTableColumnValues.ToDictionary(column => exposedColumnNames[column.Key], column => column.Value),
+                            sourceDefinition: metadataProvider.GetSourceDefinition(allowingEntityName),
+                            isLinkingEntity: false,
+                            nestingLevel: nestingLevel);
+                    return;
+                }
+                catch (DataApiBuilderException policyFailure) when (policyFailure.SubStatusCode is DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
+                    or DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed)
+                {
+                    // A create policy that rejects the row inserts nothing, so another entity's policy can still allow it.
+                    firstPolicyFailure ??= policyFailure;
+                }
+            }
+
+            throw firstPolicyFailure ?? new DataApiBuilderException(
+                message: "Unauthorized due to one or more fields in this mutation.",
+                statusCode: HttpStatusCode.Forbidden,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
         }
 
         /// <summary>

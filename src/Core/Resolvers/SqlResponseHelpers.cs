@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -262,7 +263,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     return string.Empty;
                 }
 
-                newPrimaryKeyRoute.Append(pkExposedName);
+                // The route is written to the Location header, which only accepts ASCII,
+                // so the name and the value are percent-encoded.
+                newPrimaryKeyRoute.Append(Uri.EscapeDataString(pkExposedName));
                 newPrimaryKeyRoute.Append("/");
 
                 if (!dbOperationResultSetRow.ContainsKey(pkExposedName))
@@ -276,7 +279,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // This code block is reached after the successful execution of database update/insert operations.
                 // So, it is a safe assumption that a non-null value will be present in the result set for a primary key.
-                newPrimaryKeyRoute.Append(dbOperationResultSetRow[pkExposedName]!.ToString());
+                string primaryKeyValue = Convert.ToString(dbOperationResultSetRow[pkExposedName], CultureInfo.InvariantCulture)!;
+                newPrimaryKeyRoute.Append(Uri.EscapeDataString(primaryKeyValue));
                 newPrimaryKeyRoute.Append("/");
             }
 

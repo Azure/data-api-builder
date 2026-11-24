@@ -61,9 +61,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Builds the query to obtain details about the result set for stored-procedure
         /// </summary>
-        /// <param name="databaseObjectName">Name of stored-procedure</param>
+        /// <param name="schemaName">Unquoted schema name of the stored procedure.</param>
+        /// <param name="storedProcedureName">Unquoted stored procedure name.</param>
         /// <returns></returns>
-        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName);
+        public string BuildStoredProcedureResultDetailsQuery(string schemaName, string storedProcedureName);
 
         /// <summary>
         /// Returns the query to get the read-only columns present in the table.

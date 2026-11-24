@@ -1442,7 +1442,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Generate query to get result set details
             // of the stored procedure.
             string queryForResultSetDetails = SqlQueryBuilder.BuildStoredProcedureResultDetailsQuery(
-                dbStoredProcedureName);
+                schemaName, storedProcedureName);
 
             // Execute the query to get columns' details.
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(

@@ -411,7 +411,7 @@ WHERE
         }
 
         /// <inheritdoc/>
-        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
+        public string BuildStoredProcedureResultDetailsQuery(string schemaName, string storedProcedureName)
         {
             throw new NotImplementedException();
         }

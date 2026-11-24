@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             MySqlQueryBuilder builder = new();
 
             Assert.ThrowsException<NotImplementedException>(() =>
-                builder.BuildStoredProcedureResultDetailsQuery("get_books"));
+                builder.BuildStoredProcedureResultDetailsQuery("dbo", "get_books"));
         }
     }
 }

@@ -28,6 +28,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private const string SCHEMA_NAME = "dbo";
         private const string TABLE_NAME = "books";
 
+        [DataTestMethod]
+        [DataRow("dbo", "GetItems", "[dbo].[GetItems]")]
+        [DataRow("proc", "proc", "[proc].[proc]")]
+        [DataRow("sales.region", "Get.Items", "[sales.region].[Get.Items]")]
+        [DataRow("sales]team", "Get]Items", "[sales]]team].[Get]]Items]")]
+        [DataRow("owner's", "Get'Items", "[owner''s].[Get''Items]")]
+        public void BuildStoredProcedureResultDetailsQuery_QuotesIdentifiersAndEscapesLiteral(
+            string schemaName, string storedProcedureName, string expectedObjectName)
+        {
+            string query = new MsSqlQueryBuilder().BuildStoredProcedureResultDetailsQuery(schemaName, storedProcedureName);
+
+            StringAssert.Contains(query, $"OBJECT_ID(N'{expectedObjectName}'), 0)");
+            StringAssert.Contains(query, "sys.dm_exec_describe_first_result_set_for_object");
+        }
+
         private delegate void TryGetColumnCallback(string entity, string field, out string? column);
 
         private static readonly Dictionary<string, string> _columnMapping = new()

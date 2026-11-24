@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             PostgresQueryBuilder builder = new();
 
             Assert.ThrowsException<NotImplementedException>(() =>
-                builder.BuildStoredProcedureResultDetailsQuery("get_books"));
+                builder.BuildStoredProcedureResultDetailsQuery("public", "get_books"));
         }
 
         [TestMethod]

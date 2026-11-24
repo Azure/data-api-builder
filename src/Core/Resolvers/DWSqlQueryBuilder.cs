@@ -563,9 +563,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
+        public string BuildStoredProcedureResultDetailsQuery(string schemaName, string storedProcedureName)
         {
-            string query = $"EXEC sp_describe_first_result_set @tsql = N'{databaseObjectName}';";
+            string databaseObjectName = $"{QuoteIdentifier(schemaName)}.{QuoteIdentifier(storedProcedureName)}";
+            // Identifier quoting and SQL string literal escaping are separate layers.
+            string query = $"EXEC sp_describe_first_result_set @tsql = N'{databaseObjectName.Replace("'", "''")}';";
             return query;
         }
 

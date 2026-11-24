@@ -532,15 +532,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// varchar(100) and varchar(max) would be varchar.
         /// is_nullable is a boolean value to know if the result column is nullable or not.
         /// </summary>
-        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
+        public string BuildStoredProcedureResultDetailsQuery(string schemaName, string storedProcedureName)
         {
+            string databaseObjectName = $"{QuoteIdentifier(schemaName)}.{QuoteIdentifier(storedProcedureName)}";
             // The system type name column is aliased while the other columns are not to ensure
             // names are consistent across different sql implementations as all go through same deserialization logic
             string query = "SELECT " +
                             $"{STOREDPROC_COLUMN_NAME}, TYPE_NAME(system_type_id) as {STOREDPROC_COLUMN_SYSTEMTYPENAME}, {STOREDPROC_COLUMN_ISNULLABLE} " +
                             "FROM " +
                             "sys.dm_exec_describe_first_result_set_for_object (" +
-                            $"OBJECT_ID('{databaseObjectName}'), 0) " +
+                            $"OBJECT_ID(N'{databaseObjectName.Replace("'", "''")}'), 0) " +
                             "WHERE is_hidden is not NULL AND is_hidden = 0";
             return query;
         }

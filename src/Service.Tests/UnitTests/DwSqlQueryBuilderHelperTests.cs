@@ -19,6 +19,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.DWSQL)]
     public class DwSqlQueryBuilderHelperTests
     {
+        [DataTestMethod]
+        [DataRow("dbo", "GetItems", "[dbo].[GetItems]")]
+        [DataRow("proc", "GetItems", "[proc].[GetItems]")]
+        [DataRow("dbo", "proc", "[dbo].[proc]")]
+        [DataRow("sales.region", "Get.Items", "[sales.region].[Get.Items]")]
+        [DataRow("sales]team", "Get]Items", "[sales]]team].[Get]]Items]")]
+        [DataRow("owner's", "Get'Items", "[owner''s].[Get''Items]")]
+        public void BuildStoredProcedureResultDetailsQuery_QuotesIdentifiersAndEscapesLiteral(
+            string schemaName, string storedProcedureName, string expectedObjectName)
+        {
+            string query = new DwSqlQueryBuilder().BuildStoredProcedureResultDetailsQuery(schemaName, storedProcedureName);
+
+            Assert.AreEqual($"EXEC sp_describe_first_result_set @tsql = N'{expectedObjectName}';", query);
+        }
+
         /// <summary>
         /// Verifies an absent relation tree is safe for the to-one join optimization.
         /// </summary>

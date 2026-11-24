@@ -52,6 +52,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ModelContextProtocol.AspNetCore;
 using Moq;
 using Moq.Protected;
 using Serilog;
@@ -742,8 +743,24 @@ type Moon {
         [TestInitialize]
         public void SetupAuthProviderEnvironmentVariables()
         {
+            // Other integration fixtures can leave a database environment selected. Reset
+            // before each test as well as after it, so late-config hosts start unconfigured.
+            TestHelper.UnsetAllDABEnvironmentVariables();
             TestHelper.SetAppServiceEnvironmentVariable();
             TestHelper.SetStaticWebAppsEnvironmentVariable();
+        }
+
+        [DataTestMethod]
+        [DataRow(RUNTIME_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT)]
+        [DataRow(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT)]
+        [DataRow(RUNTIME_ENV_CONNECTION_STRING, "Server=synthetic.invalid;Database=unused;")]
+        public void TestSetupDoesNotInheritDatabaseSelectionFromEarlierFixtures(string variable, string value)
+        {
+            Environment.SetEnvironmentVariable(variable, value);
+
+            SetupAuthProviderEnvironmentVariables();
+
+            Assert.IsNull(Environment.GetEnvironmentVariable(variable));
         }
 
         /// <summary>
@@ -5984,9 +6001,11 @@ type Planet @model(name:""PlanetAlias"") {
         /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow(true, 4, DisplayName = "Test Autoentities with additional entities")]
-        [DataRow(false, 2, DisplayName = "Test Autoentities without additional entities")]
-        public async Task TestAutoentitiesAreGeneratedIntoEntities(bool useEntities, int expectedEntityCount)
+        [DataRow(true, 4, false, DisplayName = "Test Autoentities with additional entities")]
+        [DataRow(false, 2, false, DisplayName = "Test Autoentities without additional entities")]
+        [DataRow(true, 3, true, DisplayName = "XML autoentity with additional entities")]
+        [DataRow(false, 1, true, DisplayName = "XML autoentity without additional entities")]
+        public async Task TestAutoentitiesAreGeneratedIntoEntities(bool useEntities, int expectedEntityCount, bool useXmlTable)
         {
             // Arrange
             EntityRelationship bookRelationship = new(Cardinality: Cardinality.One,
@@ -6033,7 +6052,7 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     "PublisherAutoEntity", new Autoentity(
                         Patterns: new AutoentityPatterns(
-                            Include: new[] { "%publishers%" },
+                            Include: new[] { useXmlTable ? "%xml_profiles%" : "%publishers%" },
                             Exclude: null,
                             Name: null
                         ),
@@ -6085,18 +6104,20 @@ type Planet @model(name:""PlanetAlias"") {
             {
                 // Act
                 RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
-                using HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/dbo_publishers");
+                string entityName = useXmlTable ? "dbo_xml_profiles" : "dbo_publishers";
+                string fieldName = useXmlTable ? "content" : "name";
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, $"/api/{entityName}");
                 using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
 
-                string graphqlQuery = @"
-                {
-                    dbo_publishers {
-                        items {
+                string graphqlQuery = $@"
+                {{
+                    {entityName} {{
+                        items {{
                             id
-                            name
-                        }
-                    }
-                }";
+                            {fieldName}
+                        }}
+                    }}
+                }}";
 
                 object graphqlPayload = new { query = graphqlQuery };
                 HttpRequestMessage graphqlRequest = new(HttpMethod.Post, "/graphql")
@@ -6106,7 +6127,9 @@ type Planet @model(name:""PlanetAlias"") {
                 HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
 
                 // Assert
-                string expectedResponseFragment = @"{""id"":1156,""name"":""The First Publisher""}";
+                string expectedResponseFragment = useXmlTable
+                    ? @"""id"":1"
+                    : @"{""id"":1156,""name"":""The First Publisher""}";
 
                 // Verify number of entities
                 Assert.AreEqual(expectedEntityCount, configProvider.GetConfig().Entities.Entities.Count, "Number of generated entities is not what is expected");
@@ -6125,6 +6148,117 @@ type Planet @model(name:""PlanetAlias"") {
                 Assert.IsTrue(!string.IsNullOrEmpty(graphqlResponseBody), "GraphQL response should contain data");
                 Assert.IsFalse(graphqlResponseBody.Contains("errors"), "GraphQL response should not contain errors");
                 Assert.IsTrue(graphqlResponseBody.Contains(expectedResponseFragment));
+                if (useXmlTable)
+                {
+                    JsonElement restItem = JsonDocument.Parse(restResponseBody).RootElement.GetProperty("value")[0];
+                    JsonElement graphqlItem = JsonDocument.Parse(graphqlResponseBody).RootElement
+                        .GetProperty("data").GetProperty(entityName).GetProperty("items")[0];
+                    Assert.AreEqual(JsonValueKind.String, restItem.GetProperty("content").ValueKind);
+                    Assert.AreEqual(restItem.GetProperty("content").GetString(), graphqlItem.GetProperty("content").GetString());
+                }
+            }
+        }
+
+        /// <summary>
+        /// A table with a geometry column, which schema discovery skips, is served through an autoentity and through
+        /// entities whose field permissions leave the column out.
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [DataTestMethod]
+        [DataRow("autoentity", DisplayName = "Autoentity")]
+        [DataRow("fields.exclude", DisplayName = "Entity whose permissions exclude the column")]
+        [DataRow("fields.include", DisplayName = "Entity whose permissions include only the other columns")]
+        public async Task TestTableWithUnsupportedColumnTypeIsServed(string entityKind)
+        {
+            // Arrange
+            const string ENTITY_NAME = "dbo_geometry_type_table";
+            EntityActionFields fields = entityKind switch
+            {
+                "fields.exclude" => new(Exclude: new() { "geom" }),
+                "fields.include" => new(Exclude: new(), Include: new() { "id", "name" }),
+                _ => null
+            };
+            EntityPermission[] permissions = new[]
+            {
+                new EntityPermission(AuthorizationResolver.ROLE_ANONYMOUS, new[] { new EntityAction(EntityActionOperation.Read, fields, new()) })
+            };
+
+            Dictionary<string, Entity> entityMap = new();
+            Dictionary<string, Autoentity> autoentityMap = new();
+            if (entityKind == "autoentity")
+            {
+                autoentityMap.Add("GeometryAutoEntity", new Autoentity(
+                    Patterns: new AutoentityPatterns(Include: new[] { "dbo.geometry_type_table" }, Exclude: null, Name: null),
+                    Template: new AutoentityTemplate(
+                        Rest: new EntityRestOptions(Enabled: true),
+                        GraphQL: new EntityGraphQLOptions(Singular: string.Empty, Plural: string.Empty, Enabled: true),
+                        Health: null,
+                        Cache: null),
+                    Permissions: permissions));
+            }
+            else
+            {
+                entityMap.Add(ENTITY_NAME, new Entity(
+                    Source: new("dbo.geometry_type_table", EntitySourceType.Table, null, null),
+                    Fields: null,
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Singular: string.Empty, Plural: string.Empty),
+                    Permissions: permissions,
+                    Relationships: null,
+                    Mappings: null));
+            }
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration = new(
+                Schema: "TestUnsupportedColumnTypeSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: false),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new Config.ObjectModel.AuthenticationOptions(
+                            Provider: nameof(EasyAuthType.StaticWebApps),
+                            Jwt: null
+                        )
+                    )
+                ),
+                Entities: new(entityMap),
+                Autoentities: autoentityMap.Count > 0 ? new RuntimeAutoentities(autoentityMap) : null
+            );
+
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Act
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, $"/api/{ENTITY_NAME}");
+                using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+
+                object graphqlPayload = new { query = $"{{ {ENTITY_NAME}s {{ items {{ id name }} }} }}" };
+                using HttpRequestMessage graphqlRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(graphqlPayload)
+                };
+                using HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
+
+                // Assert
+                const string EXPECTED_ROW = @"{""id"":1,""name"":""point""}";
+                string restResponseBody = await restResponse.Content.ReadAsStringAsync();
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, restResponseBody);
+                StringAssert.Contains(restResponseBody, EXPECTED_ROW);
+                Assert.IsFalse(restResponseBody.Contains(@"""geom"""), "The skipped column should not be returned.");
+
+                string graphqlResponseBody = await graphqlResponse.Content.ReadAsStringAsync();
+                Assert.AreEqual(HttpStatusCode.OK, graphqlResponse.StatusCode, graphqlResponseBody);
+                Assert.IsFalse(graphqlResponseBody.Contains("errors"), graphqlResponseBody);
+                StringAssert.Contains(graphqlResponseBody, EXPECTED_ROW);
             }
         }
 
@@ -6758,6 +6892,145 @@ type Planet @model(name:""PlanetAlias"") {
             File.WriteAllText(childConfigPath, childConfig.ToJson());
 
             return (rootConfigPath, new FileSystemRuntimeConfigLoader(fileSystem), fileSystem, tempDir);
+        }
+
+        [DataTestMethod]
+        [DataRow(true, false)]
+        [DataRow(false, false)]
+        [DataRow(true, true)]
+        [DataRow(false, true)]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task LinkedConfigMutations_UseChildDataSource(bool rootHasDataSource, bool useMcp)
+        {
+            string connectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL);
+            string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dab-linked-writes-" + Guid.NewGuid().ToString("N"));
+            string name = "linked-write-" + Guid.NewGuid().ToString("N");
+            using SqlConnection connection = new(connectionString);
+            await connection.OpenAsync();
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                string rootPath = System.IO.Path.Combine(tempDir, "root.json");
+                string childPath = System.IO.Path.Combine(tempDir, "child.json");
+                JsonObject child = JsonNode.Parse("""
+                                        {
+                                            "data-source": { "database-type": "mssql", "connection-string": "" },
+                                            "entities": {
+                                                "LinkedPublisher": {
+                                                    "source": "dbo.publishers",
+                                                    "rest": true,
+                                                    "graphql": false,
+                                                    "permissions": [{ "role": "anonymous", "actions": ["*"] }]
+                                                }
+                                            }
+                                        }
+                                        """)!.AsObject();
+                child["data-source"]!["connection-string"] = connectionString;
+                JsonObject root = JsonNode.Parse("""
+                                        {
+                                            "runtime": {
+                                                "rest": { "enabled": true },
+                                                "graphql": { "enabled": false },
+                                                "mcp": { "enabled": true },
+                                                "host": { "mode": "development" }
+                                            },
+                                            "entities": {}
+                                        }
+                                        """)!.AsObject();
+                root["data-source-files"] = new JsonArray(childPath);
+                if (rootHasDataSource)
+                {
+                    root["data-source"] = child["data-source"]!.DeepClone();
+                }
+
+                File.WriteAllText(childPath, child.ToJsonString());
+                File.WriteAllText(rootPath, root.ToJsonString());
+                using TestServer server = new(Program.CreateWebHostBuilder(new[] { $"--ConfigFileName={rootPath}" })
+                    .ConfigureServices(services => services.PostConfigure<HttpServerTransportOptions>(options => options.Stateless = true)));
+                using HttpClient client = server.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(30);
+                if (useMcp)
+                {
+                    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+                    client.DefaultRequestHeaders.Accept.ParseAdd("text/event-stream");
+                    client.DefaultRequestHeaders.Add("MCP-Protocol-Version", "2025-11-25");
+                    await SendMcpRequestAsync(client, 1, "initialize", new
+                    {
+                        protocolVersion = "2025-11-25",
+                        capabilities = new { },
+                        clientInfo = new { name = "linked-config-test", version = "1" }
+                    });
+                    await SendMcpRequestAsync(client, 2, "tools/call", new
+                    {
+                        name = "create_record",
+                        arguments = new { entity = "LinkedPublisher", data = new { name } }
+                    });
+                    using SqlCommand lookup = connection.CreateCommand();
+                    lookup.CommandText = "SELECT id FROM dbo.publishers WHERE name = @name";
+                    lookup.Parameters.AddWithValue("@name", name);
+                    object insertedId = await lookup.ExecuteScalarAsync();
+                    Assert.IsNotNull(insertedId);
+                    int publisherId = (int)insertedId;
+                    await SendMcpRequestAsync(client, 3, "tools/call", new
+                    {
+                        name = "update_record",
+                        arguments = new { entity = "LinkedPublisher", keys = new { id = publisherId }, fields = new { name = name + "-patch" } }
+                    });
+                    lookup.Parameters["@name"].Value = name + "-patch";
+                    Assert.AreEqual(publisherId, await lookup.ExecuteScalarAsync());
+                    await SendMcpRequestAsync(client, 4, "tools/call", new
+                    {
+                        name = "delete_record",
+                        arguments = new { entity = "LinkedPublisher", keys = new { id = publisherId } }
+                    });
+                    Assert.IsNull(await lookup.ExecuteScalarAsync());
+                    return;
+                }
+
+                using HttpResponseMessage created = await client.PostAsJsonAsync("/api/LinkedPublisher", new { name });
+                Assert.AreEqual(HttpStatusCode.Created, created.StatusCode, await created.Content.ReadAsStringAsync());
+                Assert.IsNotNull(created.Headers.Location);
+                using JsonDocument createdBody = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+                int id = createdBody.RootElement.GetProperty("value")[0].GetProperty("id").GetInt32();
+                StringAssert.EndsWith(created.Headers.Location.ToString(), $"/id/{id}");
+                string itemPath = $"/api/LinkedPublisher/id/{id}";
+
+                using HttpResponseMessage replaced = await client.PutAsJsonAsync(itemPath, new { name = name + "-put" });
+                Assert.AreEqual(HttpStatusCode.OK, replaced.StatusCode, await replaced.Content.ReadAsStringAsync());
+                using JsonDocument replacedBody = JsonDocument.Parse(await replaced.Content.ReadAsStringAsync());
+                Assert.AreEqual(name + "-put", replacedBody.RootElement.GetProperty("value")[0].GetProperty("name").GetString());
+                using HttpResponseMessage patched = await client.PatchAsJsonAsync(itemPath, new { name = name + "-patch" });
+                Assert.AreEqual(HttpStatusCode.OK, patched.StatusCode, await patched.Content.ReadAsStringAsync());
+                using JsonDocument patchedBody = JsonDocument.Parse(await patched.Content.ReadAsStringAsync());
+                Assert.AreEqual(name + "-patch", patchedBody.RootElement.GetProperty("value")[0].GetProperty("name").GetString());
+                using HttpResponseMessage deleted = await client.DeleteAsync(itemPath);
+                Assert.AreEqual(HttpStatusCode.NoContent, deleted.StatusCode, await deleted.Content.ReadAsStringAsync());
+            }
+            finally
+            {
+                using SqlCommand cleanup = connection.CreateCommand();
+                cleanup.CommandText = "DELETE FROM dbo.publishers WHERE name IN (@name, @putName, @patchName)";
+                cleanup.Parameters.AddWithValue("@name", name);
+                cleanup.Parameters.AddWithValue("@putName", name + "-put");
+                cleanup.Parameters.AddWithValue("@patchName", name + "-patch");
+                await cleanup.ExecuteNonQueryAsync();
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+
+        private static async Task SendMcpRequestAsync(HttpClient client, int id, string method, object parameters)
+        {
+            using HttpResponseMessage response = await client.PostAsJsonAsync("/mcp", new { jsonrpc = "2.0", id, method, @params = parameters });
+            string payload = await response.Content.ReadAsStringAsync();
+            Assert.IsTrue(response.IsSuccessStatusCode, $"HTTP {response.StatusCode}: {payload}");
+            if (response.Content.Headers.ContentType?.MediaType == "text/event-stream")
+            {
+                payload = payload.Split('\n').Last(line => line.StartsWith("data:", StringComparison.Ordinal))[5..].Trim();
+            }
+
+            using JsonDocument document = JsonDocument.Parse(payload);
+            Assert.IsTrue(document.RootElement.TryGetProperty("result", out JsonElement result), payload);
+            Assert.IsFalse(result.TryGetProperty("isError", out JsonElement error) && error.GetBoolean(), payload);
         }
 
         /// <summary>

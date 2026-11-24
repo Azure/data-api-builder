@@ -11,7 +11,9 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -78,14 +80,8 @@ namespace Azure.DataApiBuilder.Service
                 Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
             }
 
-            if (!ValidateAspNetCoreUrls())
-            {
-                Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
-                Environment.ExitCode = -1;
-                return;
-            }
-
-            if (!StartEngine(args, runMcpStdio, mcpRole))
+            using EngineTelemetrySession productTelemetry = EngineTelemetryHosting.CreateStandalone(runMcpStdio);
+            if (!StartEngineCore(args, runMcpStdio, mcpRole, productTelemetry, validateUrls: true))
             {
                 Environment.ExitCode = -1;
             }
@@ -93,20 +89,78 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool StartEngine(string[] args, bool runMcpStdio, string? mcpRole)
         {
+            using EngineTelemetrySession productTelemetry = EngineTelemetryHosting.CreateStandalone(runMcpStdio);
+            return StartEngineCore(args, runMcpStdio, mcpRole, productTelemetry, validateUrls: false);
+        }
+
+        // Only the CLI's actual preflight-approved handoff supplies linkage. No process-global
+        // markers are used, and the original public service entry points remain independent.
+        internal static bool StartEngine(string[] args, ProductTelemetryLaunchContext? launchContext, Action? startupFailureObserved = null)
+            => StartEngine(args, launchContext, EngineLaunchDependencies.Default,
+                startupFailureObserved: startupFailureObserved);
+
+        // Instance-scoped validation seam: tests exercise this same bootstrap and serving loop
+        // with an offline sender and local host transport, never a mutable static factory.
+        internal static bool StartEngine(string[] args, ProductTelemetryLaunchContext? launchContext,
+            EngineLaunchDependencies dependencies, Action? startupFailureObserved = null)
+        {
+            bool stdio = McpStdioHelper.ShouldRunMcpStdio(args, out string? role);
+            string? configPath = null;
+            if (launchContext is not null)
+            {
+                try
+                {
+                    configPath = new ConfigurationBuilder().AddCommandLine(args).Build()["ConfigFileName"];
+                }
+                catch (Exception)
+                {
+                    // Optional correlation must not replace the application's parser behavior.
+                }
+            }
+
+            using EngineTelemetrySession productTelemetry = dependencies.SessionFactory(stdio, launchContext, configPath);
             try
             {
-                // Initialize log level EARLY, before building the host.
-                // This ensures logging filters are effective during the entire host build process.
-                // For MCP mode, we also read the config file early to check for log level override.
-                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding, out bool isLogLevelLegacy);
+                return StartEngineCore(args, stdio, role, productTelemetry, validateUrls: false, dependencies.ConfigureHost);
+            }
+            finally
+            {
+                if (productTelemetry.HasStartupFailed)
+                {
+                    try
+                    {
+                        startupFailureObserved?.Invoke();
+                    }
+                    catch (Exception)
+                    {
+                        // An optional observer cannot alter the legacy return/exception path.
+                    }
+                }
+            }
+        }
 
-                LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverriding, isConfigOverriding, isLogLevelLegacy);
+        internal static bool StartEngineCore(string[] args, bool runMcpStdio, string? mcpRole,
+            EngineTelemetrySession productTelemetry, bool validateUrls, Func<IHostBuilder, IHostBuilder>? configureHost = null)
+        {
+            try
+            {
+                // Main's existing URL preflight belongs to the same bootstrap lifetime as
+                // other startup failures. Direct StartEngine callers retain their prior path.
+                if (validateUrls && !ValidateAspNetCoreUrls())
+                {
+                    productTelemetry.StartupFailed(TelemetryFailureStage.Configuration);
+                    Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
+                    return false;
+                }
+
+                LogLevel initialLogLevel = InitializeLogLevel(args, runMcpStdio);
 
                 // For MCP stdio mode, redirect Console.Out to keep stdout clean for JSON-RPC.
                 // MCP SDK uses Console.OpenStandardOutput() which gets the real stdout, unaffected by this redirect.
                 if (runMcpStdio)
                 {
-                    // When LogLevel.None, redirect to null stream for ZERO output.
+                    // LogLevel.None suppresses diagnostic console output. An explicitly enabled
+                    // product-telemetry notice still goes directly to stderr; it is not a log.
                     // Otherwise redirect to stderr so logs don't pollute JSON-RPC.
                     if (initialLogLevel == LogLevel.None)
                     {
@@ -119,11 +173,20 @@ namespace Azure.DataApiBuilder.Service
                     }
                 }
 
-                IHost host = CreateHostBuilder(args, runMcpStdio, mcpRole).Build();
+                IHostBuilder hostBuilder = CreateHostBuilderCore(args, runMcpStdio, mcpRole, productTelemetry);
+                // Each runner owns host disposal: web Run/RunAsync disposes in its finally;
+                // the stdio helper drains the config loader and telemetry before disposing.
+                IHost host = (configureHost is null ? hostBuilder : configureHost(hostBuilder)).Build();
 
                 if (runMcpStdio)
                 {
-                    return McpStdioHelper.RunMcpStdioHost(host);
+                    bool completed = McpStdioHelper.RunMcpStdioHost(host);
+                    if (!completed)
+                    {
+                        productTelemetry.StartupFailed(TelemetryFailureStage.Metadata);
+                    }
+
+                    return completed;
                 }
 
                 // Normal web mode
@@ -133,6 +196,7 @@ namespace Azure.DataApiBuilder.Service
             // Catch exception raised by explicit call to IHostApplicationLifetime.StopApplication()
             catch (TaskCanceledException)
             {
+                productTelemetry.StartupFailed();
                 // Do not log the exception here because exceptions raised during startup
                 // are already automatically written to the console.
                 Console.Error.WriteLine("Unable to launch the Data API builder engine.");
@@ -141,9 +205,33 @@ namespace Azure.DataApiBuilder.Service
             // Catch all remaining unhandled exceptions which may be due to server host operation.
             catch (Exception ex)
             {
+                productTelemetry.StartupFailed();
                 Console.Error.WriteLine($"Unable to launch the runtime due to: {ex}");
                 return false;
             }
+            finally
+            {
+                // Keep the synchronous public API: delivery awaits never capture the caller's
+                // SynchronizationContext, and graceful draining has a shared two-second budget.
+                productTelemetry.StopAsync().GetAwaiter().GetResult();
+            }
+        }
+
+        /// <summary>
+        /// Resolves the initial log level from the engine args (and, in MCP stdio mode, the config file)
+        /// and applies it to <see cref="LogLevelProvider"/> and <see cref="Startup"/>.
+        /// Must run before the host is built so logging filters apply during host construction.
+        /// </summary>
+        /// <param name="args">Engine arguments that may contain --log-level or --LogLevel.</param>
+        /// <param name="runMcpStdio">Whether the engine runs in MCP stdio mode.</param>
+        /// <returns>The resolved initial log level.</returns>
+        public static LogLevel InitializeLogLevel(string[] args, bool runMcpStdio)
+        {
+            LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding, out bool isLogLevelLegacy);
+            LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverriding, isConfigOverriding, isLogLevelLegacy);
+            Startup.MinimumLogLevel = LogLevelProvider.CurrentLogLevel;
+            Startup.IsCliOverriding = LogLevelProvider.IsCliOverriding;
+            return initialLogLevel;
         }
 
         // Compatibility overload used by external callers that do not pass the runMcpStdio flag.
@@ -154,6 +242,11 @@ namespace Azure.DataApiBuilder.Service
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args, bool runMcpStdio, string? mcpRole)
+            => CreateHostBuilderCore(args, runMcpStdio, mcpRole, productTelemetry: null);
+
+        // HostFactoryResolver discovers CreateHostBuilder by name, including nonpublic methods.
+        // Keep the engine-owned telemetry helper out of that convention-based lookup.
+        internal static IHostBuilder CreateHostBuilderCore(string[] args, bool runMcpStdio, string? mcpRole, EngineTelemetrySession? productTelemetry)
         {
             return Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration(builder =>
@@ -214,14 +307,11 @@ namespace Azure.DataApiBuilder.Service
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    // LogLevelProvider was already initialized in StartEngine before CreateHostBuilder.
-                    // Use the already-set values to avoid re-parsing args.
-                    Startup.MinimumLogLevel = LogLevelProvider.CurrentLogLevel;
-                    Startup.IsCliOverriding = LogLevelProvider.IsCliOverriding;
+                    // Startup log level was already set by InitializeLogLevel in StartEngine.
                     ILoggerFactory loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel, stdio: runMcpStdio);
                     ILogger<Startup> startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);
-                    webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger));
+                    webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger) { ProductTelemetry = productTelemetry });
                 });
         }
 

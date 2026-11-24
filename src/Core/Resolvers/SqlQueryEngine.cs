@@ -325,8 +325,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryString = queryBuilder.Build(structure);
             }
 
-            // Global Cache enablement check
-            if (runtimeConfig.CanUseCache())
+            if (runtimeConfig.CanUseCache(dataSourceName))
             {
                 // Entity level cache behavior checks
                 bool dbPolicyConfigured = !string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]);
@@ -468,10 +467,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
             string queryString = queryBuilder.Build(structure);
 
-            // Only proceed to use caching code when
-            // RuntimeConfig.Cache.Enabled is true
-            // RuntimeConfig.DataSource.Options.SetSessionContext is false
-            if (runtimeConfig.CanUseCache())
+            if (runtimeConfig.CanUseCache(dataSourceName))
             {
                 // Entity level cache behavior checks
                 bool entityCacheEnabled = runtimeConfig.IsEntityCachingEnabled(structure.EntityName);

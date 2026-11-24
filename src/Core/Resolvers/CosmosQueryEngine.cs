@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             JObject executeQueryResult = null;
 
-            if (runtimeConfig.CanUseCache() && runtimeConfig.IsEntityCachingEnabled(structure.EntityName))
+            if (runtimeConfig.CanUseCache(dataSourceName) && runtimeConfig.IsEntityCachingEnabled(structure.EntityName))
             {
                 StringBuilder dataSourceKey = new(dataSourceName);
 

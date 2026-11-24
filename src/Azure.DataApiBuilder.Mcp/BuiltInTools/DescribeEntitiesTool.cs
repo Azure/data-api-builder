@@ -1,12 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -153,6 +155,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                         try
                         {
+                            ISqlMetadataProvider? sqlMetadataProvider = null;
                             DatabaseObject? databaseObject = null;
                             if (entity.Source.Type == EntitySourceType.StoredProcedure)
                             {
@@ -174,12 +177,39 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                                         $"Could not resolve DB metadata for stored procedure entity '{entityName}'. Error: {resolveError}");
                                 }
                             }
+                            else if (!nameOnly)
+                            {
+                                if (McpMetadataHelper.TryResolveMetadata(
+                                        entityName,
+                                        runtimeConfig,
+                                        serviceProvider,
+                                        out ISqlMetadataProvider resolvedMetadataProvider,
+                                        out DatabaseObject resolvedDbObject,
+                                        out _,
+                                        out string resolveError,
+                                        cancellationToken))
+                                {
+                                    sqlMetadataProvider = resolvedMetadataProvider;
+                                    databaseObject = resolvedDbObject;
+                                }
+                                else
+                                {
+                                    logger?.LogDebug(
+                                        "Could not resolve DB metadata for entity '{EntityName}'; falling back to config-declared fields. Details: {ResolveError}",
+                                        entityName,
+                                        resolveError);
+                                }
+                            }
 
                             Dictionary<string, object?> entityInfo = nameOnly
                                 ? BuildBasicEntityInfo(entityName, entity)
-                                : BuildFullEntityInfo(entityName, entity, currentUserRole, databaseObject, authResolver);
+                                : BuildFullEntityInfo(entityName, entity, currentUserRole, sqlMetadataProvider, databaseObject, authResolver);
 
                             entityList.Add(entityInfo);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            throw;
                         }
                         catch (Exception ex)
                         {
@@ -434,12 +464,19 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <param name="entityName">The name of the entity to include in the dictionary.</param>
         /// <param name="entity">The entity object from which to extract additional information.</param>
         /// <param name="currentUserRole">The role of the current user, used to determine permissions and visible fields.</param>
+        /// <param name="sqlMetadataProvider">The resolved metadata provider if available, used for authoritative exposed column name resolution.</param>
         /// <param name="databaseObject">The resolved database object metadata if available.</param>
         /// <param name="authResolver">The authorization resolver used to compute allowed exposed columns.</param>
         /// <returns>
         /// A dictionary containing the entity's name, description, fields, parameters (if applicable), and permissions.
         /// </returns>
-        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity, string? currentUserRole, DatabaseObject? databaseObject, IAuthorizationResolver authResolver)
+        private static Dictionary<string, object?> BuildFullEntityInfo(
+            string entityName,
+            Entity entity,
+            string? currentUserRole,
+            ISqlMetadataProvider? sqlMetadataProvider,
+            DatabaseObject? databaseObject,
+            IAuthorizationResolver authResolver)
         {
             // Use GraphQL singular name as alias if available, otherwise use entity name
             string displayName = !string.IsNullOrWhiteSpace(entity.GraphQL?.Singular)
@@ -458,7 +495,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 ["name"] = displayName,
                 ["description"] = entity.Description ?? string.Empty,
-                ["fields"] = BuildFieldMetadataInfo(entity.Fields, allowedFieldNames),
+                ["fields"] = BuildFieldMetadataInfo(entityName, entity, sqlMetadataProvider, databaseObject, allowedFieldNames),
             };
 
             if (entity.Source.Type == EntitySourceType.StoredProcedure)
@@ -472,16 +509,86 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Builds a list of metadata information objects from the provided collection of fields,
-        /// filtered by the set of exposed column names the caller is allowed to see.
+        /// Builds field metadata for an entity.
+        /// For tables and views, merges DB columns (<see cref="SourceDefinition.Columns"/> and
+        /// <see cref="SourceDefinition.PrimaryKey"/>) with config overrides (<see cref="Entity.Fields"/>
+        /// and <see cref="Entity.Mappings"/>), filtered by <paramref name="allowedFieldNames"/>.
+        /// Falls back to config-declared fields when DB metadata is unavailable.
+        /// For stored procedures, projects config-declared result fields without column-level filtering.
         /// </summary>
-        /// <param name="fields">A list of <see cref="FieldMetadata"/> objects representing the fields to process. Can be null.</param>
-        /// <param name="allowedFieldNames">Exposed field names visible to the caller. When null the list is not filtered
-        /// (used for stored procedures, whose result-set columns are not governed by fields.include/exclude).
-        /// When empty, all fields are dropped.</param>
-        /// <returns>A list of objects, each containing the name and description of a field. If <paramref name="fields"/> is
-        /// null, an empty list is returned.</returns>
-        private static List<object> BuildFieldMetadataInfo(List<FieldMetadata>? fields, HashSet<string>? allowedFieldNames)
+        private static List<object> BuildFieldMetadataInfo(
+            string entityName,
+            Entity entity,
+            ISqlMetadataProvider? sqlMetadataProvider,
+            DatabaseObject? databaseObject,
+            HashSet<string>? allowedFieldNames)
+        {
+            if (entity.Source.Type == EntitySourceType.StoredProcedure)
+            {
+                return BuildStoredProcedureFieldMetadataInfo(entity.Fields);
+            }
+
+            List<object> result = new();
+            SourceDefinition? sourceDefinition = TryGetTableOrViewSourceDefinition(databaseObject);
+            bool hasDbColumns = sourceDefinition?.Columns is { Count: > 0 };
+            HashSet<string> primaryKeys = ResolveEffectivePrimaryKeyColumns(
+                entity,
+                hasDbColumns ? sourceDefinition : null);
+            Dictionary<string, string>? mappingsByColumn = BuildMappingsLookup(entity.Mappings);
+
+            if (hasDbColumns)
+            {
+                foreach ((string columnName, ColumnDefinition columnDefinition) in sourceDefinition!.Columns)
+                {
+                    FieldMetadata? fieldMetadata = FindConfigFieldMetadata(entity.Fields, columnName);
+                    string exposedName = ResolveExposedFieldName(
+                        entityName,
+                        columnName,
+                        fieldMetadata,
+                        mappingsByColumn,
+                        sqlMetadataProvider);
+
+                    if (allowedFieldNames != null && !allowedFieldNames.Contains(exposedName))
+                    {
+                        continue;
+                    }
+
+                    result.Add(BuildTableOrViewFieldEntry(
+                        name: exposedName,
+                        description: fieldMetadata?.Description ?? string.Empty,
+                        primaryKey: primaryKeys.Contains(columnName),
+                        dataType: MapColumnDataType(columnDefinition)));
+                }
+
+                return result;
+            }
+
+            // Degraded fallback when DB metadata is unavailable (e.g., non-SQL provider or unpopulated metadata).
+            if (entity.Fields == null)
+            {
+                return result;
+            }
+
+            foreach (FieldMetadata field in entity.Fields)
+            {
+                string exposedName = ResolveExposedFieldNameFromConfig(field.Name, field, mappingsByColumn);
+
+                if (allowedFieldNames != null && !allowedFieldNames.Contains(exposedName))
+                {
+                    continue;
+                }
+
+                result.Add(BuildTableOrViewFieldEntry(
+                    name: exposedName,
+                    description: field.Description ?? string.Empty,
+                    primaryKey: primaryKeys.Contains(field.Name),
+                    dataType: null));
+            }
+
+            return result;
+        }
+
+        private static List<object> BuildStoredProcedureFieldMetadataInfo(List<FieldMetadata>? fields)
         {
             List<object> result = new();
 
@@ -492,24 +599,254 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             foreach (FieldMetadata field in fields)
             {
-                string exposedName = field.Alias ?? field.Name;
-
-                // A null allowedFieldNames set means "do not filter" (SP case). A non-null set
-                // that omits this name means the caller is not authorized to see it under any
-                // operation, so its name and description are withheld.
-                if (allowedFieldNames != null && !allowedFieldNames.Contains(exposedName))
-                {
-                    continue;
-                }
-
                 result.Add(new
                 {
-                    name = exposedName,
+                    name = field.Alias ?? field.Name,
                     description = field.Description ?? string.Empty
                 });
             }
 
             return result;
+        }
+
+        private static Dictionary<string, object?> BuildTableOrViewFieldEntry(
+            string name,
+            string description,
+            bool primaryKey,
+            string? dataType) => new()
+            {
+                ["name"] = name,
+                ["description"] = description,
+                ["primaryKey"] = primaryKey,
+                ["dataType"] = dataType
+            };
+
+        private static SourceDefinition? TryGetTableOrViewSourceDefinition(DatabaseObject? databaseObject) =>
+            databaseObject switch
+            {
+                DatabaseTable table => table.TableDefinition,
+                DatabaseView view => view.ViewDefinition,
+                _ => null
+            };
+
+        /// <summary>
+        /// Resolves primary key backing column names.
+        /// When DB metadata is available, <see cref="SourceDefinition.PrimaryKey"/> is already populated
+        /// upstream by <see cref="Core.Services.MetadataProviders.SqlMetadataProvider"/> (applying
+        /// <c>fields[].primary-key</c> -> <c>source.key-fields</c> -> DB PK) and is the exact key set
+        /// enforced by <see cref="RequestValidator.ValidatePrimaryKey"/> in <c>update_record</c> and
+        /// <c>delete_record</c>. Config fallback is used only when DB metadata is unavailable.
+        /// </summary>
+        private static HashSet<string> ResolveEffectivePrimaryKeyColumns(Entity entity, SourceDefinition? sourceDefinition)
+        {
+            HashSet<string> primaryKeys = new(StringComparer.OrdinalIgnoreCase);
+
+            if (sourceDefinition != null)
+            {
+                if (sourceDefinition.PrimaryKey is { Count: > 0 })
+                {
+                    foreach (string pk in sourceDefinition.PrimaryKey)
+                    {
+                        if (!string.IsNullOrWhiteSpace(pk))
+                        {
+                            primaryKeys.Add(pk);
+                        }
+                    }
+                }
+
+                return primaryKeys;
+            }
+
+            if (entity.Fields != null)
+            {
+                foreach (FieldMetadata field in entity.Fields)
+                {
+                    if (field.PrimaryKey && !string.IsNullOrWhiteSpace(field.Name))
+                    {
+                        primaryKeys.Add(field.Name);
+                    }
+                }
+
+                if (primaryKeys.Count > 0)
+                {
+                    return primaryKeys;
+                }
+            }
+
+            if (entity.Source.KeyFields is { Length: > 0 })
+            {
+                foreach (string keyField in entity.Source.KeyFields)
+                {
+                    if (!string.IsNullOrWhiteSpace(keyField))
+                    {
+                        primaryKeys.Add(keyField);
+                    }
+                }
+            }
+
+            return primaryKeys;
+        }
+
+        /// <summary>
+        /// Finds config <see cref="FieldMetadata"/> for a DB column, preferring an exact case-sensitive
+        /// (<see cref="StringComparison.Ordinal"/>) match before falling back to case-insensitive matching.
+        /// </summary>
+        private static FieldMetadata? FindConfigFieldMetadata(List<FieldMetadata>? fields, string columnName)
+        {
+            if (fields is not { Count: > 0 })
+            {
+                return null;
+            }
+
+            FieldMetadata? caseInsensitiveMatch = null;
+            foreach (FieldMetadata field in fields)
+            {
+                if (string.IsNullOrWhiteSpace(field.Name))
+                {
+                    continue;
+                }
+
+                if (string.Equals(field.Name, columnName, StringComparison.Ordinal))
+                {
+                    return field;
+                }
+
+                if (caseInsensitiveMatch is null &&
+                    string.Equals(field.Name, columnName, StringComparison.OrdinalIgnoreCase))
+                {
+                    caseInsensitiveMatch = field;
+                }
+            }
+
+            return caseInsensitiveMatch;
+        }
+
+        private static Dictionary<string, string>? BuildMappingsLookup(Dictionary<string, string>? mappings)
+        {
+            if (mappings is not { Count: > 0 })
+            {
+                return null;
+            }
+
+            Dictionary<string, string> lookup = new(StringComparer.OrdinalIgnoreCase);
+            foreach ((string backingColumn, string alias) in mappings)
+            {
+                if (!string.IsNullOrWhiteSpace(backingColumn) && !string.IsNullOrWhiteSpace(alias))
+                {
+                    lookup.TryAdd(backingColumn, alias);
+                }
+            }
+
+            return lookup;
+        }
+
+        /// <summary>
+        /// Resolves the exposed name for a backing column, preferring <see cref="ISqlMetadataProvider.TryGetExposedColumnName"/>
+        /// so advertised names match <see cref="AuthorizationResolver"/> and REST/GraphQL projections,
+        /// and falling back to config rules when the provider mapping is unavailable (e.g., unit-test stubs).
+        /// </summary>
+        private static string ResolveExposedFieldName(
+            string entityName,
+            string backingColumnName,
+            FieldMetadata? fieldMetadata,
+            Dictionary<string, string>? mappingsByColumn,
+            ISqlMetadataProvider? sqlMetadataProvider)
+        {
+            if (sqlMetadataProvider != null)
+            {
+                try
+                {
+                    if (sqlMetadataProvider.TryGetExposedColumnName(entityName, backingColumnName, out string? providerExposedName) &&
+                        !string.IsNullOrWhiteSpace(providerExposedName))
+                    {
+                        return providerExposedName;
+                    }
+                }
+                catch (KeyNotFoundException)
+                {
+                    // Fall back to config-derived mapping if provider column maps were not initialized.
+                }
+            }
+
+            return ResolveExposedFieldNameFromConfig(backingColumnName, fieldMetadata, mappingsByColumn);
+        }
+
+        /// <summary>
+        /// Mirrors <c>SqlMetadataProvider.GenerateExposedToBackingColumnMapUtil</c>:
+        /// any entry in <c>entity.Fields</c> claims the column (using <c>Alias</c> if non-whitespace,
+        /// else <c>backingColumnName</c>), and <c>entity.Mappings</c> applies only to columns not
+        /// already claimed by <c>entity.Fields</c>.
+        /// </summary>
+        private static string ResolveExposedFieldNameFromConfig(
+            string backingColumnName,
+            FieldMetadata? fieldMetadata,
+            Dictionary<string, string>? mappingsByColumn)
+        {
+            if (fieldMetadata != null)
+            {
+                return !string.IsNullOrWhiteSpace(fieldMetadata.Alias)
+                    ? fieldMetadata.Alias
+                    : backingColumnName;
+            }
+
+            if (mappingsByColumn != null && mappingsByColumn.TryGetValue(backingColumnName, out string? mappedAlias))
+            {
+                return mappedAlias;
+            }
+
+            return backingColumnName;
+        }
+
+        private static string? MapColumnDataType(ColumnDefinition column)
+        {
+            if (column.IsArrayType)
+            {
+                return "array";
+            }
+
+            Type systemType = Nullable.GetUnderlyingType(column.SystemType) ?? column.SystemType;
+
+            if (systemType == typeof(int) || systemType == typeof(long) ||
+                systemType == typeof(short) || systemType == typeof(byte) ||
+                systemType == typeof(sbyte) || systemType == typeof(uint) ||
+                systemType == typeof(ulong) || systemType == typeof(ushort))
+            {
+                return "integer";
+            }
+
+            if (systemType == typeof(float) || systemType == typeof(double) ||
+                systemType == typeof(decimal))
+            {
+                return "number";
+            }
+
+            if (systemType == typeof(bool))
+            {
+                return "boolean";
+            }
+
+            if (systemType == typeof(string) || systemType == typeof(char) ||
+                systemType == typeof(Guid) || systemType == typeof(DateTime) ||
+                systemType == typeof(DateTimeOffset) || systemType == typeof(DateOnly) ||
+                systemType == typeof(TimeOnly) || systemType == typeof(TimeSpan) ||
+                systemType == typeof(byte[]))
+            {
+                return "string";
+            }
+
+            return column.DbType switch
+            {
+                DbType.Byte or DbType.SByte or DbType.Int16 or DbType.UInt16
+                    or DbType.Int32 or DbType.UInt32 or DbType.Int64 or DbType.UInt64 => "integer",
+                DbType.Single or DbType.Double or DbType.Decimal or DbType.Currency
+                    or DbType.VarNumeric => "number",
+                DbType.Boolean => "boolean",
+                DbType.AnsiString or DbType.AnsiStringFixedLength or DbType.String
+                    or DbType.StringFixedLength or DbType.Xml or DbType.Guid
+                    or DbType.Date or DbType.DateTime or DbType.DateTime2
+                    or DbType.DateTimeOffset or DbType.Time or DbType.Binary => "string",
+                _ => null
+            };
         }
 
         /// <summary>

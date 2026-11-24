@@ -901,15 +901,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
         /// <summary>
         /// Builds the parameter list for a stored procedure entity.
-        /// Each entry has: name, required, default, description.
+        /// Each entry has: name, required, description. Defaults stay server-side because
+        /// configuration may already have resolved them to secret values.
         ///
         /// The per-field rules are agreed in issue #3400:
         ///   name        - DB metadata is the source of truth; config cannot override.
         ///   required    - defaults to true when not set in config.
         ///                 (SQL Server's is_nullable describes the type, not whether the
         ///                  parameter must be supplied at call time, so it is unreliable.)
-        ///   default     - config-only. T-SQL parameter defaults are not exposed as
-        ///                 structured metadata, so they cannot be discovered from the DB.
         ///   description - config-only. SQL Server has no description column for parameters.
         ///
         /// The merge of config onto DB metadata is already performed upstream by
@@ -927,7 +926,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// </summary>
         /// <param name="databaseObject">DB metadata for the entity. Must be a populated <see cref="DatabaseStoredProcedure"/>.</param>
         /// <returns>A list whose elements are dictionaries (one per parameter), each with the keys
-        /// <c>name</c>, <c>required</c>, <c>default</c>, and <c>description</c>.</returns>
+        /// <c>name</c>, <c>required</c>, and <c>description</c>.</returns>
         /// <exception cref="InvalidOperationException">Thrown when <paramref name="databaseObject"/> is not a <see cref="DatabaseStoredProcedure"/> with a populated <see cref="StoredProcedureDefinition"/>.</exception>
         private static List<object> BuildParameterMetadataInfo(DatabaseObject? databaseObject)
         {
@@ -952,7 +951,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 ["name"] = name,
                 ["required"] = definition.Required ?? true,
-                ["default"] = definition.Default,
                 ["description"] = definition.Description ?? string.Empty
             };
 

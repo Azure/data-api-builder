@@ -36,6 +36,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         private const string TEST_AUTHENTICATION_TYPE = "TestAuth";
         private const string TEST_CLAIMTYPE_NAME = "TestName";
 
+        [DataTestMethod]
+        [DataRow(EntityActionOperation.Create)]
+        [DataRow(EntityActionOperation.All)]
+        public void MySqlCreatePolicyIsRejectedDuringPermissionSetup(EntityActionOperation operation)
+        {
+            RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
+                operation: operation, databasePolicy: "@item.col1 eq 1", dbType: DatabaseType.MySQL);
+
+            DataApiBuilderException error = Assert.ThrowsException<DataApiBuilderException>(
+                () => AuthorizationHelpers.InitAuthorizationResolver(config));
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, error.SubStatusCode);
+            StringAssert.Contains(error.Message, "The Create action");
+        }
+
         /// <summary>Verifies empty resolved policies emit an audit log and fail closed only in production.</summary>
         [DataTestMethod]
         [DataRow(HostMode.Development, EntityActionOperation.Read, "@item.", DisplayName = "Empty Predicate in Development read logs a warning")]

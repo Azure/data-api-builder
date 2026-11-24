@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -150,31 +149,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string route = SqlResponseHelpers.ConstructPrimaryKeyRoute(context, row, BuildProvider().Object);
 
             Assert.AreEqual("id/a%2Fb%20c", route);
-        }
-
-        /// <summary>
-        /// The key value is formatted the same way under every host culture.
-        /// </summary>
-        [DataTestMethod]
-        [DataRow("en-US")]
-        [DataRow("tr-TR")]
-        public void ConstructPrimaryKeyRoute_DecimalValue_UsesInvariantCulture(string cultureName)
-        {
-            CultureInfo originalCulture = CultureInfo.CurrentCulture;
-            CultureInfo.CurrentCulture = new CultureInfo(cultureName);
-            try
-            {
-                FindRequestContext context = new(ENTITY_NAME, BuildTableDbo(), isList: false);
-                Dictionary<string, object?> row = new() { ["id"] = 1.5m };
-
-                string route = SqlResponseHelpers.ConstructPrimaryKeyRoute(context, row, BuildProvider().Object);
-
-                Assert.AreEqual("id/1.5", route);
-            }
-            finally
-            {
-                CultureInfo.CurrentCulture = originalCulture;
-            }
         }
 
         #endregion

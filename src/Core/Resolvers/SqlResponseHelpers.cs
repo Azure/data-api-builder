@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -279,8 +278,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // This code block is reached after the successful execution of database update/insert operations.
                 // So, it is a safe assumption that a non-null value will be present in the result set for a primary key.
-                string primaryKeyValue = Convert.ToString(dbOperationResultSetRow[pkExposedName], CultureInfo.InvariantCulture)!;
-                newPrimaryKeyRoute.Append(Uri.EscapeDataString(primaryKeyValue));
+                newPrimaryKeyRoute.Append(Uri.EscapeDataString(dbOperationResultSetRow[pkExposedName]!.ToString()!));
                 newPrimaryKeyRoute.Append("/");
             }
 

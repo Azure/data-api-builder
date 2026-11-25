@@ -1375,16 +1375,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     PopulateReferencingFields(sqlMetadataProvider, multipleCreateStructure, fkDefinition, multipleCreateStructure.CurrentEntityCreatedValues, isLinkingTable: true);
 
                     string linkingEntityName = GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.ParentEntityName, entityName);
-                    SourceDefinition linkingTableSourceDefinition = sqlMetadataProvider.GetSourceDefinition(linkingEntityName);
+                    List<string> exposingEntityNames = GetEntitiesExposingLinkingTable(sqlMetadataProvider, linkingEntityName);
+                    if (exposingEntityNames.Count == 0)
+                    {
+                        SourceDefinition linkingTableSourceDefinition = sqlMetadataProvider.GetSourceDefinition(linkingEntityName);
 
-                    _ = BuildAndExecuteInsertDbQueries(
-                            sqlMetadataProvider: sqlMetadataProvider,
-                            entityName: linkingEntityName,
-                            parentEntityName: entityName,
-                            parameters: multipleCreateStructure.LinkingTableParams!,
-                            sourceDefinition: linkingTableSourceDefinition,
-                            isLinkingEntity: true,
-                            nestingLevel: nestingLevel);
+                        _ = BuildAndExecuteInsertDbQueries(
+                                sqlMetadataProvider: sqlMetadataProvider,
+                                entityName: linkingEntityName,
+                                parentEntityName: entityName,
+                                parameters: multipleCreateStructure.LinkingTableParams!,
+                                sourceDefinition: linkingTableSourceDefinition,
+                                isLinkingEntity: true,
+                                nestingLevel: nestingLevel);
+                    }
+                    else
+                    {
+                        Dictionary<string, object?> linkingTableColumnValues = multipleCreateStructure.LinkingTableParams.ToDictionary(
+                            param => sqlMetadataProvider.TryGetBackingColumn(linkingEntityName, param.Key, out string? backingColumn) ? backingColumn : param.Key,
+                            param => param.Value);
+
+                        InsertLinkingTableRowAsExposingEntity(
+                            sqlMetadataProvider,
+                            GetEntitiesAllowingCreate(sqlMetadataProvider, exposingEntityNames, AuthorizationResolver.GetRoleOfGraphQLRequest(context), linkingTableColumnValues.Keys),
+                            linkingTableColumnValues,
+                            relatedEntityName: entityName,
+                            nestingLevel);
+                    }
                 }
 
                 // Process referencing relationships
@@ -2211,10 +2228,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 // Dictionary to store all the entities and their corresponding exposed column names referenced in the mutation.
                 Dictionary<string, HashSet<string>> entityToExposedColumns = new();
+
+                // Linking table rows created by the mutation, each with the linking table columns supplied for it.
+                List<(string LinkingEntityName, HashSet<string> Columns)> linkingTableRows = new();
                 if (parametersDictionary.TryGetValue(inputArgumentName, out object? parameters))
                 {
                     // Get all the entity names and field names referenced in the mutation.
-                    PopulateMutationEntityAndFieldsToAuthorize(entityToExposedColumns, schemaForArgument, topLevelEntityName, context, parameters!);
+                    PopulateMutationEntityAndFieldsToAuthorize(entityToExposedColumns, linkingTableRows, schemaForArgument, topLevelEntityName, linkingEntityName: null, context, parameters!);
                 }
                 else
                 {
@@ -2237,6 +2257,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         );
                     }
                 }
+
+                // Linking table rows are authorized again with their foreign key columns when they are inserted.
+                ISqlMetadataProvider metadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(
+                    GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig()));
+                foreach ((string linkingEntityName, HashSet<string> linkingTableColumns) in linkingTableRows)
+                {
+                    List<string> exposingEntityNames = GetEntitiesExposingLinkingTable(metadataProvider, linkingEntityName);
+                    if (exposingEntityNames.Count > 0
+                        && GetEntitiesAllowingCreate(metadataProvider, exposingEntityNames, clientRole, linkingTableColumns).Count == 0)
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Unauthorized due to one or more fields in this mutation.",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                        );
+                    }
+                }
             }
             else
             {
@@ -2251,8 +2288,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Helper method to collect names of all the fields referenced from every entity in a GraphQL mutation.
         /// </summary>
         /// <param name="entityToExposedColumns">Dictionary to store all the entities and their corresponding exposed column names referenced in the mutation.</param>
+        /// <param name="linkingTableRows">Linking table rows created by the mutation, each with the linking table columns supplied for it.</param>
         /// <param name="schema">Schema for the input field.</param>
         /// <param name="entityName">Name of the entity.</param>
+        /// <param name="linkingEntityName">Linking entity of the many-to-many relationship through which the entity is created, if any.</param>
         /// <param name="context">Middleware context.</param>
         /// <param name="parameters">Value for the input field.</param>
         /// <example>
@@ -2299,8 +2338,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </example>
         private void PopulateMutationEntityAndFieldsToAuthorize(
             Dictionary<string, HashSet<string>> entityToExposedColumns,
+            List<(string LinkingEntityName, HashSet<string> Columns)> linkingTableRows,
             IInputValueDefinition schema,
             string entityName,
+            string? linkingEntityName,
             IMiddlewareContext context,
             object parameters)
         {
@@ -2310,8 +2351,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // all the fields present for item namely- title, reviews, publishers, authors are interpreted as ObjectFieldNode.
                 ProcessObjectFieldNodesForAuthZ(
                     entityToExposedColumns: entityToExposedColumns,
+                    linkingTableRows: linkingTableRows,
                     schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     entityName: entityName,
+                    linkingEntityName: linkingEntityName,
                     context: context,
                     fieldNodes: listOfObjectFieldNode);
             }
@@ -2320,8 +2363,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // For the example createbooks mutation written above, the list value for `items` is interpreted as a List<IValueNode>.
                 listOfIValueNode.ForEach(iValueNode => PopulateMutationEntityAndFieldsToAuthorize(
                     entityToExposedColumns: entityToExposedColumns,
+                    linkingTableRows: linkingTableRows,
                     schema: schema,
                     entityName: entityName,
+                    linkingEntityName: linkingEntityName,
                     context: context,
                     parameters: iValueNode));
             }
@@ -2331,8 +2376,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
                 ProcessObjectFieldNodesForAuthZ(
                     entityToExposedColumns: entityToExposedColumns,
+                    linkingTableRows: linkingTableRows,
                     schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     entityName: entityName,
+                    linkingEntityName: linkingEntityName,
                     context: context,
                     fieldNodes: objectValueNode.Fields);
             }
@@ -2343,8 +2390,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // All the nodes in the ListValueNode are parsed one by one.
                 listValueNode.GetNodes().ToList().ForEach(objectValueNodeInListValueNode => PopulateMutationEntityAndFieldsToAuthorize(
                     entityToExposedColumns: entityToExposedColumns,
+                    linkingTableRows: linkingTableRows,
                     schema: schema,
                     entityName: entityName,
+                    linkingEntityName: linkingEntityName,
                     context: context,
                     parameters: objectValueNodeInListValueNode));
             }
@@ -2355,14 +2404,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// containing all entities and their corresponding fields.
         /// </summary>
         /// <param name="entityToExposedColumns">Dictionary to store all the entities and their corresponding exposed column names referenced in the mutation.</param>
+        /// <param name="linkingTableRows">Linking table rows created by the mutation, each with the linking table columns supplied for it.</param>
         /// <param name="schemaObject">Input object type for the field.</param>
         /// <param name="entityName">Name of the entity.</param>
+        /// <param name="linkingEntityName">Linking entity of the many-to-many relationship through which the entity is created, if any.</param>
         /// <param name="context">Middleware context.</param>
         /// <param name="fieldNodes">List of ObjectFieldNodes for the the input field.</param>
         private void ProcessObjectFieldNodesForAuthZ(
             Dictionary<string, HashSet<string>> entityToExposedColumns,
+            List<(string LinkingEntityName, HashSet<string> Columns)> linkingTableRows,
             InputObjectType schemaObject,
             string entityName,
+            string? linkingEntityName,
             IMiddlewareContext context,
             IReadOnlyList<ObjectFieldNode> fieldNodes)
         {
@@ -2370,6 +2423,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             entityToExposedColumns.TryAdd(entityName, new HashSet<string>());
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
             ISqlMetadataProvider metadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            HashSet<string> linkingTableColumns = new();
             foreach (ObjectFieldNode field in fieldNodes)
             {
                 Tuple<IValueNode?, SyntaxKind> fieldDetails = GraphQLUtils.GetFieldDetails(field.Value, context.Variables);
@@ -2384,7 +2438,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // Case 2. We are processing the fields for a linking input object. Linking input objects enable users to provide
                     // input for fields belonging to the target entity and the linking entity. Hence the backing column for fields
                     // belonging to the linking entity will not be present in the source definition of this target entity.
-                    // We need to skip such fields belonging to linking table as we do not perform authorization checks on them.
+                    // Such fields are collected for the linking table row instead.
                     //
                     // Case 3. When a relationship field is assigned a null value. Such a field also needs to be ignored.
                     if (metadataProvider.TryGetBackingColumn(entityName, field.Name.Value, out string? _))
@@ -2393,21 +2447,141 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // i.e. for Case 1.
                         entityToExposedColumns[entityName].Add(field.Name.Value);
                     }
+                    else if (linkingEntityName is not null
+                        && metadataProvider.TryGetBackingColumn(linkingEntityName, field.Name.Value, out string? linkingTableColumn))
+                    {
+                        linkingTableColumns.Add(linkingTableColumn);
+                    }
                 }
                 else
                 {
                     string relationshipName = field.Name.Value;
-                    string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
+                    Entity entity = runtimeConfig.Entities![entityName];
+                    string targetEntityName = entity.Relationships![relationshipName].TargetEntity;
+                    string? targetLinkingEntityName = GraphQLUtils.IsMToNRelationship(entity, relationshipName)
+                        ? GraphQLUtils.GenerateLinkingEntityName(entityName, targetEntityName)
+                        : null;
 
                     // Recurse to process fields in the value of this relationship field.
                     PopulateMutationEntityAndFieldsToAuthorize(
                         entityToExposedColumns,
+                        linkingTableRows,
                         schemaObject.Fields[relationshipName],
                         targetEntityName,
+                        targetLinkingEntityName,
                         context,
                         fieldDetails.Item1!);
                 }
             }
+
+            if (linkingEntityName is not null)
+            {
+                linkingTableRows.Add((linkingEntityName, linkingTableColumns));
+            }
+        }
+
+        /// <summary>
+        /// Returns the entities, other than DAB's internal linking entities, whose source is the table of the given linking entity.
+        /// When there are any, a row is inserted into that table only as permitted by one of them, as for a direct create.
+        /// </summary>
+        /// <param name="metadataProvider">Metadata provider of the data source of the linking entity.</param>
+        /// <param name="linkingEntityName">Name of the linking entity.</param>
+        private static List<string> GetEntitiesExposingLinkingTable(ISqlMetadataProvider metadataProvider, string linkingEntityName)
+        {
+            IReadOnlyDictionary<string, DatabaseObject> entityDatabaseObjects = metadataProvider.GetEntityNamesAndDbObjects();
+            if (!entityDatabaseObjects.TryGetValue(linkingEntityName, out DatabaseObject? linkingTable))
+            {
+                return new();
+            }
+
+            IReadOnlyDictionary<string, Entity> linkingEntities = metadataProvider.GetLinkingEntities();
+            return entityDatabaseObjects
+                .Where(entity => !linkingEntities.ContainsKey(entity.Key) && linkingTable.Equals(entity.Value))
+                .Select(entity => entity.Key)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Returns, in the given order, the entities whose create permission allows the role to write the given backing columns,
+        /// each with the exposed name in that entity of every column.
+        /// </summary>
+        /// <param name="metadataProvider">Metadata provider of the data source of the entities.</param>
+        /// <param name="entityNames">Candidate entities, all backed by the same table.</param>
+        /// <param name="clientRole">Role of the request.</param>
+        /// <param name="backingColumns">Backing columns to be written.</param>
+        private List<(string EntityName, Dictionary<string, string> ExposedColumnNames)> GetEntitiesAllowingCreate(
+            ISqlMetadataProvider metadataProvider,
+            IEnumerable<string> entityNames,
+            string clientRole,
+            IReadOnlyCollection<string> backingColumns)
+        {
+            List<(string EntityName, Dictionary<string, string> ExposedColumnNames)> allowingEntities = new();
+            foreach (string entityName in entityNames)
+            {
+                Dictionary<string, string> exposedNames = new();
+                foreach (string backingColumn in backingColumns)
+                {
+                    if (metadataProvider.TryGetExposedColumnName(entityName, backingColumn, out string? exposedName))
+                    {
+                        exposedNames[backingColumn] = exposedName;
+                    }
+                }
+
+                if (exposedNames.Count == backingColumns.Count
+                    && _authorizationResolver.AreColumnsAllowedForOperation(entityName, clientRole, EntityActionOperation.Create, exposedNames.Values))
+                {
+                    allowingEntities.Add((entityName, exposedNames));
+                }
+            }
+
+            return allowingEntities;
+        }
+
+        /// <summary>
+        /// Inserts a linking table row as the first of the given entities whose create policy allows it, as a direct create
+        /// through that entity would. When none of them allows the row, throws the failure of the first one, or an authorization
+        /// failure when there are no entities.
+        /// </summary>
+        /// <param name="metadataProvider">Metadata provider of the data source of the entities.</param>
+        /// <param name="allowingEntities">Entities whose create permission allows the role to write the row's columns, each with
+        /// the exposed name in that entity of every column.</param>
+        /// <param name="linkingTableColumnValues">Value of each backing column of the row.</param>
+        /// <param name="relatedEntityName">Entity created in the mutation whose record the row links.</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request.</param>
+        private void InsertLinkingTableRowAsExposingEntity(
+            ISqlMetadataProvider metadataProvider,
+            List<(string EntityName, Dictionary<string, string> ExposedColumnNames)> allowingEntities,
+            Dictionary<string, object?> linkingTableColumnValues,
+            string relatedEntityName,
+            int nestingLevel)
+        {
+            DataApiBuilderException? firstPolicyFailure = null;
+            foreach ((string allowingEntityName, Dictionary<string, string> exposedColumnNames) in allowingEntities)
+            {
+                try
+                {
+                    _ = BuildAndExecuteInsertDbQueries(
+                            sqlMetadataProvider: metadataProvider,
+                            entityName: allowingEntityName,
+                            parentEntityName: relatedEntityName,
+                            parameters: linkingTableColumnValues.ToDictionary(column => exposedColumnNames[column.Key], column => column.Value),
+                            sourceDefinition: metadataProvider.GetSourceDefinition(allowingEntityName),
+                            isLinkingEntity: false,
+                            nestingLevel: nestingLevel);
+                    return;
+                }
+                catch (DataApiBuilderException policyFailure) when (policyFailure.SubStatusCode is DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
+                    or DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed)
+                {
+                    // A create policy that rejects the row inserts nothing, so another entity's policy can still allow it.
+                    firstPolicyFailure ??= policyFailure;
+                }
+            }
+
+            throw firstPolicyFailure ?? new DataApiBuilderException(
+                message: "Unauthorized due to one or more fields in this mutation.",
+                statusCode: HttpStatusCode.Forbidden,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
         }
 
         /// <summary>

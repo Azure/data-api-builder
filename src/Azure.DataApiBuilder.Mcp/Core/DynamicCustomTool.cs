@@ -580,22 +580,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // Handle different result types
             if (queryResult is OkObjectResult okResult && okResult.Value != null)
             {
-                // Extract the actual data from the action result
-                if (okResult.Value is JsonDocument jsonDoc)
-                {
-                    JsonElement root = jsonDoc.RootElement;
-                    responseData["value"] = root.ValueKind == JsonValueKind.Array ? root : JsonSerializer.SerializeToElement(new[] { root });
-                }
-                else if (okResult.Value is JsonElement jsonElement)
-                {
-                    responseData["value"] = jsonElement.ValueKind == JsonValueKind.Array ? jsonElement : JsonSerializer.SerializeToElement(new[] { jsonElement });
-                }
-                else
-                {
-                    // Serialize the value directly
-                    JsonElement serialized = JsonSerializer.SerializeToElement(okResult.Value);
-                    responseData["value"] = serialized;
-                }
+                responseData["value"] = McpResponseBuilder.NormalizeStoredProcedureResult(okResult.Value);
             }
             else if (queryResult is BadRequestObjectResult badRequest)
             {

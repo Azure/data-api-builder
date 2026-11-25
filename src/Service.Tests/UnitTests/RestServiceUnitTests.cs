@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.IO.Abstractions.TestingHelpers;
 using System.Net;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -344,7 +345,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 httpContextAccessor.Object,
                 authorizationService.Object,
                 provider,
-                requestValidator);
+                requestValidator,
+                Mock.Of<IAuthorizationResolver>());
         }
 
         /// <summary>

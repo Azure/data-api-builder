@@ -137,19 +137,24 @@ public record MsSqlOptions(bool SetSessionContext = true) : IDataSourceOptions;
 /// On-Behalf-Of flow. This allows DAB to connect to the database as the actual user, enabling
 /// Row-Level Security (RLS) filtering based on user identity.
 /// 
-/// OBO requires an Azure AD App Registration (separate from the DAB service's Managed Identity).
-/// The operator deploying DAB must set the following environment variables for the OBO App Registration,
-/// which DAB reads at startup via Environment.GetEnvironmentVariable():
-/// - DAB_OBO_CLIENT_ID: The Application (client) ID of the OBO App Registration
-/// - DAB_OBO_TENANT_ID: The Directory (tenant) ID where the OBO App Registration is registered
-/// - DAB_OBO_CLIENT_SECRET: The client secret of the OBO App Registration (not a user secret)
+/// OBO requires a Microsoft Entra API App Registration, separate from any Managed Identity used by DAB.
+/// The operator deploying DAB must set the following common environment variables, which DAB reads at startup:
+/// - DAB_OBO_CLIENT_ID: The Application (client) ID of the API App Registration, not a Managed Identity client ID
+/// - DAB_OBO_TENANT_ID: The Directory (tenant) ID where the API App Registration is registered
 /// 
-/// These credentials belong to the OBO App Registration, which acts as a confidential client to exchange
-/// the incoming user JWT for a database access token. The user provides only their JWT; DAB uses the
-/// App Registration credentials to perform the OBO token exchange on their behalf.
+/// The credential method is process-wide and applies to all data sources with OBO enabled:
+/// - Client secret: Set only DAB_OBO_CLIENT_SECRET to the API App Registration's client secret.
+///   Existing deployments need no changes.
+/// - Managed identity federation: Set only DAB_OBO_MANAGED_IDENTITY_CLIENT_ID to the client ID of a
+///   same-tenant User-Assigned Managed Identity configured as a federated identity credential on the API App Registration.
+///   The Managed Identity client ID is distinct from the API App Registration ID in DAB_OBO_CLIENT_ID.
+/// DAB selects the method from the credential that is set. When OBO is enabled, configuring both or neither
+/// credential is an error. Blank values count as unset. Leave the other method's credential variable unset.
 /// 
-/// These can be set in the hosting environment (e.g., Azure Container Apps secrets, Kubernetes secrets,
-/// Docker environment variables, or local shell environment).
+/// The API App Registration acts as a confidential client to exchange the incoming user JWT for a database
+/// access token. The user provides only their JWT; DAB uses the configured credential for the OBO exchange.
+/// Environment variables can be set in the hosting environment (e.g., Azure Container Apps secrets,
+/// Kubernetes secrets, Docker environment variables, or the local shell).
 /// 
 /// Note: DAB-specific prefixes (DAB_OBO_*) are used instead of AZURE_* to avoid conflict with
 /// DefaultAzureCredential, which interprets AZURE_CLIENT_ID as a User-Assigned Managed Identity ID.
@@ -170,7 +175,8 @@ public record UserDelegatedAuthOptions(
     public const int DEFAULT_TOKEN_CACHE_DURATION_MINUTES = 45;
 
     /// <summary>
-    /// Environment variable name for OBO App Registration client ID.
+    /// Environment variable name for the API App Registration client ID, required for either OBO credential method.
+    /// This is not the client ID of the Managed Identity used for federation.
     /// Uses DAB-specific prefix to avoid conflict with AZURE_CLIENT_ID which is
     /// interpreted by DefaultAzureCredential/ManagedIdentityCredential as a
     /// User-Assigned Managed Identity ID.
@@ -178,14 +184,22 @@ public record UserDelegatedAuthOptions(
     public const string DAB_OBO_CLIENT_ID_ENV_VAR = "DAB_OBO_CLIENT_ID";
 
     /// <summary>
-    /// Environment variable name for OBO App Registration client secret.
-    /// Used for On-Behalf-Of token exchange.
+    /// Environment variable name for the API App Registration client secret.
+    /// Selects the client-secret OBO method when set; leave unset for managed identity federation.
     /// </summary>
     public const string DAB_OBO_CLIENT_SECRET_ENV_VAR = "DAB_OBO_CLIENT_SECRET";
 
     /// <summary>
-    /// Environment variable name for OBO tenant ID.
+    /// Environment variable name for OBO tenant ID, required for either credential method.
     /// Uses DAB-specific prefix for consistency with OBO client ID.
     /// </summary>
     public const string DAB_OBO_TENANT_ID_ENV_VAR = "DAB_OBO_TENANT_ID";
+
+    /// <summary>
+    /// Environment variable name for the User-Assigned Managed Identity client ID; selects federation when set.
+    /// The identity must be in the API App Registration's tenant and configured as its federated identity credential.
+    /// This is distinct from DAB_OBO_CLIENT_ID; its selection is independent of AZURE_CLIENT_ID and startup metadata access.
+    /// Leave unset for client-secret authentication.
+    /// </summary>
+    public const string DAB_OBO_MANAGED_IDENTITY_CLIENT_ID_ENV_VAR = "DAB_OBO_MANAGED_IDENTITY_CLIENT_ID";
 }

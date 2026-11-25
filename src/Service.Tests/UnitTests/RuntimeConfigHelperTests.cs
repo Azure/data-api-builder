@@ -13,6 +13,48 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass]
     public class RuntimeConfigHelperTests
     {
+        [DataTestMethod]
+        [TestCategory("Unit")]
+        [DataRow(DatabaseType.MSSQL, false, true, true, false)]
+        [DataRow(DatabaseType.MSSQL, true, false, true, true)]
+        [DataRow(DatabaseType.MSSQL, false, false, true, true)]
+        [DataRow(DatabaseType.MSSQL, true, true, true, false)]
+        [DataRow(DatabaseType.MSSQL, false, false, false, false)]
+        [DataRow(DatabaseType.DWSQL, false, true, true, false)]
+        [DataRow(DatabaseType.DWSQL, true, false, true, true)]
+        [DataRow(DatabaseType.PostgreSQL, true, true, true, true)]
+        [DataRow(DatabaseType.MySQL, true, true, true, true)]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, true, true, true, true)]
+        public void CanUseCache_UsesQueriedSourceOptions(
+            DatabaseType childType, bool defaultSessionContext, bool childSessionContext, bool cacheEnabled, bool expected)
+        {
+            DataSource root = new(DatabaseType.MSSQL, string.Empty, new() { ["set-session-context"] = defaultSessionContext });
+            DataSource child = new(childType, string.Empty, new() { ["set-session-context"] = childSessionContext });
+            RuntimeConfig config = new(
+                string.Empty, root,
+                new RuntimeOptions(null, null, null, null, Cache: new RuntimeCacheOptions(cacheEnabled)),
+                new RuntimeEntities(new Dictionary<string, Entity>()),
+                "root", new() { ["root"] = root, ["child"] = child }, new());
+
+            Assert.AreEqual(expected, config.CanUseCache("child"), "Eligibility must use the queried source.");
+            Assert.AreEqual(cacheEnabled && !defaultSessionContext, config.CanUseCache(), "The default-source API must retain its behavior.");
+        }
+
+        [TestMethod]
+        [TestCategory("Unit")]
+        public void CanUseCache_SourceOptionsUpdatesAreObservedAndUnknownSourcesAreRejected()
+        {
+            RuntimeConfig config = CreateConfig(new RuntimeOptions(null, null, null, null, Cache: new RuntimeCacheOptions(true)));
+            string source = config.DefaultDataSourceName;
+            Assert.IsTrue(config.CanUseCache(source), "Omitted session context must preserve the executor's disabled default.");
+
+            config.UpdateDataSourceNameToDataSource(source,
+                new DataSource(DatabaseType.MSSQL, string.Empty, new() { ["set-session-context"] = true }));
+
+            Assert.IsFalse(config.CanUseCache(source), "Updated session-context options must prevent caching.");
+            Assert.ThrowsException<DataApiBuilderException>(() => config.CanUseCache("missing"));
+        }
+
         [TestMethod]
         public void OptionalRuntimeProperties_UseDocumentedDefaults()
         {

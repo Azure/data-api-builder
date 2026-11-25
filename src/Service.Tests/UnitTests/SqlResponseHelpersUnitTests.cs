@@ -4,13 +4,18 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Web;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -58,6 +63,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 context: context,
                 sqlMetadataProvider: Mock.Of<ISqlMetadataProvider>(),
                 runtimeConfig: CreateRuntimeConfig(),
+                authorizationResolver: CreateAuthorizationResolver(),
                 httpContext: new DefaultHttpContext());
 
             JsonElement envelope = SerializeValue(result);
@@ -80,6 +86,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 context: context,
                 sqlMetadataProvider: Mock.Of<ISqlMetadataProvider>(),
                 runtimeConfig: CreateRuntimeConfig(),
+                authorizationResolver: CreateAuthorizationResolver(),
                 httpContext: new DefaultHttpContext());
 
             JsonElement envelope = SerializeValue(result);
@@ -109,6 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 context: context,
                 sqlMetadataProvider: Mock.Of<ISqlMetadataProvider>(),
                 runtimeConfig: CreateRuntimeConfig(),
+                authorizationResolver: CreateAuthorizationResolver(),
                 httpContext: new DefaultHttpContext());
 
             JsonElement envelope = SerializeValue(result);
@@ -139,6 +147,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 context: context,
                 sqlMetadataProvider: CreateMetadataProviderWithIdPrimaryKey(),
                 runtimeConfig: CreateRuntimeConfig(),
+                authorizationResolver: CreateAuthorizationResolver(),
                 httpContext: httpContext);
 
             JsonElement envelope = SerializeValue(result);
@@ -170,6 +179,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 context: context,
                 sqlMetadataProvider: CreateMetadataProviderWithIdPrimaryKey(),
                 runtimeConfig: CreateRuntimeConfig(),
+                authorizationResolver: CreateAuthorizationResolver(),
                 httpContext: new DefaultHttpContext(),
                 isMcpRequest: true);
 
@@ -209,6 +219,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 context: context,
                 sqlMetadataProvider: Mock.Of<ISqlMetadataProvider>(),
                 runtimeConfig: CreateRuntimeConfig(),
+                authorizationResolver: CreateAuthorizationResolver(),
                 httpContext: new DefaultHttpContext());
 
             JsonElement envelope = SerializeValue(result);
@@ -255,6 +266,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 context: context,
                 sqlMetadataProvider: CreateMetadataProviderWithIdPrimaryKey(),
                 runtimeConfig: CreateRuntimeConfig(),
+                authorizationResolver: CreateAuthorizationResolver(),
                 httpContext: httpContext);
 
             JsonElement envelope = SerializeValue(result);
@@ -294,6 +306,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 context: nextPageContext,
                 sqlMetadataProvider: CreateMetadataProviderWithIdPrimaryKey(),
                 runtimeConfig: CreateRuntimeConfig(),
+                authorizationResolver: CreateAuthorizationResolver(),
                 httpContext: httpContext);
 
             JsonElement nextPageEnvelope = SerializeValue(nextPageResult);
@@ -339,6 +352,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 context: context,
                 sqlMetadataProvider: Mock.Of<ISqlMetadataProvider>(),
                 runtimeConfig: CreateRuntimeConfig(),
+                authorizationResolver: CreateAuthorizationResolver(),
                 httpContext: new DefaultHttpContext());
 
             JsonElement envelope = SerializeValue(result);
@@ -353,9 +367,82 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(3, value[2].GetArrayLength());
         }
 
+        [DataTestMethod]
+        [DataRow(false, true)]
+        [DataRow(true, true)]
+        [DataRow(false, false)]
+        [DataRow(true, false)]
+        public void FormatFindResult_ProtectedKey_IsDeniedOnlyWhenCursorIsEmitted(bool isMcpRequest, bool hasNextPage)
+        {
+            JsonElement input = ParseJson(hasNextPage
+                ? "[{\"id\":\"protected-1\",\"title\":\"Public\"},{\"id\":\"protected-2\",\"title\":\"Next\"}]"
+                : "[{\"id\":\"protected-1\",\"title\":\"Public\"}]");
+            FindRequestContext context = CreateContext(new List<string> { "title" }, first: 1);
+            DefaultHttpContext httpContext = new();
+            httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "restricted";
+            Mock<IAuthorizationResolver> resolver = new(MockBehavior.Strict);
+            resolver.Setup(r => r.AreColumnsAllowedForOperation(
+                ENTITY_NAME, "restricted", EntityActionOperation.Read,
+                It.Is<IEnumerable<string>>(columns => columns.SequenceEqual(new[] { "id" }))))
+                .Returns(false);
+
+            if (hasNextPage)
+            {
+                DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                    SqlResponseHelpers.FormatFindResult(input, context, CreateMetadataProviderWithIdPrimaryKey(),
+                        CreateRuntimeConfig(), httpContext, resolver.Object, isMcpRequest));
+                Assert.AreEqual(HttpStatusCode.Forbidden, exception.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed, exception.SubStatusCode);
+                Assert.AreEqual(DataApiBuilderException.PAGINATION_FIELD_AUTHZ_FAILURE, exception.Message);
+                resolver.VerifyAll();
+            }
+            else
+            {
+                OkObjectResult result = SqlResponseHelpers.FormatFindResult(input, context, CreateMetadataProviderWithIdPrimaryKey(),
+                    CreateRuntimeConfig(), httpContext, resolver.Object, isMcpRequest);
+                JsonElement envelope = SerializeValue(result);
+                AssertHasNoPaginationFields(envelope);
+                Assert.AreEqual("Public", envelope.GetProperty("value")[0].GetProperty("title").GetString());
+                Assert.IsFalse(envelope.GetProperty("value")[0].TryGetProperty("id", out _));
+                resolver.VerifyNoOtherCalls();
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void FormatFindResult_PermittedKeyOmittedFromSelect_StillEmitsCursor(bool isMcpRequest)
+        {
+            JsonElement input = ParseJson("[{\"id\":1,\"title\":\"Public\"},{\"id\":2,\"title\":\"Next\"}]");
+            DefaultHttpContext httpContext = new();
+            httpContext.Request.Scheme = "https";
+            httpContext.Request.Host = new HostString("localhost");
+            httpContext.Request.Path = "/api/Book";
+            OkObjectResult result = SqlResponseHelpers.FormatFindResult(
+                input, CreateContext(new List<string> { "title" }, first: 1),
+                CreateMetadataProviderWithIdPrimaryKey(), CreateRuntimeConfig(), httpContext,
+                CreateAuthorizationResolver(), isMcpRequest);
+            JsonElement envelope = SerializeValue(result);
+            Assert.IsFalse(envelope.GetProperty("value")[0].TryGetProperty("id", out _));
+            string cursor = isMcpRequest
+                ? envelope.GetProperty("after").GetString()!
+                : HttpUtility.ParseQueryString(new Uri(envelope.GetProperty("nextLink").GetString()!).Query)["$after"]!;
+            using JsonDocument decoded = JsonDocument.Parse(SqlPaginationUtil.Base64Decode(cursor));
+            Assert.AreEqual(1, decoded.RootElement[0].GetProperty("FieldValue").GetInt32());
+        }
+
         #endregion
 
         #region Helpers
+
+        private static IAuthorizationResolver CreateAuthorizationResolver()
+        {
+            Mock<IAuthorizationResolver> resolver = new();
+            resolver.Setup(r => r.AreColumnsAllowedForOperation(
+                It.IsAny<string>(), It.IsAny<string>(), EntityActionOperation.Read, It.IsAny<IEnumerable<string>>()))
+                .Returns(true);
+            return resolver.Object;
+        }
 
         private static JsonElement ParseJson(string json)
         {

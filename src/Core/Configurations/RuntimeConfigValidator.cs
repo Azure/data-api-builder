@@ -1440,15 +1440,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
                         DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
 
-                        // Create operation does not support defining a database policy for certain database types.
-                        if (!_databaseTypesSupportingCreatePolicy.Contains(entityDataSource.DatabaseType) && !IsValidDatabasePolicyForAction(action))
-                        {
-                            throw new DataApiBuilderException(
-                                message: $"The Create action does not support defining a database policy." +
-                                $" entity:{entityName}, role:{permissionSetting.Role}, action:{action.Action}",
-                                statusCode: HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-                        }
+                        ValidateCreatePolicy(entityDataSource.DatabaseType, entity.Source.Type, action, entityName, roleName);
 
                         operationsList.Add(actionOp);
                         totalSupportedOperationsFromAllRoles.Add(actionOp);
@@ -1477,21 +1469,29 @@ public class RuntimeConfigValidator : IConfigValidator
     }
 
     /// <summary>
-    /// A database policy can only be defined for a PermissionOperation when
-    /// the operation type is read, update, delete.
-    /// A create operation (database record insert) does not support query predicates
-    /// such as "WHERE name = 'xyz'"
+    /// Checks a table permission for a backend that cannot enforce CREATE policies.
     /// </summary>
     /// <param name="permission"></param>
     /// <returns>True/False</returns>
     public static bool IsValidDatabasePolicyForAction(EntityAction permission)
-    {
-        if (permission.Action is EntityActionOperation.Create)
-        {
-            return string.IsNullOrWhiteSpace(permission.Policy?.Database);
-        }
+        => IsValidDatabasePolicyForAction(permission, EntitySourceType.Table);
 
-        return true;
+    private static bool IsValidDatabasePolicyForAction(EntityAction permission, EntitySourceType? sourceType)
+    {
+        return string.IsNullOrWhiteSpace(permission.Policy?.Database)
+            || !AuthorizationResolver.GetAllOperationsForObjectType(permission.Action, sourceType).Contains(EntityActionOperation.Create);
+    }
+
+    internal static void ValidateCreatePolicy(DatabaseType databaseType, EntitySourceType? sourceType, EntityAction permission, string entityName, string roleName)
+    {
+        if (!_databaseTypesSupportingCreatePolicy.Contains(databaseType) && !IsValidDatabasePolicyForAction(permission, sourceType))
+        {
+            throw new DataApiBuilderException(
+                message: $"The Create action does not support defining a database policy." +
+                    $" entity:{entityName}, role:{roleName}, action:{permission.Action}",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+        }
     }
 
     /// <summary>

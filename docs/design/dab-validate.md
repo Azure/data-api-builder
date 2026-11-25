@@ -10,6 +10,7 @@ The following types of validations are run on the config file (in the order spec
 1. **Schema Validation**: Validates that config satisfies the schema requirements. For example, additionalProperties not defined in schema is not present in the config.
 2. **Config Properties Validation**: Validates that config properties such as datasource, runtime-section are correctly defined in the config. For example, both Rest and GraphQL should not be disabled.
 3. **Config permission Validation**: Validates semantic correctness of the permission defined for each entity. For example, `execute` permission is used only for stored-procedures.
+   On MySQL, a database policy cannot be attached to `create`, including through `*` on a table or view. This is also checked when the runtime builds permissions in production. If a role does not need to create rows, grant the required actions explicitly and keep their database policies.
 4. **Database connection Validation**: Validates that a proper connection can be estabilished with the database.
 5. **Entities metadata Validation**: Validates entites configuration against database. this check won't run if database connection fails. For example, checks if the specified entity is present in the DB or not.
 

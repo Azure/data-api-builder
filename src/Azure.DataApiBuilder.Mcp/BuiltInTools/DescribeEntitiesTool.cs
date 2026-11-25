@@ -59,7 +59,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             }
                         }
                     }"
-                )
+                ),
+                Annotations = new ToolAnnotations()
+                {
+                    ReadOnlyHint = true
+                }
             };
         }
 

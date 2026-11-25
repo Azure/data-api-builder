@@ -217,6 +217,8 @@ namespace Azure.DataApiBuilder.Service
                     // and continues the incoming W3C traceparent, so DAB spans are parented correctly.
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
+                    // Emits a client span per SQL Server/Azure SQL command issued through Microsoft.Data.SqlClient.
+                    .AddSqlClientInstrumentation()
                     // TODO: should we also add FusionCache traces?
                     // To do so we just need to add the package ZiggyCreatures.FusionCache.OpenTelemetry and call
                     // .AddFusionCacheInstrumentation()

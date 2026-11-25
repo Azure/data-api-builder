@@ -3,7 +3,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Reflection;
+using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -77,6 +79,66 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TargetInvocationException malformed = Assert.ThrowsException<TargetInvocationException>(
                 () => InvokeParse("not-json", typeof(float[])));
             Assert.IsInstanceOfType<FormatException>(malformed.InnerException);
+        }
+
+        /// <summary>
+        /// Pagination cursors and REST request bodies hand ParseParamAsSystemType the JSON text of a
+        /// number, which is always invariant ("1234.5"). The result must not depend on the host culture:
+        /// de-DE and en-DE use '.' as the group separator, pl-PL and fr-FR reject '.'.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("de-DE")]
+        [DataRow("en-DE")]
+        [DataRow("pl-PL")]
+        [DataRow("fr-FR")]
+        [DataRow("sv-SE")]
+        public void ParseParamAsSystemType_JsonNumberTextIgnoresCurrentCulture(string cultureName)
+        {
+            using JsonDocument cursor = JsonDocument.Parse(@"{""f"":1.25,""d"":2.5,""m"":1234.5,""i"":-5}");
+            JsonElement root = cursor.RootElement;
+            CultureInfo originalCulture = CultureInfo.CurrentCulture;
+            try
+            {
+                CultureInfo.CurrentCulture = new CultureInfo(cultureName);
+                Assert.AreEqual(1.25f, InvokeParse(root.GetProperty("f").ToString(), typeof(float)));
+                Assert.AreEqual(2.5d, InvokeParse(root.GetProperty("d").ToString(), typeof(double)));
+                Assert.AreEqual(1234.5m, InvokeParse(root.GetProperty("m").ToString(), typeof(decimal)));
+                Assert.AreEqual(-5, InvokeParse(root.GetProperty("i").ToString(), typeof(int)));
+                CollectionAssert.AreEqual(new object[] { 1.5f, 2.25f }, (object[])InvokeParse("[1.5,2.25]", typeof(float[])));
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = originalCulture;
+            }
+        }
+
+        /// <summary>
+        /// GraphQL mutation inputs arrive as CLR numbers (e.g. a double for a Float field) and are
+        /// turned into a string by GetStringifiedValue before ParseParamAsSystemType. That round trip
+        /// must give back the same number under any host culture.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("de-DE")]
+        [DataRow("en-DE")]
+        [DataRow("pl-PL")]
+        [DataRow("fr-FR")]
+        [DataRow("sv-SE")]
+        public void GetStringifiedValue_NumberRoundTripsUnderCurrentCulture(string cultureName)
+        {
+            CultureInfo originalCulture = CultureInfo.CurrentCulture;
+            try
+            {
+                CultureInfo.CurrentCulture = new CultureInfo(cultureName);
+                Assert.AreEqual(3.14d, InvokeParse(InvokeStringify(3.14d), typeof(double)));
+                Assert.AreEqual(1.15f, InvokeParse(InvokeStringify(1.15d), typeof(float)));
+                Assert.AreEqual(1234.5m, InvokeParse(InvokeStringify(1234.5m), typeof(decimal)));
+                Assert.AreEqual(-5, InvokeParse(InvokeStringify(-5), typeof(int)));
+                Assert.AreEqual(-5000000000L, InvokeParse(InvokeStringify(-5000000000L), typeof(long)));
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = originalCulture;
+            }
         }
 
         [TestMethod]
@@ -195,6 +257,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "ParseParamAsSystemType",
                 BindingFlags.Static | BindingFlags.NonPublic)!;
             return method.Invoke(null, new object[] { value, targetType })!;
+        }
+
+        private static string InvokeStringify(object value)
+        {
+            MethodInfo method = typeof(BaseSqlQueryStructure).GetMethod(
+                "GetStringifiedValue",
+                BindingFlags.Static | BindingFlags.NonPublic)!;
+            return (string)method.Invoke(null, new object[] { value })!;
         }
 
         private static (TestSqlQueryStructure Structure, Mock<ISqlMetadataProvider> Metadata) CreateStructure(

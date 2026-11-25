@@ -17,6 +17,8 @@ using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Parsers;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -1315,6 +1317,52 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidateEntityConfiguration(runtimeConfig);
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow("proc.GetItems", "proc", "procs", false)]
+        [DataRow("dbo.proc", "select", "selects", false)]
+        [DataRow("[sales.region].[Get.Items]", "Item_1", "Items_1", false)]
+        [DataRow("dbo.[Get Items]", "Item", "Items", false)]
+        [DataRow("proc.GetItems", "Item.Name", "Items", true)]
+        [DataRow("proc.GetItems", "Item Name", "Items", true)]
+        [DataRow("proc.GetItems", "Item'Name", "Items", true)]
+        [DataRow("proc.GetItems", "[proc]", "Items", true)]
+        [DataRow("proc.GetItems", "1Item", "Items", true)]
+        [DataRow("proc.GetItems", "_Item", "Items", true)]
+        [DataRow("proc.GetItems", "__type", "Items", true)]
+        [DataRow("proc.GetItems", "Pr\u00f3c", "Items", true)]
+        [DataRow("proc.GetItems", "Item", "Invalid.Items", true)]
+        public void StoredProcedureMetadataQuotingPreservesGraphQLNameValidation(
+            string sourceObject, string singular, string plural, bool expectsException)
+        {
+            Entity entity = GraphQLTestHelpers.GenerateEntityWithSingularPlural(singular, plural) with
+            {
+                Source = new(sourceObject, EntitySourceType.StoredProcedure, Parameters: null, KeyFields: null)
+            };
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new(DatabaseType.DWSQL, string.Empty, Options: null),
+                // REST validation must not mask a GraphQL name validation failure.
+                Runtime: new(Rest: new(Enabled: false), GraphQL: new(), Mcp: new(), Host: new(null, null)),
+                Entities: new(new Dictionary<string, Entity> { ["Procedure"] = entity }));
+
+            (string schemaName, string procedureName) = EntitySourceNamesParser.ParseSchemaAndTable(sourceObject);
+            string query = new DwSqlQueryBuilder().BuildStoredProcedureResultDetailsQuery(schemaName, procedureName);
+            StringAssert.StartsWith(query, "EXEC sp_describe_first_result_set @tsql = N'[");
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+            if (expectsException)
+            {
+                DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateEntityConfiguration(runtimeConfig));
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, exception.SubStatusCode);
+                StringAssert.Contains(exception.Message, "disallowed by GraphQL");
             }
             else
             {

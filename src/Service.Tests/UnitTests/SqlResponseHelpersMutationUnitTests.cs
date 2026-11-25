@@ -121,6 +121,36 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(string.Empty, route);
         }
 
+        /// <summary>
+        /// The route ends up in the Location response header, which only accepts ASCII.
+        /// A non-ASCII exposed column name or key value has to be percent-encoded.
+        /// </summary>
+        [TestMethod]
+        public void ConstructPrimaryKeyRoute_NonAsciiNameAndValue_ArePercentEncoded()
+        {
+            const string exposedName = "Año";
+            FindRequestContext context = new(ENTITY_NAME, BuildTableDbo(), isList: false);
+            Dictionary<string, object?> row = new() { [exposedName] = "España" };
+
+            string route = SqlResponseHelpers.ConstructPrimaryKeyRoute(context, row, BuildProvider(exposedName).Object);
+
+            Assert.AreEqual("A%C3%B1o/Espa%C3%B1a", route);
+        }
+
+        /// <summary>
+        /// A key value that contains a path separator or a space must stay one URL segment.
+        /// </summary>
+        [TestMethod]
+        public void ConstructPrimaryKeyRoute_ValueWithReservedCharacters_IsPercentEncoded()
+        {
+            FindRequestContext context = new(ENTITY_NAME, BuildTableDbo(), isList: false);
+            Dictionary<string, object?> row = new() { ["id"] = "a/b c" };
+
+            string route = SqlResponseHelpers.ConstructPrimaryKeyRoute(context, row, BuildProvider().Object);
+
+            Assert.AreEqual("id/a%2Fb%20c", route);
+        }
+
         #endregion
 
         #region ConstructOkMutationResponse
@@ -230,11 +260,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private static DatabaseTable BuildTableDbo() =>
             new(schemaName: "dbo", tableName: "books") { SourceType = EntitySourceType.Table, TableDefinition = BuildSourceDefinition() };
 
-        private static Mock<ISqlMetadataProvider> BuildProvider()
+        private static Mock<ISqlMetadataProvider> BuildProvider(string exposedName = "id")
         {
             Mock<ISqlMetadataProvider> provider = new();
             provider.Setup(x => x.GetSourceDefinition(It.IsAny<string>())).Returns(BuildSourceDefinition());
-            string exposed = "id";
+            string exposed = exposedName;
             provider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), "id", out exposed)).Returns(true);
             return provider;
         }

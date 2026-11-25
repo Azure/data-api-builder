@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
+using Azure.DataApiBuilder.Product;
 using Cli.Commands;
 using Cli.Constants;
 using Cli.Telemetry;
@@ -71,6 +72,9 @@ namespace Cli
                 if (string.Equals(arg, "--mcp-stdio", StringComparison.OrdinalIgnoreCase))
                 {
                     Utils.IsMcpStdioMode = true;
+
+                    // stdout is reserved for the JSON-RPC protocol stream.
+                    BootstrapLogger.WriteAllOutputToStandardError = true;
                 }
                 else if (string.Equals(arg, "--log-level", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                 {

@@ -1439,6 +1439,7 @@ public class RuntimeConfigValidator : IConfigValidator
                         }
 
                         DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
+                        ValidateCosmosDatabasePolicy(entityDataSource.DatabaseType, action, entityName, roleName);
 
                         // Create operation does not support defining a database policy for certain database types.
                         if (!_databaseTypesSupportingCreatePolicy.Contains(entityDataSource.DatabaseType) && !IsValidDatabasePolicyForAction(action))
@@ -1492,6 +1493,19 @@ public class RuntimeConfigValidator : IConfigValidator
         }
 
         return true;
+    }
+
+    internal static void ValidateCosmosDatabasePolicy(DatabaseType databaseType, EntityAction action, string entityName, string role)
+    {
+        if (databaseType == DatabaseType.CosmosDB_NoSQL && action.Action != EntityActionOperation.Read &&
+            !string.IsNullOrWhiteSpace(action.Policy?.Database))
+        {
+            throw new DataApiBuilderException(
+                message: $"Cosmos DB for NoSQL supports database policies only on the Read action. " +
+                    $"entity:{entityName}, role:{role}, action:{action.Action}",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+        }
     }
 
     /// <summary>

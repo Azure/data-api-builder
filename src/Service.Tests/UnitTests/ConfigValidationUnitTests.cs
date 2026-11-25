@@ -44,6 +44,35 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private const string OBO_CREDENTIAL_CONFLICT_ERROR_MESSAGE =
             "Configure exactly one OBO credential method. DAB_OBO_CLIENT_SECRET and DAB_OBO_MANAGED_IDENTITY_CLIENT_ID cannot both be set.";
 
+        [DataTestMethod]
+        [DataRow(EntityActionOperation.Create)]
+        [DataRow(EntityActionOperation.Update)]
+        [DataRow(EntityActionOperation.Delete)]
+        [DataRow(EntityActionOperation.All)]
+        public void CosmosWritePolicyRejectedBeforeUse(EntityActionOperation operation)
+        {
+            RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
+                operation: operation, databasePolicy: "@item.col1 eq 1", dbType: DatabaseType.CosmosDB_NoSQL);
+            DataApiBuilderException validationError = Assert.ThrowsException<DataApiBuilderException>(
+                () => InitializeRuntimeConfigValidator().ValidatePermissionsInConfig(config));
+            DataApiBuilderException startupError = Assert.ThrowsException<DataApiBuilderException>(
+                () => AuthorizationHelpers.InitAuthorizationResolver(config));
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, validationError.SubStatusCode);
+            StringAssert.Contains(validationError.Message, "only on the Read action");
+            Assert.AreEqual(validationError.Message, startupError.Message);
+        }
+
+        [DataTestMethod]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, EntityActionOperation.Read, "@item.col1 eq 1")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, EntityActionOperation.All, null)]
+        [DataRow(DatabaseType.MSSQL, EntityActionOperation.Update, "@item.col1 eq 1")]
+        public void CosmosWritePolicyCheckPreservesSupportedPermissions(DatabaseType dbType, EntityActionOperation operation, string policy)
+        {
+            RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(operation: operation, databasePolicy: policy, dbType: dbType);
+            InitializeRuntimeConfigValidator().ValidatePermissionsInConfig(config);
+            AuthorizationHelpers.InitAuthorizationResolver(config);
+        }
+
         /// <summary>
         /// Test method to validate that an appropriate exception is thrown when database policy tries to reference a field
         /// which is not accessible.

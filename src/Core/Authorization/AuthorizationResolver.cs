@@ -316,6 +316,7 @@ public class AuthorizationResolver : IAuthorizationResolver
             // this will help in copying over permissions from anonymous role to authenticated role.
             HashSet<string> allowedColumnsForAnonymousRole = new();
             string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+            DatabaseType databaseType = runtimeConfig.GetDataSourceFromEntityName(entityName).DatabaseType;
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
             foreach (EntityPermission permission in entity.Permissions)
             {
@@ -324,6 +325,7 @@ public class AuthorizationResolver : IAuthorizationResolver
                 EntityAction[] entityActions = permission.Actions;
                 foreach (EntityAction entityAction in entityActions)
                 {
+                    RuntimeConfigValidator.ValidateCosmosDatabasePolicy(databaseType, entityAction, entityName, role);
                     EntityActionOperation operation = entityAction.Action;
                     OperationMetadata operationToColumn = new();
 

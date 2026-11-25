@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
@@ -4000,6 +4001,7 @@ namespace Cli
 
             try
             {
+                SqlClientAuthentication.RegisterProviders();
                 using SqlConnection connection = new(connectionString);
                 connection.Open();
 

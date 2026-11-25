@@ -130,6 +130,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             SqlConnection conn = new()
             {
                 ConnectionString = connectionString,
+                RegisteredApplication = RegisteredApplication.DataApiBuilder,
             };
 
             // Extract info message from SQLConnection

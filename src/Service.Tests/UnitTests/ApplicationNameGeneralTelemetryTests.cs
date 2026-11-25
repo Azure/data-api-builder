@@ -518,6 +518,7 @@ public class ApplicationNameGeneralTelemetryTests
         MsSqlQueryExecutor executor = new(provider, parser.Object, NullLogger<IQueryExecutor>.Instance, accessor);
 
         using SqlConnection metadata = executor.CreateConnection(config.DefaultDataSourceName);
+        Assert.AreEqual(RegisteredApplication.DataApiBuilder, metadata.RegisteredApplication);
         Assert.IsTrue(new SqlConnectionStringBuilder(metadata.ConnectionString).ApplicationName.StartsWith(customName, StringComparison.Ordinal));
         Assert.AreEqual('M', GeneralFromConnectionString(metadata.ConnectionString)[5]);
 
@@ -530,6 +531,7 @@ public class ApplicationNameGeneralTelemetryTests
             }, "test")),
         };
         using SqlConnection request = executor.CreateConnection(config.DefaultDataSourceName);
+        Assert.AreEqual(RegisteredApplication.DataApiBuilder, request.RegisteredApplication);
         string name = new SqlConnectionStringBuilder(request.ConnectionString).ApplicationName;
         Assert.IsTrue(name.Length <= 128);
         Assert.AreEqual(22, name.IndexOf('|'), "Per-user isolation hash must not be truncated.");

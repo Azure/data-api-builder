@@ -29,6 +29,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class SqlMetadataProviderHelperTests
     {
+        /// <summary>
+        /// Metadata discovery connections identify DAB before they are opened.
+        /// </summary>
+        [TestMethod]
+        public void CreateConnection_SetsRegisteredApplication()
+        {
+            MsSqlMetadataProvider provider = CreateProvider();
+            MethodInfo method = typeof(MsSqlMetadataProvider).GetMethod(
+                "CreateConnection", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+            using SqlConnection connection = (SqlConnection)method.Invoke(provider, null)!;
+
+            Assert.AreEqual(RegisteredApplication.DataApiBuilder, connection.RegisteredApplication);
+            Assert.AreEqual(ConnectionState.Closed, connection.State);
+        }
+
         [TestMethod]
         public void InferredDatabaseObjectAccessors_ReturnConfiguredValues()
         {

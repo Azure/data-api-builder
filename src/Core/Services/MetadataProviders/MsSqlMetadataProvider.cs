@@ -53,6 +53,12 @@ namespace Azure.DataApiBuilder.Core.Services
             return "dbo";
         }
 
+        /// <inheritdoc/>
+        protected override SqlConnection CreateConnection() => new()
+        {
+            RegisteredApplication = RegisteredApplication.DataApiBuilder
+        };
+
         /// <summary>
         /// Takes a string version of an SQL Server data type (also applies to Azure SQL DB)
         /// and returns its .NET common language runtime (CLR) counterpart
@@ -186,7 +192,7 @@ namespace Azure.DataApiBuilder.Core.Services
             StoredProcedureDefinition storedProcedureDefinition,
             CancellationToken cancellationToken)
         {
-            using DbConnection conn = new SqlConnection();
+            using DbConnection conn = CreateConnection();
             conn.ConnectionString = ConnectionString;
             await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(
                 conn,

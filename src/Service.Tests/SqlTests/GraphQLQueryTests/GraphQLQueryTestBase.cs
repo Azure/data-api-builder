@@ -1666,6 +1666,37 @@ fragment p on book { id }
             Assert.AreEqual(1, response.GetProperty("id").GetInt32());
         }
 
+        /// <summary>
+        /// Regression for #3861: fields after an inline fragment with <c>@include</c> must still
+        /// be selected. Hot Chocolate 16.7.3 leaves directive-bearing inline fragments in the
+        /// selection set that reaches <c>AddGraphQLFields</c> (unlike directive-free spreads).
+        /// </summary>
+        [TestMethod]
+        public async Task QueryWithInlineFragmentIncludeDirectiveAndTrailingFields()
+        {
+            string query = @"
+query {
+    book_by_pk(id: 1) {
+        ... on book @include(if: true) {
+            id
+        }
+        title
+        publishers {
+            name
+        }
+    }
+}
+";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
+
+            Assert.AreEqual(1, response.GetProperty("id").GetInt32());
+            Assert.AreEqual("Awesome book", response.GetProperty("title").GetString());
+            Assert.AreEqual(
+                "Big Company",
+                response.GetProperty("publishers").GetProperty("name").GetString());
+        }
+
         [TestMethod]
         public async Task GraphQLQueryWithMultipleOfTheSameFieldReturnsFieldOnce()
         {

@@ -37,6 +37,9 @@ namespace Cli.Commands
             int? dataSourceHealthThresholdMs = null,
             IEnumerable<string>? dataSourceFiles = null,
             int? depthLimit = null,
+            bool? runtimeGraphQLCostEnabled = null,
+            int? runtimeGraphQLCostMaxFieldCost = null,
+            int? runtimeGraphQLCostMaxTypeCost = null,
             bool? runtimeGraphQLEnabled = null,
             string? runtimeGraphQLPath = null,
             bool? runtimeGraphQLAllowIntrospection = null,
@@ -133,6 +136,9 @@ namespace Cli.Commands
             DataSourceFiles = dataSourceFiles;
             // GraphQL
             DepthLimit = depthLimit;
+            RuntimeGraphQLCostEnabled = runtimeGraphQLCostEnabled;
+            RuntimeGraphQLCostMaxFieldCost = runtimeGraphQLCostMaxFieldCost;
+            RuntimeGraphQLCostMaxTypeCost = runtimeGraphQLCostMaxTypeCost;
             RuntimeGraphQLEnabled = runtimeGraphQLEnabled;
             RuntimeGraphQLPath = runtimeGraphQLPath;
             RuntimeGraphQLAllowIntrospection = runtimeGraphQLAllowIntrospection;
@@ -269,6 +275,15 @@ namespace Cli.Commands
 
         [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of a nested query. Allowed values: 1-2147483647, or -1 to remove a previously set limit. Default: -1.")]
         public int? DepthLimit { get; }
+
+        [Option("runtime.graphql.cost.enabled", Required = false, HelpText = "Enforce GraphQL cost limits. Requests exceeding the configured maximums are rejected. Default: false (boolean).")]
+        public bool? RuntimeGraphQLCostEnabled { get; }
+
+        [Option("runtime.graphql.cost.max-field-cost", Required = false, HelpText = "Max allowed field cost of a GraphQL request, an estimate of the work needed to execute it. Only applied when runtime.graphql.cost.enabled is true. Allowed values: 1-2147483647. Default: the GraphQL engine default.")]
+        public int? RuntimeGraphQLCostMaxFieldCost { get; }
+
+        [Option("runtime.graphql.cost.max-type-cost", Required = false, HelpText = "Max allowed type cost of a GraphQL request, an estimate of the amount of data it returns. Only applied when runtime.graphql.cost.enabled is true. Allowed values: 1-2147483647. Default: the GraphQL engine default.")]
+        public int? RuntimeGraphQLCostMaxTypeCost { get; }
 
         [Option("runtime.graphql.enabled", Required = false, HelpText = "Enable DAB's GraphQL endpoint. Default: true (boolean).")]
         public bool? RuntimeGraphQLEnabled { get; }

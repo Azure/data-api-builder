@@ -23,6 +23,9 @@ dab configure [options]
 Some Example of the options that we currently support:
 - `--config `: Specify the configuration file path.
 - `--runtime.graphql.depth-limit`: Max allowed depth of the nested query.
+- `--runtime.graphql.cost.enabled`: Enforce the GraphQL cost limits.
+- `--runtime.graphql.cost.max-field-cost`: Max allowed field cost of a GraphQL request.
+- `--runtime.graphql.cost.max-type-cost`: Max allowed type cost of a GraphQL request.
 - `--data-source.database-type`: Type of database to connect to.
 - `--data-source.options.schema`: Schema path for Cosmos DB for NoSql.
 - `--help`: Display help information about the command.

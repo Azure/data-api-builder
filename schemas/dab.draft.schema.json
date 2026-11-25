@@ -246,6 +246,30 @@
               "description": "Maximum allowed depth of a GraphQL query. Only positive integers are enforced. Default: null (no limit). Use -1 to explicitly remove a previously set limit.",
               "default": null
             },
+            "cost": {
+              "type": "object",
+              "description": "GraphQL cost analysis limits. When enabled, requests whose estimated cost exceeds the configured maximums are rejected. When this section is omitted, cost limits are not enforced.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/$defs/boolean-or-string",
+                  "description": "Enforce GraphQL cost limits. The configured maximums are only applied when this is true. When true and no maximum is configured, the GraphQL engine defaults apply.",
+                  "default": false
+                },
+                "max-field-cost": {
+                  "type": [ "integer", "null" ],
+                  "minimum": 1,
+                  "maximum": 2147483647,
+                  "description": "Maximum allowed field cost of a GraphQL request, an estimate of the work needed to execute it. Default: the GraphQL engine default."
+                },
+                "max-type-cost": {
+                  "type": [ "integer", "null" ],
+                  "minimum": 1,
+                  "maximum": 2147483647,
+                  "description": "Maximum allowed type cost of a GraphQL request, an estimate of the amount of data it returns. Default: the GraphQL engine default."
+                }
+              }
+            },
             "enable-aggregation": {
               "$ref": "#/$defs/boolean-or-string",
               "description": "Allow enabling/disabling aggregation (groupBy, sum, avg, min, max, count) for supported database types (MSSQL, DWSQL).",

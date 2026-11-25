@@ -279,6 +279,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             return (new TestSqlQueryStructure(metadata.Object), metadata);
         }
 
+        /// <summary>
+        /// Registers the related "Author" entity with the metadata provider alongside the structure's "Book" entity.
+        /// </summary>
         private static void RegisterRelatedEntity(
             TestSqlQueryStructure structure,
             Mock<ISqlMetadataProvider> metadata,
@@ -292,6 +295,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             metadata.Setup(x => x.GetSourceDefinition("Author")).Returns(relatedDefinition);
         }
 
+        /// <summary>
+        /// Stores the given foreign key definitions on the source definition for the given source and target entity pair.
+        /// </summary>
         private static void AddForeignKeyDefinitions(
             SourceDefinition sourceDefinition,
             string sourceEntityName,

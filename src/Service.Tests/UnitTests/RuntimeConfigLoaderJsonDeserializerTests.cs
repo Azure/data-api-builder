@@ -165,6 +165,62 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ClearEnvironmentVariablesFromDictionary(_environmentFileContentDict);
         }
 
+        [DataTestMethod]
+        [DataRow(false, "@env('year-end')", DisplayName = "Do not replace stored procedure parameter default environment variable.")]
+        [DataRow(true, "2024-06-30", DisplayName = "Replace stored procedure parameter default environment variable.")]
+        public void TestStoredProcedureParameterDefaultEnvVarReplacement(bool replaceEnvVar, string expectedDefaultValue)
+        {
+            const string envVarName = "year-end";
+            Environment.SetEnvironmentVariable(envVarName, "2024-06-30");
+
+            try
+            {
+                string configJson = @"
+                {
+                    ""data-source"": {
+                        ""database-type"": ""mssql"",
+                        ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
+                    },
+                    ""entities"": {
+                        ""GetRecordsByDate"": {
+                            ""source"": {
+                                ""object"": ""get_records_by_date"",
+                                ""type"": ""stored-procedure"",
+                                ""parameters"": {
+                                    ""YearEndDate"": ""@env('year-end')""
+                                }
+                            },
+                            ""permissions"": [
+                                {
+                                    ""role"": ""anonymous"",
+                                    ""actions"": [
+                                        {
+                                            ""action"": ""execute""
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }";
+
+                bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
+                    configJson,
+                    out RuntimeConfig runtimeConfig,
+                    replacementSettings: new DeserializationVariableReplacementSettings(
+                        azureKeyVaultOptions: null,
+                        doReplaceEnvVar: replaceEnvVar,
+                        doReplaceAkvVar: false));
+
+                Assert.IsTrue(isParsingSuccessful);
+                Assert.AreEqual(expectedDefaultValue, runtimeConfig.Entities["GetRecordsByDate"].Source.Parameters[0].Default);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(envVarName, null);
+            }
+        }
+
         /// <summary>
         /// Test the parsing of DataSource section in runtime config for cosmosdb_nosql
         /// where under cosmosDb options has database as null, container is not provided, and schema is an empty string.

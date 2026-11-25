@@ -52,8 +52,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 });
 
             Assert.AreEqual(2, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "id", expectedRequired: true, expectedDefault: "42", expectedDescription: "Config description");
-            AssertParameter(parameters, name: "tenant", expectedRequired: true, expectedDefault: null, expectedDescription: string.Empty);
+            AssertParameter(parameters, name: "id", expectedRequired: true, expectedDescription: "Config description");
+            AssertParameter(parameters, name: "tenant", expectedRequired: true, expectedDescription: string.Empty);
         }
 
         /// <summary>
@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 });
 
             Assert.AreEqual(1, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "locale", expectedRequired: false, expectedDefault: expectedDefault, expectedDescription: "Locale override");
+            AssertParameter(parameters, name: "locale", expectedRequired: false, expectedDescription: "Locale override");
         }
 
         // ----------------------------------------------------------------------------------
@@ -152,29 +152,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Checks that one parameter in the JSON array has the expected required, default, and description.
+        /// Checks the public parameter metadata without exposing its execution default.
         /// </summary>
-        /// <param name="expectedDefault">Expected default value, or null to assert the JSON value is null.</param>
         private static void AssertParameter(
             JsonElement parameters,
             string name,
             bool expectedRequired,
-            string expectedDefault,
             string expectedDescription)
         {
             JsonElement param = parameters.EnumerateArray().Single(p => p.GetProperty("name").GetString() == name);
 
             Assert.AreEqual(expectedRequired, param.GetProperty("required").GetBoolean(), $"required mismatch for parameter '{name}'.");
 
-            JsonElement defaultElement = param.GetProperty("default");
-            if (expectedDefault is null)
-            {
-                Assert.AreEqual(JsonValueKind.Null, defaultElement.ValueKind, $"default should be JSON null for parameter '{name}'.");
-            }
-            else
-            {
-                Assert.AreEqual(expectedDefault, defaultElement.GetString(), $"default mismatch for parameter '{name}'.");
-            }
+            Assert.IsFalse(param.TryGetProperty("default", out _), "Execution defaults must not appear in discovery.");
 
             Assert.AreEqual(expectedDescription, param.GetProperty("description").GetString(), $"description mismatch for parameter '{name}'.");
         }

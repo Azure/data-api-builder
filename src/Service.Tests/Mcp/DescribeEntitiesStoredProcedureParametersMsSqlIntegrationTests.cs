@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         /// <summary>
         /// SP with one DB parameter and no config-side override: name comes from the DB,
-        /// required defaults to true, default is null, description is empty.
+        /// required defaults to true and description is empty.
         /// </summary>
         [TestMethod]
         public async Task DescribeEntities_DbParameterWithoutConfigOverride_DefaultsToRequiredTrue()
@@ -78,12 +78,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             JsonElement parameters = await DescribeEntityParametersAsync("GetBook");
 
             Assert.AreEqual(1, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "id", expectedRequired: true, expectedDefault: null, expectedDescription: string.Empty);
+            AssertParameter(parameters, name: "id", expectedRequired: true, expectedDescription: string.Empty);
         }
 
         /// <summary>
         /// SP with two DB parameters and matching config-side overrides: each parameter's
-        /// required / default values come from config; name still comes from the DB.
+        /// required flag comes from config; name still comes from the DB.
         /// This is the scenario that exercises the upstream merge end-to-end.
         /// </summary>
         [TestMethod]
@@ -92,15 +92,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             JsonElement parameters = await DescribeEntityParametersAsync("InsertBook");
 
             Assert.AreEqual(2, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "title", expectedRequired: false, expectedDefault: "randomX", expectedDescription: string.Empty);
-            AssertParameter(parameters, name: "publisher_id", expectedRequired: false, expectedDefault: "1234", expectedDescription: string.Empty);
+            AssertParameter(parameters, name: "title", expectedRequired: false, expectedDescription: string.Empty);
+            AssertParameter(parameters, name: "publisher_id", expectedRequired: false, expectedDescription: string.Empty);
         }
 
         /// <summary>
         /// Mixed merge: an SP has two DB parameters but the config only overrides one of them.
-        /// The overridden param ('id') must reflect the config-side required/default; the
-        /// non-overridden param ('title') must fall back to the merge defaults
-        /// (required=true, default=null). This exercises the per-parameter branch in
+        /// The overridden param ('id') must reflect the configured required flag; the
+        /// non-overridden param ('title') remains required. This exercises the per-parameter branch in
         /// <c>FillSchemaForStoredProcedureAsync</c> that only applies overrides when the
         /// config-side entry exists for that name.
         ///
@@ -167,8 +166,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 JsonElement parameters = await DescribeEntityParametersAsync(EntityName, tamperedConfig);
 
                 Assert.AreEqual(2, parameters.GetArrayLength());
-                AssertParameter(parameters, name: "id", expectedRequired: false, expectedDefault: "42", expectedDescription: string.Empty);
-                AssertParameter(parameters, name: "title", expectedRequired: true, expectedDefault: null, expectedDescription: string.Empty);
+                AssertParameter(parameters, name: "id", expectedRequired: false, expectedDescription: string.Empty);
+                AssertParameter(parameters, name: "title", expectedRequired: true, expectedDescription: string.Empty);
             }
             finally
             {
@@ -347,7 +346,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             JsonElement parameters,
             string name,
             bool expectedRequired,
-            string expectedDefault,
             string expectedDescription)
         {
             JsonElement param = parameters.EnumerateArray()
@@ -356,17 +354,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(expectedRequired, param.GetProperty("required").GetBoolean(),
                 $"required mismatch for parameter '{name}'.");
 
-            JsonElement defaultElement = param.GetProperty("default");
-            if (expectedDefault is null)
-            {
-                Assert.AreEqual(JsonValueKind.Null, defaultElement.ValueKind,
-                    $"default should be JSON null for parameter '{name}'.");
-            }
-            else
-            {
-                Assert.AreEqual(expectedDefault, defaultElement.GetString(),
-                    $"default mismatch for parameter '{name}'.");
-            }
+            Assert.IsFalse(param.TryGetProperty("default", out _), "Execution defaults must not appear in discovery.");
 
             Assert.AreEqual(expectedDescription, param.GetProperty("description").GetString(),
                 $"description mismatch for parameter '{name}'.");

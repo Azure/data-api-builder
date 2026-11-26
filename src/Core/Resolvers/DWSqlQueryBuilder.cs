@@ -565,7 +565,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
-            string query = $"EXEC sp_describe_first_result_set @tsql = N'{databaseObjectName}';";
+            // The identifier is embedded in a T-SQL string literal.
+            string query = $"EXEC sp_describe_first_result_set @tsql = N'{databaseObjectName.Replace("'", "''")}';";
             return query;
         }
 

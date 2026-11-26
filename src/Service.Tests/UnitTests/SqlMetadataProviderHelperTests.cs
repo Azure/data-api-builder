@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using System.Threading;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -29,6 +30,45 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class SqlMetadataProviderHelperTests
     {
+        [DataTestMethod]
+        [DataRow(DatabaseType.DWSQL, "[proc].[usp_get]", "EXEC sp_describe_first_result_set @tsql = N'[proc].[usp_get]';")]
+        [DataRow(DatabaseType.DWSQL, "[sales.region].[order'get]", "EXEC sp_describe_first_result_set @tsql = N'[sales.region].[order''get]';")]
+        [DataRow(DatabaseType.DWSQL, "dbo.usp_get", "EXEC sp_describe_first_result_set @tsql = N'[dbo].[usp_get]';")]
+        [DataRow(DatabaseType.MSSQL, "dbo.usp_get", "SELECT name, TYPE_NAME(system_type_id) as system_type_name, is_nullable FROM sys.dm_exec_describe_first_result_set_for_object (OBJECT_ID('dbo.usp_get'), 0) WHERE is_hidden is not NULL AND is_hidden = 0")]
+        public async Task StoredProcedureResultMetadata_UsesCorrectlyQuotedName(
+            DatabaseType databaseType, string source, string expectedQuery)
+        {
+            MsSqlMetadataProvider provider = CreateProvider();
+            SetBaseField(provider, "_databaseType", databaseType);
+            SetBaseAutoProperty(provider, "SqlQueryBuilder",
+                databaseType == DatabaseType.DWSQL ? new DwSqlQueryBuilder() : new MsSqlQueryBuilder());
+            Mock<IQueryExecutor> executor = new();
+            executor.Setup(x => x.ExecuteQueryAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                    It.IsAny<Func<System.Data.Common.DbDataReader, List<string>?, Task<JsonArray>>>(),
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>(),
+                    It.IsAny<Microsoft.AspNetCore.Http.HttpContext>(),
+                    It.IsAny<List<string>>()))
+                .ReturnsAsync(new JsonArray());
+            SetBaseAutoProperty(provider, "QueryExecutor", executor.Object);
+
+            (string schemaName, string procedureName) = provider.ParseSchemaAndDbTableName(source);
+            Task operation = (Task)GetBaseMethod("PopulateResultSetDefinitionsForStoredProcedureAsync")
+                .Invoke(provider, new object[] { schemaName, procedureName, new StoredProcedureDefinition(), CancellationToken.None })!;
+            await operation;
+
+            executor.Verify(x => x.ExecuteQueryAsync(
+                expectedQuery,
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                It.IsAny<Func<System.Data.Common.DbDataReader, List<string>?, Task<JsonArray>>>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<Microsoft.AspNetCore.Http.HttpContext>(),
+                It.IsAny<List<string>>()), Times.Once);
+        }
+
         [TestMethod]
         public void InferredDatabaseObjectAccessors_ReturnConfiguredValues()
         {

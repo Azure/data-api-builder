@@ -1441,8 +1441,11 @@ namespace Azure.DataApiBuilder.Core.Services
             string dbStoredProcedureName = $"{schemaName}.{storedProcedureName}";
             // Generate query to get result set details
             // of the stored procedure.
+            // DWSQL executes the name as a batch, so each identifier must be quoted separately.
             string queryForResultSetDetails = SqlQueryBuilder.BuildStoredProcedureResultDetailsQuery(
-                dbStoredProcedureName);
+                GetDatabaseType() == DatabaseType.DWSQL
+                    ? GetTableNameWithSchemaPrefix(schemaName, storedProcedureName)
+                    : dbStoredProcedureName);
 
             // Execute the query to get columns' details.
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(

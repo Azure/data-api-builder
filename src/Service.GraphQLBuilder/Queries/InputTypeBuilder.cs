@@ -7,192 +7,191 @@ using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
 
-namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
+namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+
+public static class InputTypeBuilder
 {
-    public static class InputTypeBuilder
+    public static void GenerateInputTypesForObjectType(ObjectTypeDefinitionNode node, IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
     {
-        public static void GenerateInputTypesForObjectType(ObjectTypeDefinitionNode node, IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
-        {
-            GenerateOrderByInputTypeForObjectType(node, inputTypes);
-            GenerateFilterInputTypeForObjectType(node, inputTypes);
-        }
+        GenerateOrderByInputTypeForObjectType(node, inputTypes);
+        GenerateFilterInputTypeForObjectType(node, inputTypes);
+    }
 
-        public static void GenerateFilterInputTypeForObjectType(
-            ObjectTypeDefinitionNode node,
-            IDictionary<string, InputObjectTypeDefinitionNode> inputTypes
-        )
-        {
-            List<InputValueDefinitionNode> inputFields = GenerateFilterInputFieldsForBuiltInFields(node, inputTypes);
-            string filterInputName = GenerateObjectInputFilterName(node);
-            GenerateFilterInputTypeFromInputFields(inputTypes, inputFields, filterInputName, $"Filter input for {node.Name} GraphQL type");
-        }
+    public static void GenerateFilterInputTypeForObjectType(
+        ObjectTypeDefinitionNode node,
+        IDictionary<string, InputObjectTypeDefinitionNode> inputTypes
+    )
+    {
+        List<InputValueDefinitionNode> inputFields = GenerateFilterInputFieldsForBuiltInFields(node, inputTypes);
+        string filterInputName = GenerateObjectInputFilterName(node);
+        GenerateFilterInputTypeFromInputFields(inputTypes, inputFields, filterInputName, $"Filter input for {node.Name} GraphQL type");
+    }
 
-        internal static void GenerateOrderByInputTypeForObjectType(ObjectTypeDefinitionNode node, IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
-        {
-            List<InputValueDefinitionNode> inputFields = GenerateOrderByInputFieldsForBuiltInFields(node);
-            string orderByInputName = GenerateObjectInputOrderByName(node);
+    internal static void GenerateOrderByInputTypeForObjectType(ObjectTypeDefinitionNode node, IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+    {
+        List<InputValueDefinitionNode> inputFields = GenerateOrderByInputFieldsForBuiltInFields(node);
+        string orderByInputName = GenerateObjectInputOrderByName(node);
 
-            // OrderBy does not include "and" and "or" input types so we add only the orderByInputName here.
-            inputTypes.Add(
-                orderByInputName,
-                new(
-                    location: null,
-                    new NameNode(orderByInputName),
-                    new StringValueNode($"Order by input for {node.Name} GraphQL type"),
-                    new List<DirectiveNode>(),
-                    inputFields
-                    )
-                );
-        }
-
-        private static List<InputValueDefinitionNode> GenerateOrderByInputFieldsForBuiltInFields(ObjectTypeDefinitionNode node)
-        {
-            List<InputValueDefinitionNode> inputFields = new();
-            foreach (FieldDefinitionNode field in node.Fields)
-            {
-                // Skip scalar array fields (e.g., PostgreSQL int[], text[]) - they cannot be ordered.
-                // Non-scalar list types (e.g., Cosmos nested object arrays) are not skipped
-                // because they are handled as relationship navigations.
-                if (field.Type.IsListType() && IsBuiltInType(field.Type))
-                {
-                    continue;
-                }
-
-                if (IsBuiltInType(field.Type))
-                {
-                    inputFields.Add(
-                        new(
-                            location: null,
-                            field.Name,
-                            new StringValueNode($"Order by options for {field.Name}"),
-                            new NamedTypeNode(OrderByType.EnumName),
-                            defaultValue: null,
-                            new List<DirectiveNode>())
-                        );
-                }
-            }
-
-            return inputFields;
-        }
-
-        private static void GenerateFilterInputTypeFromInputFields(
-            IDictionary<string, InputObjectTypeDefinitionNode> inputTypes,
-            List<InputValueDefinitionNode> inputFields,
-            string inputTypeName,
-            string inputTypeDescription)
-        {
-            inputFields.Add(
-                new(
-                    location: null,
-                    new("and"),
-                    new("Conditions to be treated as AND operations"),
-                    new ListTypeNode(new NamedTypeNode(inputTypeName)),
-                    defaultValue: null,
-                    new List<DirectiveNode>()));
-
-            inputFields.Add(
-                new(
-                    location: null,
-                    new("or"),
-                    new("Conditions to be treated as OR operations"),
-                    new ListTypeNode(new NamedTypeNode(inputTypeName)),
-                    defaultValue: null,
-                    new List<DirectiveNode>()));
-
-            inputTypes.Add(
-                inputTypeName,
-                new(
-                    location: null,
-                    new NameNode(inputTypeName),
-                    new StringValueNode(inputTypeDescription),
-                    new List<DirectiveNode>(),
-                    inputFields
+        // OrderBy does not include "and" and "or" input types so we add only the orderByInputName here.
+        inputTypes.Add(
+            orderByInputName,
+            new(
+                location: null,
+                new NameNode(orderByInputName),
+                new StringValueNode($"Order by input for {node.Name} GraphQL type"),
+                new List<DirectiveNode>(),
+                inputFields
                 )
             );
-        }
+    }
 
-        private static List<InputValueDefinitionNode> GenerateFilterInputFieldsForBuiltInFields(
-            ObjectTypeDefinitionNode objectTypeDefinitionNode,
-            IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+    private static List<InputValueDefinitionNode> GenerateOrderByInputFieldsForBuiltInFields(ObjectTypeDefinitionNode node)
+    {
+        List<InputValueDefinitionNode> inputFields = new();
+        foreach (FieldDefinitionNode field in node.Fields)
         {
-            List<InputValueDefinitionNode> inputFields = new();
-            foreach (FieldDefinitionNode field in objectTypeDefinitionNode.Fields)
+            // Skip scalar array fields (e.g., PostgreSQL int[], text[]) - they cannot be ordered.
+            // Non-scalar list types (e.g., Cosmos nested object arrays) are not skipped
+            // because they are handled as relationship navigations.
+            if (field.Type.IsListType() && IsBuiltInType(field.Type))
             {
-                // Skip auto-generated list fields (e.g., PostgreSQL int[], text[] array columns)
-                // which are read-only and cannot be filtered. Cosmos scalar arrays like
-                // tags: [String] do NOT have @autoGenerated and remain filterable
-                // (using ARRAY_CONTAINS).
-                if (field.Type.IsListType()
-                    && IsBuiltInType(field.Type)
-                    && field.Directives.Any(d => d.Name.Value == AutoGeneratedDirectiveType.DirectiveName))
-                {
-                    continue;
-                }
-
-                string fieldTypeName = field.Type.NamedType().Name.Value;
-                if (IsBuiltInType(field.Type))
-                {
-                    if (!inputTypes.ContainsKey(fieldTypeName))
-                    {
-                        inputTypes.Add(fieldTypeName, StandardQueryInputs.GetFilterTypeByScalar(fieldTypeName));
-                    }
-
-                    InputObjectTypeDefinitionNode inputType = inputTypes[fieldTypeName];
-
-                    inputFields.Add(
-                        new(
-                            location: null,
-                            field.Name,
-                            new StringValueNode($"Filter options for {field.Name}"),
-                            new NamedTypeNode(inputType.Name.Value),
-                            defaultValue: null,
-                            new List<DirectiveNode>())
-                        );
-                }
-                else
-                {
-                    string targetEntityName = RelationshipDirectiveType.Target(field);
-
-                    DirectiveNode? relationshipDirective =
-                        RelationshipDirectiveType.GetDirective(field);
-                    List<DirectiveNode> directives = new();
-                    if (relationshipDirective is not null)
-                    {
-                        directives.Add(relationshipDirective);
-                    }
-
-                    inputFields.Add(
-                        new(
-                            location: null,
-                            field.Name,
-                            new StringValueNode($"Filter options for {field.Name}"),
-                            new NamedTypeNode(GenerateObjectInputFilterName(targetEntityName)),
-                            defaultValue: null,
-                            directives: directives));
-                }
+                continue;
             }
 
-            return inputFields;
+            if (IsBuiltInType(field.Type))
+            {
+                inputFields.Add(
+                    new(
+                        location: null,
+                        field.Name,
+                        new StringValueNode($"Order by options for {field.Name}"),
+                        new NamedTypeNode(OrderByType.EnumName),
+                        defaultValue: null,
+                        new List<DirectiveNode>())
+                    );
+            }
         }
 
-        internal static string GenerateObjectInputOrderByName(string name)
+        return inputFields;
+    }
+
+    private static void GenerateFilterInputTypeFromInputFields(
+        IDictionary<string, InputObjectTypeDefinitionNode> inputTypes,
+        List<InputValueDefinitionNode> inputFields,
+        string inputTypeName,
+        string inputTypeDescription)
+    {
+        inputFields.Add(
+            new(
+                location: null,
+                new("and"),
+                new("Conditions to be treated as AND operations"),
+                new ListTypeNode(new NamedTypeNode(inputTypeName)),
+                defaultValue: null,
+                new List<DirectiveNode>()));
+
+        inputFields.Add(
+            new(
+                location: null,
+                new("or"),
+                new("Conditions to be treated as OR operations"),
+                new ListTypeNode(new NamedTypeNode(inputTypeName)),
+                defaultValue: null,
+                new List<DirectiveNode>()));
+
+        inputTypes.Add(
+            inputTypeName,
+            new(
+                location: null,
+                new NameNode(inputTypeName),
+                new StringValueNode(inputTypeDescription),
+                new List<DirectiveNode>(),
+                inputFields
+            )
+        );
+    }
+
+    private static List<InputValueDefinitionNode> GenerateFilterInputFieldsForBuiltInFields(
+        ObjectTypeDefinitionNode objectTypeDefinitionNode,
+        IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+    {
+        List<InputValueDefinitionNode> inputFields = new();
+        foreach (FieldDefinitionNode field in objectTypeDefinitionNode.Fields)
         {
-            return $"{name}OrderByInput";
+            // Skip auto-generated list fields (e.g., PostgreSQL int[], text[] array columns)
+            // which are read-only and cannot be filtered. Cosmos scalar arrays like
+            // tags: [String] do NOT have @autoGenerated and remain filterable
+            // (using ARRAY_CONTAINS).
+            if (field.Type.IsListType()
+                && IsBuiltInType(field.Type)
+                && field.Directives.Any(d => d.Name.Value == AutoGeneratedDirectiveType.DirectiveName))
+            {
+                continue;
+            }
+
+            string fieldTypeName = field.Type.NamedType().Name.Value;
+            if (IsBuiltInType(field.Type))
+            {
+                if (!inputTypes.ContainsKey(fieldTypeName))
+                {
+                    inputTypes.Add(fieldTypeName, StandardQueryInputs.GetFilterTypeByScalar(fieldTypeName));
+                }
+
+                InputObjectTypeDefinitionNode inputType = inputTypes[fieldTypeName];
+
+                inputFields.Add(
+                    new(
+                        location: null,
+                        field.Name,
+                        new StringValueNode($"Filter options for {field.Name}"),
+                        new NamedTypeNode(inputType.Name.Value),
+                        defaultValue: null,
+                        new List<DirectiveNode>())
+                    );
+            }
+            else
+            {
+                string targetEntityName = RelationshipDirectiveType.Target(field);
+
+                DirectiveNode? relationshipDirective =
+                    RelationshipDirectiveType.GetDirective(field);
+                List<DirectiveNode> directives = new();
+                if (relationshipDirective is not null)
+                {
+                    directives.Add(relationshipDirective);
+                }
+
+                inputFields.Add(
+                    new(
+                        location: null,
+                        field.Name,
+                        new StringValueNode($"Filter options for {field.Name}"),
+                        new NamedTypeNode(GenerateObjectInputFilterName(targetEntityName)),
+                        defaultValue: null,
+                        directives: directives));
+            }
         }
 
-        private static string GenerateObjectInputOrderByName(ObjectTypeDefinitionNode node)
-        {
-            return GenerateObjectInputOrderByName(node.Name.Value);
-        }
+        return inputFields;
+    }
 
-        private static string GenerateObjectInputFilterName(ObjectTypeDefinitionNode node)
-        {
-            return GenerateObjectInputFilterName(node.Name.Value);
-        }
+    internal static string GenerateObjectInputOrderByName(string name)
+    {
+        return $"{name}OrderByInput";
+    }
 
-        public static string GenerateObjectInputFilterName(string name)
-        {
-            return $"{name}FilterInput";
-        }
+    private static string GenerateObjectInputOrderByName(ObjectTypeDefinitionNode node)
+    {
+        return GenerateObjectInputOrderByName(node.Name.Value);
+    }
+
+    private static string GenerateObjectInputFilterName(ObjectTypeDefinitionNode node)
+    {
+        return GenerateObjectInputFilterName(node.Name.Value);
+    }
+
+    public static string GenerateObjectInputFilterName(string name)
+    {
+        return $"{name}FilterInput";
     }
 }

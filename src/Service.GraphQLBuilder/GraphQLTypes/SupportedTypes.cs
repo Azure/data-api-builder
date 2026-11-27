@@ -1,67 +1,66 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
+namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
+
+/// <summary>
+/// Only used to group the supported type names under a class with a relevant name.
+/// The type names mentioned here are Hotchocolate scalar built in types.
+/// The corresponding SQL type name may be different for e.g. UUID maps to Guid as the .NET type.
+/// </summary>
+public static class SupportedHotChocolateTypes
 {
-    /// <summary>
-    /// Only used to group the supported type names under a class with a relevant name.
-    /// The type names mentioned here are Hotchocolate scalar built in types.
-    /// The corresponding SQL type name may be different for e.g. UUID maps to Guid as the .NET type.
-    /// </summary>
-    public static class SupportedHotChocolateTypes
-    {
-        public const string UUID_TYPE = "UUID";
-        // HC v16 split the legacy Byte scalar into:
-        //  - ByteType         (runtime: sbyte, range -128..127)
-        //  - UnsignedByteType (runtime: byte,  range 0..255)
-        // SQL Server's tinyint maps to .NET byte (0..255), so DAB targets UnsignedByte.
-        // The GraphQL type name visible in the generated schema therefore changed from
-        // "Byte" to "UnsignedByte" with the HC v16 upgrade.
-        public const string BYTE_TYPE = "UnsignedByte";
-        public const string SHORT_TYPE = "Short";
-        public const string INT_TYPE = "Int";
-        public const string LONG_TYPE = "Long";
-        public const string SINGLE_TYPE = "Single";
-        public const string FLOAT_TYPE = "Float";
-        public const string DECIMAL_TYPE = "Decimal";
-        public const string STRING_TYPE = "String";
-        public const string BOOLEAN_TYPE = "Boolean";
-        // HC v16 marked the legacy ByteArrayType ([Obsolete]) in favor of Base64StringType.
-        // Both serialize byte[] as a base64-encoded JSON string (identical wire format), but
-        // the GraphQL scalar name is now "Base64String" (was "ByteArray"). DAB targets the
-        // new name so the generated schema does not depend on a deprecated scalar.
-        public const string BYTEARRAY_TYPE = "Base64String";
-        public const string DATETIME_TYPE = "DateTime";
-        public const string LOCALTIME_TYPE = "LocalTime";
-        public const string TIME_TYPE = "Time";
-    }
+    public const string UUID_TYPE = "UUID";
+    // HC v16 split the legacy Byte scalar into:
+    //  - ByteType         (runtime: sbyte, range -128..127)
+    //  - UnsignedByteType (runtime: byte,  range 0..255)
+    // SQL Server's tinyint maps to .NET byte (0..255), so DAB targets UnsignedByte.
+    // The GraphQL type name visible in the generated schema therefore changed from
+    // "Byte" to "UnsignedByte" with the HC v16 upgrade.
+    public const string BYTE_TYPE = "UnsignedByte";
+    public const string SHORT_TYPE = "Short";
+    public const string INT_TYPE = "Int";
+    public const string LONG_TYPE = "Long";
+    public const string SINGLE_TYPE = "Single";
+    public const string FLOAT_TYPE = "Float";
+    public const string DECIMAL_TYPE = "Decimal";
+    public const string STRING_TYPE = "String";
+    public const string BOOLEAN_TYPE = "Boolean";
+    // HC v16 marked the legacy ByteArrayType ([Obsolete]) in favor of Base64StringType.
+    // Both serialize byte[] as a base64-encoded JSON string (identical wire format), but
+    // the GraphQL scalar name is now "Base64String" (was "ByteArray"). DAB targets the
+    // new name so the generated schema does not depend on a deprecated scalar.
+    public const string BYTEARRAY_TYPE = "Base64String";
+    public const string DATETIME_TYPE = "DateTime";
+    public const string LOCALTIME_TYPE = "LocalTime";
+    public const string TIME_TYPE = "Time";
+}
 
-    /// <summary>
-    /// Class representing the sql datetime types supported by DAB. All types in this class
-    /// map to the Hotchocolate scalar type of DateTime. Most map to the .NET type of DateTime,
-    /// except DATETIMEOFFSET_TYPE which maps to the .NET type of DateTimeOffset.
-    /// </summary>
-    public static class SupportedDateTimeTypes
-    {
-        public const string DATE_TYPE = "date";
-        public const string SMALLDATETIME_TYPE = "smalldatetime";
-        public const string DATETIME2_TYPE = "datetime2";
-        public const string DATETIMEOFFSET_TYPE = "datetimeoffset";
-    }
+/// <summary>
+/// Class representing the sql datetime types supported by DAB. All types in this class
+/// map to the Hotchocolate scalar type of DateTime. Most map to the .NET type of DateTime,
+/// except DATETIMEOFFSET_TYPE which maps to the .NET type of DateTimeOffset.
+/// </summary>
+public static class SupportedDateTimeTypes
+{
+    public const string DATE_TYPE = "date";
+    public const string SMALLDATETIME_TYPE = "smalldatetime";
+    public const string DATETIME2_TYPE = "datetime2";
+    public const string DATETIMEOFFSET_TYPE = "datetimeoffset";
+}
 
-    /// <summary>
-    /// class representing mapping between hotchocolate types and return type for aggregate.
-    /// </summary>
-    public static class SupportedAggregateTypes
+/// <summary>
+/// class representing mapping between hotchocolate types and return type for aggregate.
+/// </summary>
+public static class SupportedAggregateTypes
+{
+    public static HashSet<string> NumericAggregateTypes = new(StringComparer.OrdinalIgnoreCase)
     {
-        public static HashSet<string> NumericAggregateTypes = new(StringComparer.OrdinalIgnoreCase)
-        {
-            SupportedHotChocolateTypes.LONG_TYPE,
-            SupportedHotChocolateTypes.INT_TYPE,
-            SupportedHotChocolateTypes.SHORT_TYPE,
-            SupportedHotChocolateTypes.DECIMAL_TYPE,
-            SupportedHotChocolateTypes.FLOAT_TYPE,
-            SupportedHotChocolateTypes.BYTE_TYPE,
-        };
-    }
+        SupportedHotChocolateTypes.LONG_TYPE,
+        SupportedHotChocolateTypes.INT_TYPE,
+        SupportedHotChocolateTypes.SHORT_TYPE,
+        SupportedHotChocolateTypes.DECIMAL_TYPE,
+        SupportedHotChocolateTypes.FLOAT_TYPE,
+        SupportedHotChocolateTypes.BYTE_TYPE,
+    };
 }

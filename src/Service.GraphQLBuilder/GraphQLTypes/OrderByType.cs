@@ -3,21 +3,20 @@
 
 using HotChocolate.Types;
 
-namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
+namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
+
+public class OrderByType : EnumType<OrderBy>
 {
-    public class OrderByType : EnumType<OrderBy>
-    {
-        public static string EnumName { get; } = nameof(OrderBy);
+    public static string EnumName { get; } = nameof(OrderBy);
 
-        protected override void Configure(IEnumTypeDescriptor<OrderBy> descriptor)
-        {
-            base.Configure(descriptor);
-            descriptor.Name(EnumName);
-        }
-    }
-
-    public enum OrderBy
+    protected override void Configure(IEnumTypeDescriptor<OrderBy> descriptor)
     {
-        ASC, DESC
+        base.Configure(descriptor);
+        descriptor.Name(EnumName);
     }
+}
+
+public enum OrderBy
+{
+    ASC, DESC
 }

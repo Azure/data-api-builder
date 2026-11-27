@@ -16,205 +16,204 @@ using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
 
-namespace Azure.DataApiBuilder.Service.GraphQLBuilder
+namespace Azure.DataApiBuilder.Service.GraphQLBuilder;
+
+public static class GraphQLStoredProcedureBuilder
 {
-    public static class GraphQLStoredProcedureBuilder
+    /// <summary>
+    /// Helper function to create StoredProcedure Schema for GraphQL.
+    /// It uses the parameters to build the arguments and returns a list
+    /// of the StoredProcedure GraphQL object.
+    /// </summary>
+    /// <remarks>
+    /// Each input argument's GraphQL type is wrapped in <see cref="NonNullTypeNode"/> when the
+    /// parameter is required, so introspection (<c>String!</c> vs <c>String</c>) reflects whether
+    /// the caller must supply a value. A parameter is treated as required unless the runtime
+    /// config explicitly sets <c>required: false</c> for it.
+    /// </remarks>
+    /// <param name="name">Name used for InputValueDefinition name.</param>
+    /// <param name="entity">Entity's runtime config metadata.</param>
+    /// <param name="dbObject">Stored procedure database schema metadata.</param>
+    /// <param name="rolesAllowed">Role authorization metadata.</param>
+    /// <returns>Stored procedure mutation field.</returns>
+    public static FieldDefinitionNode GenerateStoredProcedureSchema(
+        NameNode name,
+        Entity entity,
+        DatabaseObject dbObject,
+        IEnumerable<string>? rolesAllowed = null
+        )
     {
-        /// <summary>
-        /// Helper function to create StoredProcedure Schema for GraphQL.
-        /// It uses the parameters to build the arguments and returns a list
-        /// of the StoredProcedure GraphQL object.
-        /// </summary>
-        /// <remarks>
-        /// Each input argument's GraphQL type is wrapped in <see cref="NonNullTypeNode"/> when the
-        /// parameter is required, so introspection (<c>String!</c> vs <c>String</c>) reflects whether
-        /// the caller must supply a value. A parameter is treated as required unless the runtime
-        /// config explicitly sets <c>required: false</c> for it.
-        /// </remarks>
-        /// <param name="name">Name used for InputValueDefinition name.</param>
-        /// <param name="entity">Entity's runtime config metadata.</param>
-        /// <param name="dbObject">Stored procedure database schema metadata.</param>
-        /// <param name="rolesAllowed">Role authorization metadata.</param>
-        /// <returns>Stored procedure mutation field.</returns>
-        public static FieldDefinitionNode GenerateStoredProcedureSchema(
-            NameNode name,
-            Entity entity,
-            DatabaseObject dbObject,
-            IEnumerable<string>? rolesAllowed = null
-            )
+        List<InputValueDefinitionNode> inputValues = new();
+        List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+
+        // StoredProcedureDefinition contains both output result set column and input parameter metadata
+        // which are needed because parameter and column names can differ.
+        StoredProcedureDefinition spdef = (StoredProcedureDefinition)dbObject.SourceDefinition;
+
+        // Create input value definitions from parameters defined in stored proc.
+        if (spdef is not null)
         {
-            List<InputValueDefinitionNode> inputValues = new();
-            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
-
-            // StoredProcedureDefinition contains both output result set column and input parameter metadata
-            // which are needed because parameter and column names can differ.
-            StoredProcedureDefinition spdef = (StoredProcedureDefinition)dbObject.SourceDefinition;
-
-            // Create input value definitions from parameters defined in stored proc.
-            if (spdef is not null)
+            foreach ((string param, ParameterDefinition definition) in spdef.Parameters)
             {
-                foreach ((string param, ParameterDefinition definition) in spdef.Parameters)
+                // Input parameters defined in the runtime config may denote values that may not cast
+                // to the exact value type defined in the database schema.
+                // e.g. Runtime config parameter value set as 1, while database schema denotes value type decimal.
+                // Without database metadata, there is no way to know to cast 1 to a decimal versus an integer.
+
+                IValueNode? defaultValueNode = null;
+                ParameterMetadata? paramMetadata = entity.Source.Parameters?
+                    .FirstOrDefault(p => p.Name == param);
+
+                if (paramMetadata is not null && paramMetadata.Default is not null)
                 {
-                    // Input parameters defined in the runtime config may denote values that may not cast
-                    // to the exact value type defined in the database schema.
-                    // e.g. Runtime config parameter value set as 1, while database schema denotes value type decimal.
-                    // Without database metadata, there is no way to know to cast 1 to a decimal versus an integer.
-
-                    IValueNode? defaultValueNode = null;
-                    ParameterMetadata? paramMetadata = entity.Source.Parameters?
-                        .FirstOrDefault(p => p.Name == param);
-
-                    if (paramMetadata is not null && paramMetadata.Default is not null)
-                    {
-                        Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(paramMetadata.Default.ToString()!, parameterDefinition: spdef.Parameters[param]);
-                        defaultValueNode = defaultGraphQLValue.Item2;
-                    }
-
-                    // Default to required so the schema doesn't silently mark a mandatory parameter as
-                    // optional. T-SQL nullability does not indicate whether a caller must supply a value,
-                    // so we only relax this when the config explicitly opts out.
-                    bool isRequired = paramMetadata?.Required ?? true;
-
-                    ITypeNode parameterTypeNode = new NamedTypeNode(
-                        SchemaConverter.GetGraphQLTypeFromSystemType(type: definition.SystemType));
-
-                    if (isRequired)
-                    {
-                        parameterTypeNode = new NonNullTypeNode((INullableTypeNode)parameterTypeNode);
-                    }
-
-                    string parameterDescription = !string.IsNullOrWhiteSpace(paramMetadata?.Description)
-                        ? paramMetadata.Description
-                        : !string.IsNullOrWhiteSpace(definition.Description)
-                            ? definition.Description
-                            : $"parameters for {name.Value} stored-procedure";
-
-                    inputValues.Add(
-                        new(
-                            location: null,
-                            name: new(param),
-                            description: new StringValueNode(parameterDescription),
-                            type: parameterTypeNode,
-                            defaultValue: defaultValueNode,
-                            directives: new List<DirectiveNode>())
-                        );
+                    Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(paramMetadata.Default.ToString()!, parameterDefinition: spdef.Parameters[param]);
+                    defaultValueNode = defaultGraphQLValue.Item2;
                 }
-            }
 
-            if (CreateAuthorizationDirectiveIfNecessary(
-                    rolesAllowed,
-                    out DirectiveNode? authorizeDirective))
-            {
-                fieldDefinitionNodeDirectives.Add(authorizeDirective!);
-            }
+                // Default to required so the schema doesn't silently mark a mandatory parameter as
+                // optional. T-SQL nullability does not indicate whether a caller must supply a value,
+                // so we only relax this when the config explicitly opts out.
+                bool isRequired = paramMetadata?.Required ?? true;
 
-            string description = !string.IsNullOrWhiteSpace(entity.Description)
-                ? entity.Description
-                : $"Execute Stored-Procedure {name.Value} and get results from the database";
+                ITypeNode parameterTypeNode = new NamedTypeNode(
+                    SchemaConverter.GetGraphQLTypeFromSystemType(type: definition.SystemType));
 
-            return new(
-                location: null,
-                new NameNode(GenerateStoredProcedureGraphQLFieldName(name.Value, entity)),
-                new StringValueNode(description),
-                inputValues,
-                new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
-                fieldDefinitionNodeDirectives
-            );
-        }
-
-        /// <summary>
-        /// Takes the result from DB as JsonDocument and formats it in a way that can be filtered by column
-        /// name. It parses the Json document into a list of Dictionary with key as result_column_name
-        /// with it's corresponding value.
-        /// returns an empty list in case of no result
-        /// or stored-procedure is trying to read from DB without READ permission.
-        /// </summary>
-        public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(JsonDocument? jsonDocument)
-        {
-            if (jsonDocument is null)
-            {
-                return new List<JsonDocument>();
-            }
-
-            List<JsonDocument> resultJson = new();
-            List<Dictionary<string, object>> resultList = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonDocument.RootElement.ToString())!;
-            foreach (Dictionary<string, object> result in resultList)
-            {
-                resultJson.Add(JsonDocument.Parse(JsonSerializer.Serialize(result)));
-            }
-
-            return resultJson;
-        }
-
-        /// <summary>
-        /// Create and return a default GraphQL result field for a stored-procedure which doesn't
-        /// define a result set and doesn't return any rows.
-        /// </summary>
-        public static FieldDefinitionNode GetDefaultResultFieldForStoredProcedure()
-        {
-            return new(
-                location: null,
-                name: new("result"),
-                description: new StringValueNode("Contains output of stored-procedure execution"),
-                arguments: new List<InputValueDefinitionNode>(),
-                type: new StringType().ToTypeNode(),
-                directives: new List<DirectiveNode>());
-        }
-
-        /// <summary>
-        /// Translates a JSON string or number value defined as a stored procedure's default value
-        /// within the runtime configuration to a GraphQL {Type}ValueNode which represents
-        /// the associated GraphQL type. The target value type is referenced from the passed in parameterDefinition which
-        /// holds database schema metadata.
-        /// </summary>
-        /// <param name="defaultValueFromConfig">String representation of default value defined in runtime config.</param>
-        /// <param name="parameterDefinition">Database schema metadata for stored procedure parameter which include value and value type.</param>
-        /// <returns>Tuple where first item is the string representation of a GraphQLType (e.g. "Byte", "Int", "Decimal")
-        /// and the second item is the GraphQL {type}ValueNode.</returns>
-        /// <exception cref="DataApiBuilderException">Raised when parameter casting fails due to unsupported type.</exception>
-        private static Tuple<string, IValueNode> ConvertValueToGraphQLType(string defaultValueFromConfig, ParameterDefinition parameterDefinition)
-        {
-            string paramValueType = SchemaConverter.GetGraphQLTypeFromSystemType(type: parameterDefinition.SystemType);
-
-            try
-            {
-                Tuple<string, IValueNode> valueNode = paramValueType switch
+                if (isRequired)
                 {
-                    UUID_TYPE => new(UUID_TYPE, new UuidType().ValueToLiteral(Guid.Parse(defaultValueFromConfig))),
-                    BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
-                    SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
-                    INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
-                    LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
-                    SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ValueToLiteral(float.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
-                    FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
-                    DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
-                    STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
-                    BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(
-                        defaultValueFromConfig switch
-                        {
-                            "1" => true,
-                            "0" => false,
-                            var s when s.Equals("true", StringComparison.OrdinalIgnoreCase) => true,
-                            var s when s.Equals("false", StringComparison.OrdinalIgnoreCase) => false,
-                            _ => throw new FormatException($"String '{defaultValueFromConfig}' was not recognized as a valid Boolean.")
-                        })),
-                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ValueToLiteral(
-                        DateTimeOffset.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
-                    BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new Base64StringType().ValueToLiteral(Convert.FromBase64String(defaultValueFromConfig))),
-                    LOCALTIME_TYPE => new(LOCALTIME_TYPE, new HotChocolate.Types.NodaTime.LocalTimeType().ValueToLiteral(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
-                    _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
-                };
+                    parameterTypeNode = new NonNullTypeNode((INullableTypeNode)parameterTypeNode);
+                }
 
-                return valueNode;
+                string parameterDescription = !string.IsNullOrWhiteSpace(paramMetadata?.Description)
+                    ? paramMetadata.Description
+                    : !string.IsNullOrWhiteSpace(definition.Description)
+                        ? definition.Description
+                        : $"parameters for {name.Value} stored-procedure";
+
+                inputValues.Add(
+                    new(
+                        location: null,
+                        name: new(param),
+                        description: new StringValueNode(parameterDescription),
+                        type: parameterTypeNode,
+                        defaultValue: defaultValueNode,
+                        directives: new List<DirectiveNode>())
+                    );
             }
-            catch (Exception error)
+        }
+
+        if (CreateAuthorizationDirectiveIfNecessary(
+                rolesAllowed,
+                out DirectiveNode? authorizeDirective))
+        {
+            fieldDefinitionNodeDirectives.Add(authorizeDirective!);
+        }
+
+        string description = !string.IsNullOrWhiteSpace(entity.Description)
+            ? entity.Description
+            : $"Execute Stored-Procedure {name.Value} and get results from the database";
+
+        return new(
+            location: null,
+            new NameNode(GenerateStoredProcedureGraphQLFieldName(name.Value, entity)),
+            new StringValueNode(description),
+            inputValues,
+            new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
+            fieldDefinitionNodeDirectives
+        );
+    }
+
+    /// <summary>
+    /// Takes the result from DB as JsonDocument and formats it in a way that can be filtered by column
+    /// name. It parses the Json document into a list of Dictionary with key as result_column_name
+    /// with it's corresponding value.
+    /// returns an empty list in case of no result
+    /// or stored-procedure is trying to read from DB without READ permission.
+    /// </summary>
+    public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(JsonDocument? jsonDocument)
+    {
+        if (jsonDocument is null)
+        {
+            return new List<JsonDocument>();
+        }
+
+        List<JsonDocument> resultJson = new();
+        List<Dictionary<string, object>> resultList = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonDocument.RootElement.ToString())!;
+        foreach (Dictionary<string, object> result in resultList)
+        {
+            resultJson.Add(JsonDocument.Parse(JsonSerializer.Serialize(result)));
+        }
+
+        return resultJson;
+    }
+
+    /// <summary>
+    /// Create and return a default GraphQL result field for a stored-procedure which doesn't
+    /// define a result set and doesn't return any rows.
+    /// </summary>
+    public static FieldDefinitionNode GetDefaultResultFieldForStoredProcedure()
+    {
+        return new(
+            location: null,
+            name: new("result"),
+            description: new StringValueNode("Contains output of stored-procedure execution"),
+            arguments: new List<InputValueDefinitionNode>(),
+            type: new StringType().ToTypeNode(),
+            directives: new List<DirectiveNode>());
+    }
+
+    /// <summary>
+    /// Translates a JSON string or number value defined as a stored procedure's default value
+    /// within the runtime configuration to a GraphQL {Type}ValueNode which represents
+    /// the associated GraphQL type. The target value type is referenced from the passed in parameterDefinition which
+    /// holds database schema metadata.
+    /// </summary>
+    /// <param name="defaultValueFromConfig">String representation of default value defined in runtime config.</param>
+    /// <param name="parameterDefinition">Database schema metadata for stored procedure parameter which include value and value type.</param>
+    /// <returns>Tuple where first item is the string representation of a GraphQLType (e.g. "Byte", "Int", "Decimal")
+    /// and the second item is the GraphQL {type}ValueNode.</returns>
+    /// <exception cref="DataApiBuilderException">Raised when parameter casting fails due to unsupported type.</exception>
+    private static Tuple<string, IValueNode> ConvertValueToGraphQLType(string defaultValueFromConfig, ParameterDefinition parameterDefinition)
+    {
+        string paramValueType = SchemaConverter.GetGraphQLTypeFromSystemType(type: parameterDefinition.SystemType);
+
+        try
+        {
+            Tuple<string, IValueNode> valueNode = paramValueType switch
             {
-                throw new DataApiBuilderException(
-                        message: $"The parameter value {defaultValueFromConfig} provided in configuration cannot be converted to the type {paramValueType}",
-                        statusCode: HttpStatusCode.InternalServerError,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
-                        innerException: error);
-            }
+                UUID_TYPE => new(UUID_TYPE, new UuidType().ValueToLiteral(Guid.Parse(defaultValueFromConfig))),
+                BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ValueToLiteral(float.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
+                BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(
+                    defaultValueFromConfig switch
+                    {
+                        "1" => true,
+                        "0" => false,
+                        var s when s.Equals("true", StringComparison.OrdinalIgnoreCase) => true,
+                        var s when s.Equals("false", StringComparison.OrdinalIgnoreCase) => false,
+                        _ => throw new FormatException($"String '{defaultValueFromConfig}' was not recognized as a valid Boolean.")
+                    })),
+                DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ValueToLiteral(
+                    DateTimeOffset.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
+                BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new Base64StringType().ValueToLiteral(Convert.FromBase64String(defaultValueFromConfig))),
+                LOCALTIME_TYPE => new(LOCALTIME_TYPE, new HotChocolate.Types.NodaTime.LocalTimeType().ValueToLiteral(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
+                _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
+            };
+
+            return valueNode;
+        }
+        catch (Exception error)
+        {
+            throw new DataApiBuilderException(
+                    message: $"The parameter value {defaultValueFromConfig} provided in configuration cannot be converted to the type {paramValueType}",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
+                    innerException: error);
         }
     }
 }
